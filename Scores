@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Scores</title>
+
+  <style>
+    body {
+      margin:0;
+      background:#0b0d10;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .wrap {
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Minnesota Teams Section */
+    .mn {
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:16px;
+      padding:20px;
+      box-sizing:border-box;
+      flex:1;
+    }
+
+    .card {
+      background:#12161c;
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:0 0 20px rgba(0,0,0,0.5);
+    }
+
+    /* Ticker Section */
+    .tickerWrap {
+      height:110px;
+      background:#07090c;
+      border-top:2px solid rgba(255,255,255,.1);
+      padding:10px 0;
+    }
+
+    iframe {
+      width:100%;
+      height:100%;
+      border:0;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <!-- Minnesota Teams -->
+  <div class="mn">
+    <div class="card">
+      <div class="scorestream-widget-container"
+           data-ss_widget_type="vertScoreboard"
+           style="height:100%;"
+           data-user-widget-id="68173"></div>
+    </div>
+
+    <div class="card">
+      <div class="scorestream-widget-container"
+           data-ss_widget_type="vertScoreboard"
+           style="height:100%;"
+           data-user-widget-id="68174"></div>
+    </div>
+
+    <div class="card">
+      <div class="scorestream-widget-container"
+           data-ss_widget_type="vertScoreboard"
+           style="height:100%;"
+           data-user-widget-id="68175"></div>
+    </div>
+
+    <div class="card">
+      <div class="scorestream-widget-container"
+           data-ss_widget_type="vertScoreboard"
+           style="height:100%;"
+           data-user-widget-id="68177"></div>
+    </div>
+  </div>
+
+  <!-- Mixed League Ticker -->
+  <div class="tickerWrap">
+    <div class="scorestream-widget-container"
+         data-ss_widget_type="horzScoreboard"
+         data-user-widget-id="68178"></div>
+  </div>
+
+</div>
+
+<script async type="text/javascript"
+        src="https://scorestream.com/apiJsCdn/widgets/embed.js"></script>
+
+</body>
+</html>
