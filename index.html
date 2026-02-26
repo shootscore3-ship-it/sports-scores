@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports - Broadcast Fixed</title>
+    <title>MN Sports Center - Final Fix</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #050505; --card-bg: #111111; --text: #ffffff;
-            --live: #ff3b3b; --final-gold: #D4AF37; --theme-color: #333;
+            --live: #ff3b3b; --final-gold: #D4AF37; --theme-color: #222;
         }
 
         body {
@@ -19,137 +19,142 @@
 
         .dashboard {
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;
-            padding: 20px; flex: 1; box-sizing: border-box;
-            align-items: stretch;
+            padding: 20px; flex: 1; box-sizing: border-box; align-items: stretch;
         }
 
         .card {
-            background: var(--card-bg); border-radius: 24px; padding: 20px;
+            background: var(--card-bg); border-radius: 24px; padding: 25px;
             display: flex; flex-direction: column; justify-content: space-between;
             align-items: center; border: 2px solid var(--theme-color);
             position: relative; transition: all 0.5s ease;
-            min-height: 400px; /* Forces card to stay large */
         }
 
         .rank-badge {
             position: absolute; top: 15px; right: 15px;
-            background: rgba(212, 175, 55, 0.1); color: var(--final-gold);
-            padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 900;
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(212, 175, 55, 0.15); color: var(--final-gold);
+            padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 900;
+            border: 1px solid var(--final-gold);
         }
 
-        .team-logo-main { width: 110px; height: 110px; object-fit: contain; margin-top: 10px; }
+        .team-logo { width: 105px; height: 105px; object-fit: contain; margin-bottom: 10px; }
         
-        .player-box {
+        .player-row {
             display: flex; align-items: center; background: rgba(255,255,255,0.05);
             border-radius: 15px; padding: 12px; width: 100%; box-sizing: border-box;
             border-left: 5px solid var(--theme-color); margin: 15px 0;
         }
-        .headshot { width: 60px; height: 60px; border-radius: 50%; background: #222; margin-right: 12px; border: 1px solid #444; }
-        .p-name { font-size: 14px; font-weight: 900; color: var(--final-gold); display: block; }
-        .p-stat { font-size: 12px; color: #aaa; }
+        .headshot { width: 65px; height: 65px; border-radius: 50%; background: #222; margin-right: 15px; border: 2px solid #333; }
+        .stat-name { font-size: 15px; font-weight: 900; color: var(--final-gold); display: block; }
+        .stat-vals { font-size: 12px; color: #bbb; }
 
-        .score-row { display: flex; align-items: center; justify-content: center; gap: 15px; width: 100%; }
-        .score-big { font-size: 48px; font-weight: 900; }
-        .opp-logo { width: 45px; height: 45px; object-fit: contain; }
+        .score-box { width: 100%; text-align: center; }
+        .score-row { display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .score-val { font-size: 48px; font-weight: 900; }
+        .opp-logo-small { width: 45px; height: 45px; object-fit: contain; }
 
-        .ticker-wrap { background: #000; height: 210px; border-top: 6px solid var(--theme-color); display: flex; align-items: center; overflow: hidden; }
-        .ticker-move { display: flex; white-space: nowrap; animation: ticker-scroll 100s linear infinite; }
-        .ticker-item { display: flex; align-items: center; background: #151515; margin: 0 30px; padding: 0 40px; border-radius: 20px; font-size: 70px; font-weight: 900; height: 160px; }
-        .ticker-logo { width: 105px; height: 105px; object-fit: contain; margin: 0 15px; }
+        /* Ticker Styling */
+        .ticker-wrap { background: #000; height: 215px; border-top: 6px solid var(--theme-color); display: flex; align-items: center; overflow: hidden; }
+        .ticker-move { display: flex; white-space: nowrap; animation: ticker-scroll 120s linear infinite; }
+        .ticker-item { display: flex; align-items: center; background: #151515; margin: 0 30px; padding: 0 45px; border-radius: 20px; font-size: 75px; font-weight: 900; height: 170px; }
+        .ticker-logo { width: 110px; height: 110px; object-fit: contain; margin: 0 15px; }
+        .ticker-final { color: var(--final-gold); margin-left: 20px; font-size: 40px; }
 
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
 </head>
 <body>
-    <div class="dashboard" id="cards-container"></div>
-    <div class="ticker-wrap"><div class="ticker-move" id="ticker-content"></div></div>
+    <div class="dashboard" id="main-grid"></div>
+    <div class="ticker-wrap"><div class="ticker-move" id="ticker-box"></div></div>
 
     <script>
-        const worker = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
-        const TEAMS = [
-            { id: "30", league: "nhl", sport: "hockey", name: "Wild", color: "#154734", ath: "3043233", pN: "K. Kaprizov", pS: "32G, 38A" },
-            { id: "16", league: "nba", sport: "basketball", name: "Wolves", color: "#0C2340", ath: "4431611", pN: "A. Edwards", pS: "29.5 PPG" },
-            { id: "9", league: "mlb", sport: "baseball", name: "Twins", color: "#002B5C", ath: "4240362", pN: "J. Miranda", pS: ".310 AVG" },
-            { id: "16", league: "nfl", sport: "football", name: "Vikings", color: "#4F2683", ath: "4426336", pN: "J.J. McCarthy", pS: "1,632 Yds, 11 TD" }
+        const proxy = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
+        const TEAM_DATA = [
+            { id: "30", league: "nhl", sport: "hockey", name: "Wild", color: "#154734", ath: "3043233", pName: "K. Kaprizov", pStat: "32G, 38A", record: "34-14-10" },
+            { id: "16", league: "nba", sport: "basketball", name: "Wolves", color: "#0C2340", ath: "4431611", pName: "A. Edwards", pStat: "29.6 PPG", record: "36-23" },
+            { id: "9", league: "mlb", sport: "baseball", name: "Twins", color: "#002B5C", ath: "4240362", pName: "J. Miranda", pStat: ".310 AVG", record: "Spring" },
+            { id: "16", league: "nfl", sport: "football", name: "Vikings", color: "#4F2683", ath: "4426336", pName: "J.J. McCarthy", pStat: "1,632 Yds, 11 TD", record: "Offseason" }
         ];
 
-        async function fetchJSON(url) {
-            try { const r = await fetch(worker + encodeURIComponent(url)); return await r.json(); } catch(e) { return null; }
-        }
+        async function api(url) { try { return await (await fetch(proxy + encodeURIComponent(url))).json(); } catch { return null; } }
 
         async function getRank(league, teamId) {
-            const path = league==='nba'?'basketball':(league==='nhl'?'hockey':(league==='mlb'?'baseball':'football'));
-            const data = await fetchJSON(`https://site.api.espn.com/apis/v2/sports/${path}/${league}/standings`);
+            const sport = league==='nba'?'basketball':(league==='nhl'?'hockey':(league==='mlb'?'baseball':'football'));
+            const data = await api(`https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`);
             try {
-                // Dig into children arrays for divisions
-                const allEntries = data.children.flatMap(c => c.standings?.entries || c.children?.flatMap(cc => cc.standings?.entries) || []);
-                const team = allEntries.find(e => e.team.id === teamId);
-                return team ? `#${team.stats.find(s=>s.name==='rank')?.displayValue}` : "—";
-            } catch(e) { return "—"; }
+                // Force a deep search for the team ID in nested arrays
+                let foundRank = "—";
+                const search = (obj) => {
+                    if (obj.team?.id === teamId) {
+                        foundRank = obj.stats?.find(s => s.name === 'rank' || s.name === 'conferenceRank')?.displayValue || "—";
+                    } else if (obj.children) obj.children.forEach(search);
+                    else if (obj.standings?.entries) obj.standings.entries.forEach(search);
+                };
+                search(data); return foundRank !== "—" ? `#${foundRank}` : "—";
+            } catch { return "—"; }
         }
 
-        async function updateUI() {
-            const container = document.getElementById('cards-container');
-            const cardsHTML = await Promise.all(TEAMS.map(async (t) => {
-                const sb = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${t.sport}/${t.league}/scoreboard`);
+        async function refresh() {
+            const container = document.getElementById('main-grid');
+            let html = "";
+            for (const t of TEAM_DATA) {
+                const sb = await api(`https://site.api.espn.com/apis/site/v2/sports/${t.sport}/${t.league}/scoreboard`);
                 const rank = await getRank(t.league, t.id);
                 const game = sb?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === t.id));
-                
-                let scoreSection = `<div style="font-size:12px; color:#444; font-weight:900;">NO GAME SCHEDULED</div>`;
+
+                let gameContent = `<div style="font-size:12px; font-weight:900; color:#444; letter-spacing:1px;">UPCOMING SCHEDULED</div>`;
                 if (game) {
                     const me = game.competitions[0].competitors.find(c => c.team.id === t.id);
-                    const them = game.competitions[0].competitors.find(c => c.team.id !== t.id);
-                    scoreSection = `
+                    const opp = game.competitions[0].competitors.find(c => c.team.id !== t.id);
+                    gameContent = `
                         <div class="score-row">
-                            <span class="score-big">${me.score}</span>
-                            <img class="opp-logo" src="${them.team.logo}">
-                            <span class="score-big">${them.score}</span>
+                            <span class="score-val">${me.score}</span>
+                            <img class="opp-logo-small" src="${opp.team.logo}">
+                            <span class="score-val">${opp.score}</span>
                         </div>
-                        <div style="font-size:13px; font-weight:700; color:#888;">${game.status.type.shortDetail}</div>
+                        <div style="font-size:14px; font-weight:700;">${game.status.type.shortDetail}</div>
                     `;
                 }
 
-                return `
+                html += `
                 <div class="card" style="--theme-color: ${t.color}">
                     <div class="rank-badge">${rank}</div>
                     <div style="text-align:center;">
-                        <img class="team-logo-main" src="https://a.espncdn.com/i/teamlogos/${t.league}/500/${t.id}.png">
-                        <div style="font-size:28px; font-weight:900; margin-top:5px;">${t.name}</div>
+                        <img class="team-logo" src="https://a.espncdn.com/i/teamlogos/${t.league}/500/${t.id}.png">
+                        <div style="font-size:32px; font-weight:900;">${t.name}</div>
+                        <div style="color:#666; font-size:14px; font-weight:700;">${t.record}</div>
                     </div>
-
-                    <div class="player-box">
-                        <img class="headshot" src="https://a.espncdn.com/i/headshots/${t.league}/players/full/${t.ath}.png" onerror="this.src='https://a.espncdn.com/i/teamlogos/${t.league}/500/${t.id}.png'">
-                        <div>
-                            <span class="p-name">${t.pN}</span>
-                            <span class="p-stat">${t.pS}</span>
-                        </div>
+                    <div class="player-row">
+                        <img class="headshot" src="https://a.espncdn.com/i/headshots/${t.league}/players/full/${t.ath}.png">
+                        <div><span class="stat-name">${t.pName}</span><span class="stat-vals">${t.pStat}</span></div>
                     </div>
-
-                    <div style="width:100%; text-align:center;">
-                        ${scoreSection}
-                    </div>
+                    <div class="score-box">${gameContent}</div>
                 </div>`;
-            }));
-            container.innerHTML = cardsHTML.join('');
+            }
+            container.innerHTML = html;
         }
 
         async function updateTicker() {
-            const ticker = document.getElementById('ticker-content');
+            const box = document.getElementById('ticker-box');
             let items = [];
             const leagues = [{l:'nhl', s:'hockey'}, {l:'nba', s:'basketball'}, {l:'mlb', s:'baseball'}];
             for (const leg of leagues) {
-                const data = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${leg.s}/${leg.l}/scoreboard`);
+                const data = await api(`https://site.api.espn.com/apis/site/v2/sports/${leg.s}/${leg.l}/scoreboard`);
                 data?.events?.forEach(e => {
                     const a = e.competitions[0].competitors[1], h = e.competitions[0].competitors[0];
-                    items.push(`<div class="ticker-item"><img class="ticker-logo" src="${a.team.logo}"> ${a.team.abbreviation} ${a.score} @ ${h.team.abbreviation} ${h.score} <img class="ticker-logo" src="${h.team.logo}"><span style="color:#555; margin-left:20px;">${e.status.type.shortDetail}</span></div>`);
+                    const isFinal = e.status.type.state === 'post';
+                    items.push(`
+                        <div class="ticker-item">
+                            <img class="ticker-logo" src="${a.team.logo}"> ${a.team.abbreviation} ${a.score} @ 
+                            ${h.team.abbreviation} ${h.score} <img class="ticker-logo" src="${h.team.logo}">
+                            <span class="ticker-final" style="${isFinal ? 'color:#D4AF37' : 'color:#555'}">${e.status.type.shortDetail}</span>
+                        </div>`);
                 });
             }
-            ticker.innerHTML = [...items, ...items].join('');
+            box.innerHTML = [...items, ...items].join('');
         }
 
-        updateUI(); updateTicker();
-        setInterval(updateUI, 60000); setInterval(updateTicker, 300000);
+        refresh(); updateTicker();
+        setInterval(refresh, 60000); setInterval(updateTicker, 300000);
     </script>
 </body>
 </html>
