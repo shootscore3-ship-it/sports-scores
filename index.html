@@ -76,10 +76,10 @@
     <script>
         const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
         const TEAMS = [
-            { id: "30", sport: "hockey", league: "nhl", name: "Wild", statLabel: "Kaprizov (PTS)", statVal: "32G, 38A (70 PTS)" },
-            { id: "16", sport: "basketball", league: "nba", name: "Wolves", statLabel: "A. Edwards (PPG)", statVal: "29.6 PPG, 5.3 RPG" },
-            { id: "9", sport: "baseball", league: "mlb", name: "Twins", statLabel: "Spring Leaders", statVal: "Miranda: 6 RBI • Rodriguez: 2 HR" },
-            { id: "16", sport: "football", league: "nfl", name: "Vikings", statLabel: "Season Leaders", statVal: "McCarthy: 1632Yds • JJ: 1048Yds" }
+            { id: "30", sport: "hockey", league: "nhl", name: "Wild", backupLabel: "Season Leader", backupVal: "Loading Stats..." },
+            { id: "16", sport: "basketball", league: "nba", name: "Wolves", backupLabel: "Season Leader", backupVal: "Loading Stats..." },
+            { id: "9", sport: "baseball", league: "mlb", name: "Twins", backupLabel: "Record", backupVal: "Spring Training" },
+            { id: "16", sport: "football", league: "nfl", name: "Vikings", backupLabel: "Off-Season", backupVal: "2026 Draft Prep" }
         ];
 
         async function fetchJson(url) {
@@ -91,21 +91,38 @@
 
         async function getTeamData(team) {
             const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-            let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
             
             let record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
-            // FALLBACK LOGO LOGIC
             let logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
+            
+            // SMART STAT LOGIC
+            let sLabel = team.backupLabel;
+            let sVal = team.backupVal;
+            
+            // If the API has leaders (Wild/Wolves), use them
+            const leaders = teamDetails?.team?.leaders;
+            if (leaders && leaders[0]) {
+                const topCat = leaders[0];
+                const topPlayer = topCat.leaders[0];
+                sLabel = `${topPlayer.athlete.shortName} (${topCat.displayName})`;
+                sVal = topPlayer.displayValue;
+            } else {
+                // Otherwise use the record
+                sLabel = "Team Record";
+                sVal = record;
+            }
+
+            let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             
             if (game) {
                 const comp = game.competitions[0];
                 const me = comp.competitors.find(c => c.team.id === team.id);
                 const opp = comp.competitors.find(c => c.team.id !== team.id);
-                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
+                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo, record, sLabel, sVal };
             } else {
                 const next = teamDetails?.team?.nextEvent?.[0];
-                return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : "TBD" };
+                return { status: 'none', record, logo, sLabel, sVal, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : "TBD" };
             }
         }
 
@@ -121,8 +138,8 @@
                     <img class="team-logo" src="${data.logo}">
                     <div><div style="font-size:32px; font-weight:900;">${TEAMS[index].name}</div><div style="color:#888;">${data.record}</div></div>
                     <div class="stat-box">
-                        <div class="stat-label">${TEAMS[index].statLabel}</div>
-                        <div class="stat-value">${TEAMS[index].statVal}</div>
+                        <div class="stat-label">${data.sLabel}</div>
+                        <div class="stat-value">${data.sVal}</div>
                     </div>
                     ${data.status !== 'none' ? `<div style="font-size:56px; font-weight:900;">${data.myScore}-${data.oppScore}</div><div>${data.detail}</div>` : `<div><div style="color:#444; font-size:12px; font-weight:900;">NEXT</div><div style="font-size:24px; font-weight:900;">${data.nextOpponent}</div><div>${data.nextTime}</div></div>`}`;
                 container.appendChild(card);
@@ -142,16 +159,12 @@
                     const state = game.status.type.state;
                     const sit = comp.situation;
 
-                    // POWER PLAY / RED ZONE LOGIC
                     let alertClass = "";
                     let alertLabel = "";
                     if (state === 'in' && sit) {
                         if (league.l === 'nhl' && sit.onPowerPlay) {
                             alertClass = "ticker-alert-pulse";
                             alertLabel = '<span class="alert-badge">POWER PLAY</span>';
-                        } else if (league.l === 'nfl' && sit.isRedZone) {
-                            alertClass = "ticker-alert-pulse";
-                            alertLabel = '<span class="alert-badge">RED ZONE</span>';
                         }
                     }
 
