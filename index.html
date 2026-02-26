@@ -1,354 +1,292 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Scores</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live Scores</title>
 
-  <style>
-    body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; color:#fff; }
-    .wrap { height:100vh; display:flex; flex-direction:column; }
+<style>
+body {
+  margin:0;
+  background:#0b0f14;
+  font-family: Arial, Helvetica, sans-serif;
+  color:#fff;
+}
+.wrap {
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
 
-    /* Top: 4 static boards */
-    .mn {
-      display:grid;
-      grid-template-columns:repeat(4, 1fr);
-      gap:16px;
-      padding:20px;
-      box-sizing:border-box;
-      flex:1;
-      min-height:0;
-    }
-    .card {
-      background:#12161c;
-      border-radius:18px;
-      overflow:hidden;
-      box-shadow:0 0 20px rgba(0,0,0,0.5);
-      min-height:0;
-    }
-    iframe { width:100%; height:100%; border:0; }
+/* ---------- Top 4 static boards ---------- */
+.mn{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+  padding:20px;
+  flex:1;
+}
+.card{
+  background:#12161c;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 0 20px rgba(0,0,0,.5);
+}
+iframe{ width:100%; height:100%; border:0; }
 
-    /* Bottom ticker */
-    .tickerBar{
-      height:115px;                 /* BIGGER */
-      background:#0b0f14;           /* slightly lighter than pure black */
-      border-top:2px solid rgba(255,255,255,.12);
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-    }
-    .tickerTrack{
-      display:flex;
-      white-space:nowrap;
-      will-change:transform;
-      animation: tickerScroll 170s linear infinite;
-    }
-    @keyframes tickerScroll{
-      from{ transform:translateX(0); }
-      to{ transform:translateX(-50%); }
-    }
+/* ---------- Ticker Bar ---------- */
+.tickerBar{
+  height:140px;                 /* BIGGER for 1080p */
+  background:#0d131a;
+  border-top:2px solid rgba(255,255,255,.15);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+}
+.tickerTrack{
+  display:flex;
+  white-space:nowrap;
+  animation:tickerScroll 180s linear infinite;
+}
+@keyframes tickerScroll{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(-50%); }
+}
 
-    .lane{ display:flex; align-items:center; }
+.lane{ display:flex; align-items:center; }
 
-    .leagueHeader{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:12px 18px;
-      margin-right:28px;
-      border-radius:999px;
-      background:rgba(255,255,255,.12);
-      font: 900 30px/1 Arial, sans-serif;
-      letter-spacing:.8px;
-    }
+/* ---------- League Header ---------- */
+.leagueHeader{
+  display:inline-flex;
+  align-items:center;
+  padding:14px 22px;
+  margin-right:32px;
+  border-radius:999px;
+  background:rgba(255,255,255,.14);
+  font:900 38px/1 Arial;
+  letter-spacing:1px;
+}
 
-    .tickItem{
-      display:inline-flex;
-      align-items:center;
-      gap:12px;
-      padding-right:68px;
-      font: 900 38px/1 Arial, sans-serif; /* BIGGER */
-      color:#fff;
-    }
+/* ---------- Game Line ---------- */
+.tickItem{
+  display:inline-flex;
+  align-items:center;
+  gap:18px;
+  padding-right:90px;
+  font:900 52px/1 Arial;      /* MUCH BIGGER */
+}
 
-    .team{
-      display:inline-flex;
-      align-items:center;
-      gap:12px;
-    }
+/* ---------- Team ---------- */
+.team{
+  display:inline-flex;
+  align-items:center;
+  gap:16px;
+}
 
-    /* BIGGER + better contrast badge behind logos */
-    .logo{
-      width:44px;                   /* BIGGER */
-      height:44px;                  /* BIGGER */
-      object-fit:contain;
-      border-radius:10px;
+.logo{
+  width:56px;                 /* BIGGER */
+  height:56px;
+  object-fit:contain;
+  border-radius:12px;
+  background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.28);
+  padding:6px;
+  box-shadow:0 3px 14px rgba(0,0,0,.6);
+}
 
-      background:rgba(255,255,255,.18);
-      border:1px solid rgba(255,255,255,.22);
+.abbr{ font-weight:900; }
 
-      padding:5px;
-      box-sizing:border-box;
+.score{
+  font-weight:900;
+  font-size:56px;
+}
 
-      box-shadow:0 2px 10px rgba(0,0,0,.55);
-    }
+.sepDot{
+  opacity:.7;
+  margin:0 14px;
+  font-weight:900;
+}
 
-    .abbr{ font-weight:900; }
-    .score{ font-weight:900; opacity:.97; }
-    .sepDot{ opacity:.7; margin:0 12px; font-weight:900; }
+/* ---------- Status Area ---------- */
+.meta{
+  display:inline-flex;
+  align-items:center;
+  gap:18px;
+  margin-left:30px;
+  font:900 30px/1 Arial;
+}
 
-    .meta{
-      display:inline-flex;
-      align-items:center;
-      gap:12px;
-      margin-left:26px;
-      font: 900 24px/1 Arial, sans-serif;  /* slightly bigger */
-      opacity:.98;
-    }
-    .timeTag{
-      display:inline-flex;
-      align-items:center;
-      padding:7px 16px;
-      border-radius:999px;
-      background:rgba(255,255,255,.14);
-      border:1px solid rgba(255,255,255,.20);
-      color:#fff;
-      letter-spacing:.4px;
-    }
-    .statusText{
-      opacity:.82;
-      font-weight:900;
-      font-size:24px;
-      letter-spacing:.2px;
-    }
-    .liveTag{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 14px;
-      border-radius:999px;
-      background:rgba(255,0,0,.18);
-      border:1px solid rgba(255,0,0,.35);
-      color:#fff;
-    }
-    .liveDot{
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      background:#ff2b2b;
-      box-shadow:0 0 10px rgba(255,43,43,.9);
-    }
-    .finalTag{
-      display:inline-flex;
-      align-items:center;
-      padding:7px 14px;
-      border-radius:999px;
-      background:rgba(255,205,0,.18);
-      border:1px solid rgba(255,205,0,.35);
-      color:#ffd24d;
-      letter-spacing:.4px;
-    }
-    .divider{
-      display:inline-block;
-      width:2px;
-      height:44px;
-      background:rgba(255,255,255,.18);
-      margin:0 26px;
-      border-radius:2px;
-    }
-  </style>
+.timeTag{
+  padding:8px 18px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.25);
+}
+
+.statusText{
+  opacity:.85;
+}
+
+.liveTag{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 16px;
+  border-radius:999px;
+  background:rgba(255,0,0,.20);
+  border:1px solid rgba(255,0,0,.45);
+}
+
+.liveDot{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#ff2b2b;
+  box-shadow:0 0 14px rgba(255,43,43,.9);
+}
+
+.finalTag{
+  padding:8px 16px;
+  border-radius:999px;
+  background:rgba(255,205,0,.22);
+  border:1px solid rgba(255,205,0,.45);
+  color:#ffd24d;
+}
+
+.divider{
+  display:inline-block;
+  width:3px;
+  height:60px;
+  background:rgba(255,255,255,.2);
+  margin:0 30px;
+  border-radius:2px;
+}
+</style>
 </head>
 
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <!-- 4 static boards (ScoreStream) -->
-    <div class="mn">
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe></div>
-    </div>
+<div class="mn">
+  <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe></div>
+  <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe></div>
+  <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe></div>
+  <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe></div>
+</div>
 
-    <!-- Bottom ticker -->
-    <div class="tickerBar">
-      <div class="tickerTrack">
-        <span class="lane" id="lane1"></span>
-        <span class="lane" id="lane2"></span>
-      </div>
-    </div>
-
+<div class="tickerBar">
+  <div class="tickerTrack">
+    <span class="lane" id="lane1"></span>
+    <span class="lane" id="lane2"></span>
   </div>
+</div>
 
-  <script>
-    const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
+</div>
 
-    // ESPN teams endpoints for logos
-    const ESPN_TEAMS = {
-      nhl: "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
-      nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
-      mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
-      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams",
-    };
-    const logoMap = { nhl:{}, nba:{}, mlb:{}, nfl:{} };
+<script>
+const WORKER_URL="https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
-    function esc(s){
-      return String(s ?? "").replace(/[&<>"']/g, m => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-      }[m]));
-    }
+const ESPN_TEAMS={
+  nhl:"https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
+  nba:"https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
+  mlb:"https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
+  nfl:"https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+};
 
-    function setTickerHTML(html){
-      const a = document.getElementById("lane1");
-      const b = document.getElementById("lane2");
-      if (a) a.innerHTML = html;
-      if (b) b.innerHTML = html;
-    }
+const logoMap={nhl:{},nba:{},mlb:{},nfl:{}};
 
-    function toCTDateYYYYMMDD(){
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "America/Chicago",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-      }).formatToParts(new Date());
-      const y = parts.find(p=>p.type==="year").value;
-      const m = parts.find(p=>p.type==="month").value;
-      const d = parts.find(p=>p.type==="day").value;
-      return `${y}-${m}-${d}`;
-    }
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
-    function toCentral12h(iso){
-      try{
-        const d = new Date(iso);
-        const ct = d.toLocaleString("en-US", {
-          timeZone: "America/Chicago",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true
-        });
-        return `${ct} CT`;
-      }catch(e){
-        return "";
+function setTickerHTML(html){
+  document.getElementById("lane1").innerHTML=html;
+  document.getElementById("lane2").innerHTML=html;
+}
+
+function toCTDate(){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  return `${p.find(x=>x.type==="year").value}-${p.find(x=>x.type==="month").value}-${p.find(x=>x.type==="day").value}`;
+}
+
+function toCentral12h(iso){
+  try{
+    return new Date(iso).toLocaleString("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit",hour12:true})+" CT";
+  }catch{return "";}
+}
+
+async function loadLogos(l){
+  try{
+    const r=await fetch(ESPN_TEAMS[l]);
+    const j=await r.json();
+    const teams=j?.sports?.[0]?.leagues?.[0]?.teams||[];
+    for(const e of teams){
+      const t=e.team;
+      if(t?.abbreviation && t?.logos?.[0]?.href){
+        logoMap[l][t.abbreviation.toUpperCase()]=t.logos[0].href;
       }
     }
+  }catch{}
+}
 
-    async function loadEspnLogos(leagueKey){
-      try{
-        const r = await fetch(ESPN_TEAMS[leagueKey]);
-        if(!r.ok) throw new Error(`${leagueKey} teams HTTP ${r.status}`);
-        const j = await r.json();
-        const teams = j?.sports?.[0]?.leagues?.[0]?.teams || [];
-        for (const entry of teams){
-          const t = entry?.team;
-          const abbr = (t?.abbreviation || "").toUpperCase();
-          const logo = t?.logos?.[0]?.href || t?.logo || "";
-          if (abbr && logo) logoMap[leagueKey][abbr] = logo;
-        }
-      }catch(e){
-        console.log("Logo fetch failed for", leagueKey, e);
-      }
-    }
+function teamHTML(l,a){
+  const url=logoMap[l]?.[a];
+  return url?
+    `<span class="team"><img class="logo" src="${url}" alt="${a}"><span class="abbr">${a}</span></span>`:
+    `<span class="team"><span class="abbr">${a}</span></span>`;
+}
 
-    function teamHTML(leagueKey, abbr){
-      const A = (abbr || "").toUpperCase();
-      const url = logoMap?.[leagueKey]?.[A];
-      if(!url){
-        return `<span class="team"><span class="abbr">${esc(A)}</span></span>`;
-      }
-      return `
-        <span class="team">
-          <img class="logo" src="${esc(url)}" alt="${esc(A)}"
-               loading="lazy"
-               referrerpolicy="no-referrer"
-               onerror="this.style.display='none'">
-          <span class="abbr">${esc(A)}</span>
-        </span>
-      `;
-    }
+function formatGame(l,g){
+  const away=g.away?.abbr||"";
+  const home=g.home?.abbr||"";
+  const as=g.away?.score??"";
+  const hs=g.home?.score??"";
+  const state=(g.statusState||"").toLowerCase();
+  const detail=g.shortDetail||g.statusDetail||"";
+  const start=g.startTime||"";
 
-    function formatGame(leagueKey, g){
-      const away = g.away?.abbr || "";
-      const home = g.home?.abbr || "";
-      const awayScore = (g.away?.score ?? "").toString();
-      const homeScore = (g.home?.score ?? "").toString();
+  let meta="";
+  if(state==="pre"){
+    meta=`<span class="meta"><span class="timeTag">${toCentral12h(start)}</span></span>`;
+  }else if(state==="post"){
+    meta=`<span class="meta"><span class="finalTag">FINAL</span></span>`;
+  }else if(state==="in"){
+    meta=`<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(detail)}</span></span>`;
+  }
 
-      const state = (g.statusState || "").toLowerCase(); // pre/in/post
-      const detail = g.shortDetail || g.statusDetail || "";
-      const start = g.startTime || "";
+  return `
+  <span class="tickItem">
+    ${teamHTML(l,away)}
+    <span class="score">${as}</span>
+    <span class="sepDot">•</span>
+    <span class="score">${hs}</span>
+    ${teamHTML(l,home)}
+    ${meta}
+  </span>`;
+}
 
-      let metaHTML = "";
+function leagueSection(l,label,games){
+  if(!games.length) return "";
+  return `<span class="leagueHeader">${label}</span>`+
+         games.map(g=>formatGame(l,g)).join("")+
+         `<span class="divider"></span>`;
+}
 
-      if (state === "pre") {
-        const t = start ? toCentral12h(start) : "";
-        metaHTML = t
-          ? `<span class="meta"><span class="timeTag">${esc(t)}</span></span>`
-          : `<span class="meta"><span class="statusText">${esc(detail)}</span></span>`;
-      } else if (state === "post") {
-        metaHTML = `<span class="meta"><span class="finalTag">FINAL</span></span>`;
-      } else if (state === "in") {
-        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(detail)}</span></span>`;
-      } else if (detail) {
-        metaHTML = `<span class="meta"><span class="statusText">${esc(detail)}</span></span>`;
-      }
+async function refresh(){
+  const r=await fetch(WORKER_URL+"?date="+toCTDate()+"&t="+Date.now());
+  const j=await r.json();
+  let html="";
+  html+=leagueSection("nhl","NHL",j.nhl?.games||[]);
+  html+=leagueSection("nba","NBA",j.nba?.games||[]);
+  html+=leagueSection("mlb","MLB",j.mlb?.games||[]);
+  html+=leagueSection("nfl","NFL",j.nfl?.games||[]);
+  setTickerHTML(html||"<span class='tickItem'>No games today</span>");
+}
 
-      return `
-        <span class="tickItem">
-          ${teamHTML(leagueKey, away)}
-          <span class="score">${esc(awayScore)}</span>
-          <span class="sepDot">•</span>
-          <span class="score">${esc(homeScore)}</span>
-          ${teamHTML(leagueKey, home)}
-          ${metaHTML}
-        </span>
-      `;
-    }
-
-    function leagueSection(leagueKey, label, games){
-      if (!games || !games.length) return "";
-      const header = `<span class="leagueHeader">${esc(label)}</span>`;
-      const items = games.map(g => formatGame(leagueKey, g)).join("");
-      return header + items + `<span class="divider"></span>`;
-    }
-
-    async function refreshTicker(){
-      try{
-        const dateCT = toCTDateYYYYMMDD();
-        const r = await fetch(WORKER_URL + "?date=" + encodeURIComponent(dateCT) + "&t=" + Date.now());
-        if(!r.ok) throw new Error("Worker HTTP " + r.status);
-        const j = await r.json();
-
-        const nhl = j.nhl?.games || [];
-        const nba = j.nba?.games || [];
-        const mlb = j.mlb?.games || [];
-        const nfl = j.nfl?.games || [];
-
-        let html = "";
-        html += leagueSection("nhl", "NHL", nhl);
-        html += leagueSection("nba", "NBA", nba);
-        html += leagueSection("mlb", "MLB", mlb);
-        html += leagueSection("nfl", "NFL", nfl);
-
-        if (!html) html = `<span class="tickItem">No games today</span>`;
-        setTickerHTML(html);
-
-      }catch(e){
-        console.log("Ticker error:", e);
-        setTickerHTML(`<span class="tickItem">Ticker error (worker).</span>`);
-      }
-    }
-
-    (async () => {
-      setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
-      await Promise.all([
-        loadEspnLogos("nhl"),
-        loadEspnLogos("nba"),
-        loadEspnLogos("mlb"),
-        loadEspnLogos("nfl"),
-      ]);
-      await refreshTicker();
-      setInterval(refreshTicker, 30000);
-    })();
-  </script>
+(async()=>{
+  setTickerHTML("<span class='tickItem'>Loading scores...</span>");
+  await Promise.all(["nhl","nba","mlb","nfl"].map(loadLogos));
+  await refresh();
+  setInterval(refresh,30000);
+})();
+</script>
 </body>
 </html>
