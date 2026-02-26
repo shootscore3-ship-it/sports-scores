@@ -12,13 +12,9 @@
     font-family: Arial, Helvetica, sans-serif;
     color:#fff;
   }
-  .wrap{
-    height:100vh;
-    display:flex;
-    flex-direction:column;
-  }
+  .wrap{ height:100vh; display:flex; flex-direction:column; }
 
-  /* ===== TOP: Minnesota cards (BIGGER content now) ===== */
+  /* ===== TOP: Minnesota cards ===== */
   .mn{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
@@ -42,16 +38,13 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:16px 18px;                 /* bigger header */
+    padding:16px 18px;
     background:rgba(255,255,255,.06);
     border-bottom:1px solid rgba(255,255,255,.10);
   }
-  .mnTitle{
-    font:900 28px/1.1 Arial;           /* bigger title */
-    letter-spacing:.6px;
-  }
+  .mnTitle{ font:900 28px/1.1 Arial; letter-spacing:.6px; }
   .mnLeaguePill{
-    font:900 16px/1 Arial;             /* bigger pill */
+    font:900 16px/1 Arial;
     opacity:.9;
     padding:9px 12px;
     border-radius:999px;
@@ -59,50 +52,46 @@
     border:1px solid rgba(255,255,255,.16);
   }
 
+  /* IMPORTANT: top-aligned content now */
   .mnBody{
-    padding:18px;                      /* more padding */
+    padding:18px;
     display:flex;
     flex-direction:column;
     gap:16px;
     flex:1;
-    justify-content:center;
+    justify-content:flex-start;     /* <-- top */
+    min-height:0;
   }
 
-  /* No overlap layout */
+  /* No-overlap matchup row */
   .matchGrid{
     display:grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items:center;
     gap:18px;
   }
 
+  /* team side blocks are narrower now: logo + ABBR only */
   .side{
     display:flex;
     align-items:center;
     gap:14px;
     min-width:0;
+    overflow:hidden;               /* <-- prevents pushing into center */
   }
   .side.right{ justify-content:flex-end; }
 
   .abbr{
     font-weight:900;
-    font-size:28px;                    /* bigger */
+    font-size:30px;
     letter-spacing:.6px;
     white-space:nowrap;
-  }
-  .name{
-    font-weight:900;
-    font-size:20px;                    /* bigger */
-    opacity:.82;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    max-width:220px;                   /* more room */
+    flex:0 0 auto;
   }
 
-  /* Logo badge */
+  /* logo badge to keep visibility on black backgrounds */
   .logo{
-    width:56px;                        /* bigger */
+    width:56px;
     height:56px;
     object-fit:contain;
     border-radius:14px;
@@ -117,21 +106,16 @@
   .scoreBox{
     display:flex;
     align-items:center;
-    gap:14px;
-    padding:14px 18px;                 /* bigger */
+    gap:16px;
+    padding:14px 18px;
     border-radius:18px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.10);
+    flex:0 0 auto;
+    white-space:nowrap;
   }
-  .scoreBig{
-    font:900 46px/1 Arial;             /* bigger */
-    letter-spacing:.5px;
-  }
-  .dash{
-    font:900 38px/1 Arial;
-    opacity:.75;
-    padding:0 4px;
-  }
+  .scoreBig{ font:900 48px/1 Arial; letter-spacing:.5px; }
+  .dash{ font:900 40px/1 Arial; opacity:.75; padding:0 4px; }
 
   .statusLine{
     display:flex;
@@ -145,41 +129,51 @@
     gap:10px;
     padding:10px 16px;
     border-radius:999px;
-    font:900 20px/1 Arial;             /* bigger */
+    font:900 20px/1 Arial;
     letter-spacing:.3px;
   }
-  .pillLive{
-    background:rgba(255,0,0,.20);
-    border:1px solid rgba(255,0,0,.45);
-  }
+  .pillLive{ background:rgba(255,0,0,.20); border:1px solid rgba(255,0,0,.45); }
   .liveDot{
-    width:12px;
-    height:12px;
-    border-radius:50%;
-    background:#ff2b2b;
-    box-shadow:0 0 14px rgba(255,43,43,.95);
+    width:12px; height:12px; border-radius:50%;
+    background:#ff2b2b; box-shadow:0 0 14px rgba(255,43,43,.95);
   }
-  .pillFinal{
-    background:rgba(255,205,0,.22);
-    border:1px solid rgba(255,205,0,.45);
-    color:#ffd24d;
-  }
-  .pillTime{
-    background:rgba(255,255,255,.16);
-    border:1px solid rgba(255,255,255,.22);
-  }
-  .detailText{
-    font:900 20px/1.2 Arial;           /* bigger */
-    opacity:.85;
-  }
-  .mutedBig{
-    font:900 28px/1.2 Arial;           /* bigger "No game today" */
-    opacity:.88;
-  }
+  .pillFinal{ background:rgba(255,205,0,.22); border:1px solid rgba(255,205,0,.45); color:#ffd24d; }
+  .pillTime{ background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); }
 
-  /* ===== BOTTOM: Ticker (EVEN BIGGER) ===== */
+  .detailText{ font:900 20px/1.2 Arial; opacity:.85; }
+  .mutedBig{ font:900 28px/1.2 Arial; opacity:.88; }
+
+  /* bottom filler “stats” panel */
+  .statsPanel{
+    margin-top:auto;               /* <-- pushes panel to bottom */
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    padding:14px 16px;
+  }
+  .statsTitle{
+    font:900 18px/1 Arial;
+    opacity:.85;
+    margin-bottom:10px;
+    letter-spacing:.5px;
+  }
+  .statsGrid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px 14px;
+  }
+  .stat{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    font:900 18px/1.2 Arial;
+  }
+  .stat .k{ opacity:.70; }
+  .stat .v{ opacity:.95; text-align:right; }
+
+  /* ===== BOTTOM: Ticker (keep size you liked) ===== */
   .tickerBar{
-    height:220px;                      /* bigger */
+    height:220px;
     background:#0d131a;
     border-top:2px solid rgba(255,255,255,.15);
     overflow:hidden;
@@ -205,7 +199,7 @@
     margin-right:40px;
     border-radius:999px;
     background:rgba(255,255,255,.14);
-    font:900 64px/1 Arial;            /* bigger */
+    font:900 64px/1 Arial;
     letter-spacing:1px;
   }
 
@@ -214,23 +208,13 @@
     align-items:center;
     gap:26px;
     padding-right:140px;
-    font:900 84px/1 Arial;            /* bigger */
+    font:900 84px/1 Arial;
   }
-
-  .tScore{
-    font-weight:900;
-    font-size:92px;
-  }
-  .sepDot{
-    opacity:.7;
-    margin:0 20px;
-    font-weight:900;
-    font-size:82px;
-  }
+  .tScore{ font-weight:900; font-size:92px; }
+  .sepDot{ opacity:.7; margin:0 20px; font-weight:900; font-size:82px; }
 
   .tlogo{
-    width:76px;                       /* bigger */
-    height:76px;
+    width:76px; height:76px;
     object-fit:contain;
     border-radius:16px;
     background:rgba(255,255,255,.22);
@@ -245,7 +229,7 @@
     align-items:center;
     gap:22px;
     margin-left:44px;
-    font:900 44px/1 Arial;            /* bigger */
+    font:900 44px/1 Arial;
   }
   .timeTag{
     padding:14px 26px;
@@ -283,8 +267,6 @@
 
 <body>
 <div class="wrap">
-
-  <!-- Minnesota cards -->
   <div class="mn">
     <div class="mnCard" id="card-nhl"></div>
     <div class="mnCard" id="card-nba"></div>
@@ -292,14 +274,12 @@
     <div class="mnCard" id="card-nfl"></div>
   </div>
 
-  <!-- Ticker -->
   <div class="tickerBar">
     <div class="tickerTrack">
       <span class="lane" id="lane1"></span>
       <span class="lane" id="lane2"></span>
     </div>
   </div>
-
 </div>
 
 <script>
@@ -311,7 +291,9 @@
     mlb:"https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
     nfl:"https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams"
   };
+
   const logoMap = { nhl:{}, nba:{}, mlb:{}, nfl:{} };
+  const teamMeta = { nhl:{}, nba:{}, mlb:{}, nfl:{} }; // record, etc.
 
   function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
@@ -324,10 +306,7 @@
     const da = parts.find(p=>p.type==="day").value;
     return `${y}-${m}-${da}`;
   }
-
-  function addDaysCT(dateObj, days){
-    return new Date(dateObj.getTime() + days*86400000);
-  }
+  function addDaysCT(dateObj, days){ return new Date(dateObj.getTime() + days*86400000); }
 
   function toCentral12h(iso){
     try{
@@ -340,7 +319,7 @@
     }catch(e){ return ""; }
   }
 
-  async function loadEspnLogos(league){
+  async function loadEspnTeams(league){
     try{
       const r = await fetch(ESPN_TEAMS[league]);
       if(!r.ok) throw new Error("teams " + r.status);
@@ -351,9 +330,18 @@
         const abbr = (t?.abbreviation || "").toUpperCase();
         const logo = t?.logos?.[0]?.href || t?.logo || "";
         if(abbr && logo) logoMap[league][abbr] = logo;
+
+        // record summary if available
+        let recordSummary = "";
+        try{
+          const items = t?.record?.items || [];
+          const total = items.find(x => x?.type === "total") || items[0];
+          recordSummary = total?.summary || t?.recordSummary || "";
+        }catch(e){}
+        if(abbr && recordSummary) teamMeta[league][abbr] = { record: recordSummary };
       }
-    } catch(e){
-      console.log("Logo fetch failed for", league, e);
+    }catch(e){
+      console.log("Teams fetch failed for", league, e);
     }
   }
 
@@ -369,7 +357,6 @@
     const A = (abbr||"").toUpperCase();
     return (g?.home?.abbr || "").toUpperCase() === A || (g?.away?.abbr || "").toUpperCase() === A;
   }
-
   function findGameForTeam(games, teamAbbr){
     return (games || []).find(g => isTeamInGame(g, teamAbbr));
   }
@@ -401,7 +388,27 @@
     `;
   }
 
-  function renderMnGame(leagueKey, title, leagueLabel, game){
+  function statsPanelHTML(leagueKey, teamAbbr, nextGame){
+    const record = teamMeta?.[leagueKey]?.[teamAbbr]?.record || "";
+    let nextText = "";
+    if(nextGame){
+      const away = (nextGame.away?.abbr || "").toUpperCase();
+      const home = (nextGame.home?.abbr || "").toUpperCase();
+      const when = nextGame.startTime ? toCentral12h(nextGame.startTime) : "";
+      nextText = `${away} @ ${home}${when ? " • " + when : ""}`;
+    }
+    return `
+      <div class="statsPanel">
+        <div class="statsTitle">TEAM INFO</div>
+        <div class="statsGrid">
+          <div class="stat"><span class="k">Record</span><span class="v">${esc(record || "—")}</span></div>
+          <div class="stat"><span class="k">Next</span><span class="v">${esc(nextText || "—")}</span></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMnGame(leagueKey, title, leagueLabel, teamAbbr, game, nextGame){
     const away = (game.away?.abbr || "").toUpperCase();
     const home = (game.home?.abbr || "").toUpperCase();
     const awayScore = (game.away?.score ?? "").toString();
@@ -436,10 +443,7 @@
         <div class="matchGrid">
           <div class="side">
             ${logoHTML(leagueKey, away, "logo")}
-            <div style="min-width:0;">
-              <div class="abbr">${esc(away)}</div>
-              <div class="name">${esc(away)}</div>
-            </div>
+            <div class="abbr">${esc(away)}</div>
           </div>
 
           <div class="scoreBox">
@@ -449,42 +453,34 @@
           </div>
 
           <div class="side right">
-            <div style="min-width:0; text-align:right;">
-              <div class="abbr">${esc(home)}</div>
-              <div class="name" style="margin-left:auto;">${esc(home)}</div>
-            </div>
+            <div class="abbr">${esc(home)}</div>
             ${logoHTML(leagueKey, home, "logo")}
           </div>
         </div>
 
-        <div class="statusLine">
-          ${statusHTML}
-        </div>
+        <div class="statusLine">${statusHTML}</div>
+
+        ${statsPanelHTML(leagueKey, teamAbbr, nextGame)}
       </div>
     `;
   }
 
-  function renderMnNoGame(leagueKey, title, leagueLabel, nextGame){
-    let nextLine = `<div class="mutedBig">No game today</div>`;
+  function renderMnNoGame(leagueKey, title, leagueLabel, teamAbbr, nextGame){
+    let line = `<div class="mutedBig">No game today</div>`;
     if(nextGame){
       const away = (nextGame.away?.abbr || "").toUpperCase();
       const home = (nextGame.home?.abbr || "").toUpperCase();
       const when = nextGame.startTime ? toCentral12h(nextGame.startTime) : "";
-      nextLine = `
-        <div class="mutedBig">No game today</div>
-        <div class="detailText" style="font-size:22px;">
-          Next: ${esc(away)} @ ${esc(home)}${when ? " • " + esc(when) : ""}
-        </div>
-      `;
+      line += `<div class="detailText" style="font-size:22px;">Next: ${esc(away)} @ ${esc(home)}${when ? " • " + esc(when) : ""}</div>`;
     }
-
     return `
       <div class="mnHeader">
         <div class="mnTitle">${esc(title)}</div>
         <div class="mnLeaguePill">${esc(leagueLabel)}</div>
       </div>
       <div class="mnBody">
-        ${nextLine}
+        ${line}
+        ${statsPanelHTML(leagueKey, teamAbbr, nextGame)}
       </div>
     `;
   }
@@ -561,27 +557,25 @@
       { key:"nfl", title:"Minnesota Vikings", league:"NFL", games:nfl, team:"MIN" },
     ];
 
-    // shells
     for(const c of configs){
       const el = document.getElementById(`card-${c.key}`);
       if(el) el.innerHTML = buildMnCardShell(c.title, c.league);
     }
 
-    // render
     for(const c of configs){
       const el = document.getElementById(`card-${c.key}`);
       if(!el) continue;
 
       const todayGame = findGameForTeam(c.games, c.team);
+      const next = await findNextGame(c.key, c.team, 14);
+
       if(todayGame){
-        el.innerHTML = renderMnGame(c.key, c.title, c.league, todayGame);
+        el.innerHTML = renderMnGame(c.key, c.title, c.league, c.team, todayGame, next);
       }else{
-        const next = await findNextGame(c.key, c.team, 14);
-        el.innerHTML = renderMnNoGame(c.key, c.title, c.league, next);
+        el.innerHTML = renderMnNoGame(c.key, c.title, c.league, c.team, next);
       }
     }
 
-    // ticker
     let html = "";
     html += leagueSection("nhl","NHL", nhl);
     html += leagueSection("nba","NBA", nba);
@@ -594,10 +588,10 @@
     setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
 
     await Promise.all([
-      loadEspnLogos("nhl"),
-      loadEspnLogos("nba"),
-      loadEspnLogos("mlb"),
-      loadEspnLogos("nfl"),
+      loadEspnTeams("nhl"),
+      loadEspnTeams("nba"),
+      loadEspnTeams("mlb"),
+      loadEspnTeams("nfl"),
     ]);
 
     try{
