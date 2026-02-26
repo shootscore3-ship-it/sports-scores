@@ -18,20 +18,20 @@
     flex-direction:column;
   }
 
-  /* ===== TOP: Minnesota cards (slightly smaller now) ===== */
+  /* ===== TOP: Minnesota cards (BIGGER content now) ===== */
   .mn{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
-    gap:16px;
-    padding:16px 18px 12px;
+    gap:18px;
+    padding:18px 20px 14px;
     box-sizing:border-box;
     flex:1;
     min-height:0;
   }
   .mnCard{
     background:#11161d;
-    border-radius:18px;
-    box-shadow:0 0 18px rgba(0,0,0,.55);
+    border-radius:20px;
+    box-shadow:0 0 20px rgba(0,0,0,.55);
     border:1px solid rgba(255,255,255,.10);
     overflow:hidden;
     display:flex;
@@ -42,74 +42,74 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:12px 14px;
+    padding:16px 18px;                 /* bigger header */
     background:rgba(255,255,255,.06);
     border-bottom:1px solid rgba(255,255,255,.10);
   }
   .mnTitle{
-    font:900 22px/1.1 Arial;
+    font:900 28px/1.1 Arial;           /* bigger title */
     letter-spacing:.6px;
   }
   .mnLeaguePill{
-    font:900 14px/1 Arial;
+    font:900 16px/1 Arial;             /* bigger pill */
     opacity:.9;
-    padding:7px 10px;
+    padding:9px 12px;
     border-radius:999px;
     background:rgba(255,255,255,.12);
     border:1px solid rgba(255,255,255,.16);
   }
 
   .mnBody{
-    padding:14px;
+    padding:18px;                      /* more padding */
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:16px;
     flex:1;
     justify-content:center;
   }
 
-  /* New layout so NOTHING overlaps */
+  /* No overlap layout */
   .matchGrid{
     display:grid;
     grid-template-columns: 1fr auto 1fr;
     align-items:center;
-    gap:14px;
+    gap:18px;
   }
 
   .side{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:14px;
     min-width:0;
   }
   .side.right{ justify-content:flex-end; }
 
   .abbr{
     font-weight:900;
-    font-size:22px;
-    letter-spacing:.5px;
+    font-size:28px;                    /* bigger */
+    letter-spacing:.6px;
     white-space:nowrap;
   }
   .name{
     font-weight:900;
-    font-size:16px;
+    font-size:20px;                    /* bigger */
     opacity:.82;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-    max-width:160px;
+    max-width:220px;                   /* more room */
   }
 
-  /* Logo badge to prevent black-on-black issues */
+  /* Logo badge */
   .logo{
-    width:44px;
-    height:44px;
+    width:56px;                        /* bigger */
+    height:56px;
     object-fit:contain;
-    border-radius:12px;
+    border-radius:14px;
     background:rgba(255,255,255,.22);
     border:1px solid rgba(255,255,255,.28);
-    padding:6px;
-    box-shadow:0 2px 12px rgba(0,0,0,.60);
+    padding:7px;
+    box-shadow:0 3px 14px rgba(0,0,0,.60);
     box-sizing:border-box;
     flex:0 0 auto;
   }
@@ -117,35 +117,35 @@
   .scoreBox{
     display:flex;
     align-items:center;
-    gap:10px;
-    padding:10px 14px;
-    border-radius:16px;
+    gap:14px;
+    padding:14px 18px;                 /* bigger */
+    border-radius:18px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.10);
   }
   .scoreBig{
-    font:900 34px/1 Arial;
+    font:900 46px/1 Arial;             /* bigger */
     letter-spacing:.5px;
   }
   .dash{
-    font:900 28px/1 Arial;
+    font:900 38px/1 Arial;
     opacity:.75;
-    padding:0 2px;
+    padding:0 4px;
   }
 
   .statusLine{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:12px;
     flex-wrap:wrap;
   }
   .pill{
     display:inline-flex;
     align-items:center;
-    gap:8px;
-    padding:8px 12px;
+    gap:10px;
+    padding:10px 16px;
     border-radius:999px;
-    font:900 16px/1 Arial;
+    font:900 20px/1 Arial;             /* bigger */
     letter-spacing:.3px;
   }
   .pillLive{
@@ -153,8 +153,8 @@
     border:1px solid rgba(255,0,0,.45);
   }
   .liveDot{
-    width:10px;
-    height:10px;
+    width:12px;
+    height:12px;
     border-radius:50%;
     background:#ff2b2b;
     box-shadow:0 0 14px rgba(255,43,43,.95);
@@ -169,17 +169,17 @@
     border:1px solid rgba(255,255,255,.22);
   }
   .detailText{
-    font:900 16px/1.2 Arial;
+    font:900 20px/1.2 Arial;           /* bigger */
     opacity:.85;
   }
   .mutedBig{
-    font:900 22px/1.2 Arial;
-    opacity:.85;
+    font:900 28px/1.2 Arial;           /* bigger "No game today" */
+    opacity:.88;
   }
 
-  /* ===== BOTTOM: Ticker (BIGGER now) ===== */
+  /* ===== BOTTOM: Ticker (EVEN BIGGER) ===== */
   .tickerBar{
-    height:190px;                 /* BIGGER */
+    height:220px;                      /* bigger */
     background:#0d131a;
     border-top:2px solid rgba(255,255,255,.15);
     overflow:hidden;
@@ -201,42 +201,41 @@
   .leagueHeader{
     display:inline-flex;
     align-items:center;
-    padding:18px 28px;
-    margin-right:36px;
+    padding:20px 32px;
+    margin-right:40px;
     border-radius:999px;
     background:rgba(255,255,255,.14);
-    font:900 54px/1 Arial;        /* BIGGER */
+    font:900 64px/1 Arial;            /* bigger */
     letter-spacing:1px;
   }
 
   .tickItem{
     display:inline-flex;
     align-items:center;
-    gap:22px;
-    padding-right:120px;
-    font:900 72px/1 Arial;        /* BIGGER */
+    gap:26px;
+    padding-right:140px;
+    font:900 84px/1 Arial;            /* bigger */
   }
 
   .tScore{
     font-weight:900;
-    font-size:78px;
+    font-size:92px;
   }
   .sepDot{
     opacity:.7;
-    margin:0 18px;
+    margin:0 20px;
     font-weight:900;
-    font-size:68px;
+    font-size:82px;
   }
 
-  /* ticker logo bigger too */
   .tlogo{
-    width:64px;
-    height:64px;
+    width:76px;                       /* bigger */
+    height:76px;
     object-fit:contain;
-    border-radius:14px;
+    border-radius:16px;
     background:rgba(255,255,255,.22);
     border:1px solid rgba(255,255,255,.28);
-    padding:7px;
+    padding:8px;
     box-shadow:0 3px 14px rgba(0,0,0,.60);
     box-sizing:border-box;
   }
@@ -244,30 +243,28 @@
   .meta{
     display:inline-flex;
     align-items:center;
-    gap:18px;
-    margin-left:38px;
-    font:900 38px/1 Arial;        /* BIGGER */
+    gap:22px;
+    margin-left:44px;
+    font:900 44px/1 Arial;            /* bigger */
   }
   .timeTag{
-    padding:12px 22px;
+    padding:14px 26px;
     border-radius:999px;
     background:rgba(255,255,255,.18);
     border:1px solid rgba(255,255,255,.25);
   }
-  .statusText{
-    opacity:.85;
-  }
+  .statusText{ opacity:.85; }
   .liveTag{
     display:inline-flex;
     align-items:center;
     gap:12px;
-    padding:12px 20px;
+    padding:14px 22px;
     border-radius:999px;
     background:rgba(255,0,0,.20);
     border:1px solid rgba(255,0,0,.45);
   }
   .finalTag{
-    padding:12px 20px;
+    padding:14px 22px;
     border-radius:999px;
     background:rgba(255,205,0,.22);
     border:1px solid rgba(255,205,0,.45);
@@ -276,9 +273,9 @@
   .divider{
     display:inline-block;
     width:4px;
-    height:92px;
+    height:104px;
     background:rgba(255,255,255,.2);
-    margin:0 38px;
+    margin:0 44px;
     border-radius:2px;
   }
 </style>
@@ -287,7 +284,7 @@
 <body>
 <div class="wrap">
 
-  <!-- Minnesota custom cards -->
+  <!-- Minnesota cards -->
   <div class="mn">
     <div class="mnCard" id="card-nhl"></div>
     <div class="mnCard" id="card-nba"></div>
@@ -329,9 +326,7 @@
   }
 
   function addDaysCT(dateObj, days){
-    // add days in UTC then format in CT (good enough for day stepping)
-    const d = new Date(dateObj.getTime() + days*86400000);
-    return d;
+    return new Date(dateObj.getTime() + days*86400000);
   }
 
   function toCentral12h(iso){
@@ -342,9 +337,7 @@
         hour:"numeric", minute:"2-digit", hour12:true
       });
       return `${ct} CT`;
-    }catch(e){
-      return "";
-    }
+    }catch(e){ return ""; }
   }
 
   async function loadEspnLogos(league){
@@ -364,7 +357,7 @@
     }
   }
 
-  function logoHTML(league, abbr, cls="logo"){
+  function logoHTML(league, abbr, cls){
     const A = (abbr||"").toUpperCase();
     const url = logoMap?.[league]?.[A];
     if(!url) return "";
@@ -377,12 +370,10 @@
     return (g?.home?.abbr || "").toUpperCase() === A || (g?.away?.abbr || "").toUpperCase() === A;
   }
 
-  // Find the team's game for a given league from a games array
   function findGameForTeam(games, teamAbbr){
     return (games || []).find(g => isTeamInGame(g, teamAbbr));
   }
 
-  // Look ahead for the next game (up to maxDays)
   async function findNextGame(leagueKey, teamAbbr, maxDays=14){
     const now = new Date();
     for(let i=1; i<=maxDays; i++){
@@ -393,18 +384,18 @@
       const j = await r.json();
       const games = j?.[leagueKey]?.games || [];
       const g = findGameForTeam(games, teamAbbr);
-      if(g) return { game: g, dateStr };
+      if(g) return g;
     }
     return null;
   }
 
-  function buildMnCardShell(leagueKey, title, leagueLabel){
+  function buildMnCardShell(title, leagueLabel){
     return `
       <div class="mnHeader">
         <div class="mnTitle">${esc(title)}</div>
         <div class="mnLeaguePill">${esc(leagueLabel)}</div>
       </div>
-      <div class="mnBody" id="mnBody-${leagueKey}">
+      <div class="mnBody">
         <div class="mutedBig">Loading…</div>
       </div>
     `;
@@ -475,14 +466,13 @@
 
   function renderMnNoGame(leagueKey, title, leagueLabel, nextGame){
     let nextLine = `<div class="mutedBig">No game today</div>`;
-    if(nextGame && nextGame.game){
-      const g = nextGame.game;
-      const away = (g.away?.abbr || "").toUpperCase();
-      const home = (g.home?.abbr || "").toUpperCase();
-      const when = g.startTime ? toCentral12h(g.startTime) : "";
+    if(nextGame){
+      const away = (nextGame.away?.abbr || "").toUpperCase();
+      const home = (nextGame.home?.abbr || "").toUpperCase();
+      const when = nextGame.startTime ? toCentral12h(nextGame.startTime) : "";
       nextLine = `
         <div class="mutedBig">No game today</div>
-        <div class="detailText" style="font-size:18px;">
+        <div class="detailText" style="font-size:22px;">
           Next: ${esc(away)} @ ${esc(home)}${when ? " • " + esc(when) : ""}
         </div>
       `;
@@ -564,44 +554,39 @@
     const mlb = j.mlb?.games || [];
     const nfl = j.nfl?.games || [];
 
-    // Minnesota cards (team abbreviations)
-    const teamByLeague = { nhl:"MIN", nba:"MIN", mlb:"MIN", nfl:"MIN" };
-
     const configs = [
-      { key:"nhl", title:"Minnesota Wild", league:"NHL", games:nhl },
-      { key:"nba", title:"Minnesota Timberwolves", league:"NBA", games:nba },
-      { key:"mlb", title:"Minnesota Twins", league:"MLB", games:mlb },
-      { key:"nfl", title:"Minnesota Vikings", league:"NFL", games:nfl },
+      { key:"nhl", title:"Minnesota Wild", league:"NHL", games:nhl, team:"MIN" },
+      { key:"nba", title:"Minnesota Timberwolves", league:"NBA", games:nba, team:"MIN" },
+      { key:"mlb", title:"Minnesota Twins", league:"MLB", games:mlb, team:"MIN" },
+      { key:"nfl", title:"Minnesota Vikings", league:"NFL", games:nfl, team:"MIN" },
     ];
 
-    // Set shells fast
+    // shells
     for(const c of configs){
       const el = document.getElementById(`card-${c.key}`);
-      if(el) el.innerHTML = buildMnCardShell(c.key, c.title, c.league);
+      if(el) el.innerHTML = buildMnCardShell(c.title, c.league);
     }
 
-    // Render actual or next game
+    // render
     for(const c of configs){
       const el = document.getElementById(`card-${c.key}`);
       if(!el) continue;
 
-      const todayGame = findGameForTeam(c.games, teamByLeague[c.key]);
+      const todayGame = findGameForTeam(c.games, c.team);
       if(todayGame){
         el.innerHTML = renderMnGame(c.key, c.title, c.league, todayGame);
       }else{
-        // look ahead for next game
-        const next = await findNextGame(c.key, teamByLeague[c.key], 14);
+        const next = await findNextGame(c.key, c.team, 14);
         el.innerHTML = renderMnNoGame(c.key, c.title, c.league, next);
       }
     }
 
-    // Ticker
+    // ticker
     let html = "";
     html += leagueSection("nhl","NHL", nhl);
     html += leagueSection("nba","NBA", nba);
     html += leagueSection("mlb","MLB", mlb);
     html += leagueSection("nfl","NFL", nfl);
-
     setTickerHTML(html || `<span class="tickItem">No games today</span>`);
   }
 
@@ -622,7 +607,6 @@
       setTickerHTML(`<span class="tickItem">Ticker error (worker).</span>`);
     }
 
-    // refresh today’s scores often
     setInterval(() => refreshAll().catch(console.log), 30000);
   })();
 </script>
