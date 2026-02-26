@@ -7,288 +7,103 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:#050505; --card-bg:#111111; --text:#ffffff;
-      --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
-      --muted:#8b8b8b;
+      --bg: #050505; --card-bg: #111111; --text: #ffffff;
+      --live: #ff3b3b; --final-gold: #D4AF37; --accent: #1a1a1a;
     }
 
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font-family:'Inter',sans-serif; width:100vw; height:100vh;
-      overflow:hidden; display:flex; flex-direction:column;
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: 'Inter', sans-serif; width: 100vw; height: 100vh;
+      overflow: hidden; display: flex; flex-direction: column;
     }
 
-    .dashboard{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:20px;
-      padding:20px;
-      flex:1;
-      box-sizing:border-box;
-      max-height:calc(100vh - 245px);
+    .dashboard {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+      padding: 20px; flex: 1; box-sizing: border-box;
+      max-height: calc(100vh - 215px);
     }
 
-    .card{
-      background:var(--card-bg);
-      border-radius:20px;
-      padding:26px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      border:2px solid #222;
-      text-align:center;
-      justify-content:flex-start;
-      position:relative;
-      overflow:hidden;
+    .card {
+      background: var(--card-bg); border-radius: 20px; padding: 25px;
+      display: flex; flex-direction: column; align-items: center;
+      border: 2px solid #222; text-align: center; justify-content: space-between;
     }
 
-    .topRow{
-      width:100%;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:12px;
+    .team-logo { width: 140px; height: 140px; object-fit: contain; }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px; border-radius: 12px; width: 90%; margin: 10px 0;
+    }
+    .stat-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900; }
+    .stat-value { color: var(--final-gold); font-size: 17px; font-weight: 800; margin-top: 4px; line-height: 1.2; }
+
+    .status-badge { font-size: 18px; font-weight: 900; padding: 6px 15px; border-radius: 6px; border: 1px solid #222; }
+    .status-in { background: var(--live); animation: pulse 2s infinite; color: #fff; border-color: rgba(255,59,59,.5); }
+    .status-post { color: var(--final-gold); border: 1px solid var(--final-gold); background: rgba(212,175,55,.06); }
+    .status-pre { color: #ddd; border: 1px solid #444; background: rgba(255,255,255,.04); }
+    .status-none { color: #777; border: 1px solid #222; background: rgba(255,255,255,.02); }
+
+    /* TICKER STYLES */
+    .ticker-wrap {
+      background: #000; height: 215px; border-top: 6px solid var(--accent);
+      display: flex; align-items: center; overflow: hidden;
     }
 
-    .teamTitle{
-      font-size:34px;
-      font-weight:900;
-      line-height:1.05;
-      text-align:left;
+    /* slower + smoother */
+    .ticker-move { display: flex; white-space: nowrap; animation: ticker-scroll 170s linear infinite; }
+
+    .ticker-item {
+      display: flex; align-items: center; height: 175px;
+      background: #151515; margin: 0 40px; padding: 0 50px;
+      border-radius: 20px; font-size: 72px; font-weight: 900;
+      border: 2px solid rgba(255,255,255,.08);
+      gap: 18px;
     }
 
-    .leaguePill{
-      background:#1b1b1b;
-      border:1px solid #2a2a2a;
-      padding:6px 14px;
-      border-radius:999px;
-      font-weight:900;
-      font-size:14px;
-      letter-spacing:.06em;
-      color:#cfcfcf;
+    .ticker-item.live { border-color: rgba(255,59,59,.5); box-shadow: 0 0 26px rgba(255,59,59,.10); }
+    .ticker-item.final { border-color: rgba(212,175,55,.45); box-shadow: 0 0 22px rgba(212,175,55,.08); }
+
+    .ticker-alert-pulse { border: 4px solid var(--live) !important; animation: alert-glow 1s infinite alternate !important; }
+    @keyframes alert-glow {
+      from { box-shadow: 0 0 10px rgba(255, 59, 59, 0.2); }
+      to   { box-shadow: 0 0 50px rgba(255, 59, 59, 0.8); }
     }
 
-    .status-badge{
-      font-size:18px;
-      font-weight:900;
-      padding:6px 14px;
-      border-radius:10px;
-      border:1px solid #2a2a2a;
-      background:#0e0e0e;
-      margin:8px 0 12px;
-    }
-    .status-in{ background:rgba(255,59,59,.18); border-color:rgba(255,59,59,.5); color:var(--live); animation:pulse 1.8s infinite; }
-    .status-post{ background:rgba(212,175,55,.16); border-color:rgba(212,175,55,.5); color:var(--final-gold); }
-    .status-pre{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14); color:#d8d8d8; }
-    .status-none{ background:rgba(255,255,255,.03); border-color:rgba(255,255,255,.10); color:#b0b0b0; }
+    .alert-badge { background: var(--live); color: white; font-size: 24px; padding: 4px 12px; border-radius: 4px; margin-left: 20px; }
 
-    .team-logo{
-      width:120px; height:120px; object-fit:contain;
-      margin:8px 0 10px;
-      filter: drop-shadow(0 6px 16px rgba(0,0,0,.45));
-    }
+    .ticker-logo-container { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin: 0 10px; }
+    .ticker-team-logo { width: 115px; height: 115px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,.45)); }
+    .league-badge { background: #222; color: #888; font-size: 24px; padding: 5px 15px; border-radius: 5px; margin-right: 10px; }
 
-    .recordLine{
-      color:var(--muted);
-      font-weight:800;
-      font-size:16px;
-      margin-bottom:16px;
+    /* Only one status indicator per game */
+    .state-badge {
+      font-size: 26px; font-weight: 900;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color: #cfcfcf;
+      margin-left: 12px;
+      letter-spacing: .08em;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
     }
+    .state-badge.live { background: rgba(255,59,59,.18); border-color: rgba(255,59,59,.55); color: var(--live); }
+    .state-badge.final { background: rgba(212,175,55,.14); border-color: rgba(212,175,55,.55); color: var(--final-gold); }
+    .state-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--live); box-shadow: 0 0 16px rgba(255,59,59,.55); }
 
-    .midBlock{
-      width:100%;
-      margin-top:10px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      flex:1;
-      justify-content:center;
+    .meta-time {
+      font-size: 34px;
+      font-weight: 900;
+      color: #666;
+      margin-left: 18px;
+      white-space: nowrap;
     }
 
-    .scoreRow{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:16px;
-      margin-top:8px;
-    }
-
-    .miniLogo{
-      width:52px; height:52px; object-fit:contain;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:14px;
-      padding:8px;
-    }
-
-    .scoreBox{
-      font-size:56px;
-      font-weight:900;
-      padding:10px 18px;
-      border-radius:16px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.12);
-      min-width:170px;
-    }
-
-    .detailLine{
-      margin-top:10px;
-      font-size:18px;
-      font-weight:800;
-      color:#cfcfcf;
-    }
-
-    .nextBlock{
-      margin-top:8px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      align-items:center;
-    }
-
-    .nextLabel{
-      color:#666;
-      font-size:12px;
-      font-weight:900;
-      letter-spacing:.16em;
-    }
-    .nextText{
-      font-size:22px;
-      font-weight:900;
-    }
-    .nextTime{
-      color:#cfcfcf;
-      font-weight:800;
-      font-size:18px;
-    }
-
-    .stat-box{
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.08);
-      padding:12px;
-      border-radius:14px;
-      width:100%;
-      box-sizing:border-box;
-      margin-top:6px;
-    }
-    .stat-label{
-      color:#888;
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:1px;
-      font-weight:900;
-    }
-    .stat-value{
-      color:var(--final-gold);
-      font-size:18px;
-      font-weight:900;
-      margin-top:5px;
-      line-height:1.15;
-    }
-
-    .footerSnapshot{
-      width:100%;
-      margin-top:14px;
-      display:flex;
-      gap:10px;
-      justify-content:space-between;
-    }
-    .snap{
-      flex:1;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.08);
-      padding:12px;
-      border-radius:14px;
-      text-align:left;
-    }
-    .snap .k{ color:#9a9a9a; font-size:11px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;}
-    .snap .v{ margin-top:6px; font-weight:900; font-size:18px; color:#f0f0f0;}
-
-    /* ====== TICKER ====== */
-    .ticker-wrap{
-      background:#000;
-      height:245px;
-      border-top:6px solid var(--accent);
-      display:flex;
-      align-items:center;
-      overflow:hidden;
-    }
-    .ticker-move{
-      display:flex;
-      white-space:nowrap;
-      will-change:transform;
-      animation: ticker-scroll 170s linear infinite; /* SLOWER */
-    }
-
-    .ticker-item{
-      display:flex;
-      align-items:center;
-      height:195px;
-      background:#151515;
-      margin:0 44px;
-      padding:0 56px;
-      border-radius:22px;
-      font-size:84px; /* BIGGER */
-      font-weight:900;
-      border:2px solid rgba(255,255,255,.08);
-      gap:18px;
-    }
-
-    .ticker-item.live{
-      border-color:rgba(255,59,59,.45);
-      box-shadow:0 0 34px rgba(255,59,59,.10);
-    }
-    .ticker-item.final{
-      border-color:rgba(212,175,55,.35);
-      box-shadow:0 0 34px rgba(212,175,55,.08);
-    }
-
-    .badge{
-      font-size:26px;
-      font-weight:900;
-      padding:8px 14px;
-      border-radius:10px;
-      background:#1d1d1d;
-      border:1px solid rgba(255,255,255,.14);
-      color:#cfcfcf;
-      letter-spacing:.08em;
-    }
-    .badge.live{ background:rgba(255,59,59,.18); border-color:rgba(255,59,59,.5); color:var(--live); }
-    .badge.final{ background:rgba(212,175,55,.16); border-color:rgba(212,175,55,.5); color:var(--final-gold); }
-
-    .league-badge{
-      background:#222;
-      color:#9a9a9a;
-      font-size:26px;
-      font-weight:900;
-      padding:7px 16px;
-      border-radius:10px;
-      margin-right:6px;
-      letter-spacing:.08em;
-    }
-
-    .ticker-logo{
-      width:110px; height:110px; object-fit:contain;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      padding:10px;
-    }
-
-    .mutedSep{ color:#2a2a2a; margin:0 14px; }
-
-    .statusText{
-      margin-left:18px;
-      font-size:40px;
-      font-weight:900;
-      color:#a9a9a9;
-      white-space:nowrap;
-    }
-    .statusText.live{ color:var(--live); }
-    .statusText.final{ color:var(--final-gold); }
-
-    @keyframes ticker-scroll { 0%{ transform: translateX(0);} 100%{ transform: translateX(-50%);} }
-    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
+    @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
   </style>
 </head>
 
@@ -299,72 +114,79 @@
   </div>
 
   <script>
-    // ====== CONFIG ======
-    // Your worker sometimes uses /proxy?url= and sometimes ?url=.
-    // Put ONLY the origin here:
+    /***********************
+     * CONFIG
+     ***********************/
     const WORKER_ORIGIN = "https://grumpys-scores-api.shootscore3.workers.dev";
 
-    const CT_FORMAT_TIME = (iso) => {
-      try {
-        return new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Chicago',
-          hour: 'numeric',
-          minute: '2-digit'
-        }).format(new Date(iso));
-      } catch { return "TBD"; }
-    };
-
+    // Minnesota teams (ESPN team IDs)
     const TEAMS = [
-      { id:"30", sport:"hockey",     league:"nhl", name:"Minnesota Wild",        leagueLabel:"NHL",
-        statLabel:"Spotlight", statVal:"Kaprizov • Boldy • Faber" },
-      { id:"16", sport:"basketball", league:"nba", name:"Minnesota Timberwolves", leagueLabel:"NBA",
-        statLabel:"Spotlight", statVal:"Edwards • Towns • Gobert" },
-      { id:"9",  sport:"baseball",   league:"mlb", name:"Minnesota Twins",       leagueLabel:"MLB",
-        statLabel:"Spotlight", statVal:"Correa • Buxton • Lewis" },
-      { id:"16", sport:"football",   league:"nfl", name:"Minnesota Vikings",     leagueLabel:"NFL",
-        statLabel:"Spotlight", statVal:"Jefferson • Addison • Hockenson" }
+      { id: "30", sport: "hockey",     league: "nhl", name: "Wild"   },
+      { id: "16", sport: "basketball", league: "nba", name: "Wolves" },
+      { id: "9",  sport: "baseball",   league: "mlb", name: "Twins"  },
+      { id: "16", sport: "football",   league: "nfl", name: "Vikings"}
     ];
 
-    // ====== FETCH HELPERS ======
-    async function fetchJsonThroughWorker(targetUrl) {
-      // Try both worker styles without you touching Cloudflare:
-      const tryUrls = [
-        `${WORKER_ORIGIN}/proxy?url=${encodeURIComponent(targetUrl)}`,
-        `${WORKER_ORIGIN}/?url=${encodeURIComponent(targetUrl)}`,
-        `${WORKER_ORIGIN}/?u=${encodeURIComponent(targetUrl)}`,
+    const TICKER_LEAGUES = [
+      { l:'nhl', s:'hockey' },
+      { l:'nba', s:'basketball' },
+      { l:'mlb', s:'baseball' },
+      { l:'nfl', s:'football' }
+    ];
+
+    const TZ = "America/Chicago";
+
+    /***********************
+     * FETCH THROUGH WORKER (tries multiple routes)
+     ***********************/
+    async function fetchJson(url) {
+      const tries = [
+        `${WORKER_ORIGIN}/proxy?url=${encodeURIComponent(url)}`,
+        `${WORKER_ORIGIN}/?url=${encodeURIComponent(url)}`,
+        `${WORKER_ORIGIN}/?u=${encodeURIComponent(url)}`
       ];
 
-      for (const u of tryUrls) {
+      for (const t of tries) {
         try {
-          const res = await fetch(u, { cache: 'no-store' });
-          const text = await res.text();
-
-          // Some worker versions return "OK" at root. Ignore that.
+          const r = await fetch(t, { cache: "no-store" });
+          const text = await r.text();
           if (!text || text.trim() === "OK") continue;
-
-          const json = JSON.parse(text);
-
-          // If your worker has URL allow-list errors, skip that route and try another.
-          if (json && json.error && String(json.error).toLowerCase().includes("url")) continue;
-
-          return json;
+          const j = JSON.parse(text);
+          if (j && j.error && String(j.error).toLowerCase().includes("not allowed")) continue;
+          return j;
         } catch (e) { /* try next */ }
       }
       return null;
     }
 
-    function safeLogo(teamObj, league, id) {
-      // ESPN sometimes returns logo in different fields
-      const fromObj = teamObj?.logo || teamObj?.logos?.[0]?.href || teamObj?.logos?.[0]?.url;
-      return fromObj || `https://a.espncdn.com/i/teamlogos/${league}/500/${id}.png`;
+    /***********************
+     * TIME (Central, 12hr)
+     ***********************/
+    function fmtCT(iso) {
+      try {
+        return new Intl.DateTimeFormat("en-US", {
+          timeZone: TZ,
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        }).format(new Date(iso));
+      } catch {
+        return "TBD";
+      }
     }
 
-    function getRecord(teamDetails) {
+    /***********************
+     * ESPN HELPERS
+     ***********************/
+    function safeLogo(teamObj, league, id) {
       return (
-        teamDetails?.team?.record?.items?.[0]?.summary ||
-        teamDetails?.team?.recordSummary ||
-        teamDetails?.team?.records?.[0]?.summary ||
-        "—"
+        teamObj?.logo ||
+        teamObj?.logos?.[0]?.href ||
+        teamObj?.logos?.[0]?.url ||
+        `https://a.espncdn.com/i/teamlogos/${league}/500/${id}.png`
       );
     }
 
@@ -374,270 +196,324 @@
       return { home, away };
     }
 
+    function normalizeState(state) {
+      if (state === "in" || state === "post" || state === "pre") return state;
+      return "none";
+    }
+
     function findTeamGame(scoreboard, teamId) {
       const events = scoreboard?.events || [];
       for (const e of events) {
         const comp = e?.competitions?.[0];
         if (!comp?.competitors) continue;
-        const hit = comp.competitors.some(c => String(c?.team?.id) === String(teamId));
-        if (hit) return e;
+        if (comp.competitors.some(c => String(c?.team?.id) === String(teamId))) return e;
       }
       return null;
     }
 
-    function normalizeState(state) {
-      // ESPN uses: pre, in, post
-      if (state === "in" || state === "post" || state === "pre") return state;
-      return "none";
+    /***********************
+     * STANDINGS -> season-to-date stats that update all year
+     ***********************/
+    function findTeamEntryInStandings(standingsJson, teamId) {
+      const entries = [];
+
+      if (standingsJson?.standings?.entries) entries.push(...standingsJson.standings.entries);
+
+      const children = standingsJson?.children || [];
+      for (const ch of children) {
+        if (ch?.standings?.entries) entries.push(...ch.standings.entries);
+        const ch2 = ch?.children || [];
+        for (const c2 of ch2) {
+          if (c2?.standings?.entries) entries.push(...c2.standings.entries);
+        }
+      }
+
+      return entries.find(e => String(e?.team?.id) === String(teamId)) || null;
     }
 
-    // ====== DATA LOADERS ======
+    function stat(entry, preferAbbrevs) {
+      const stats = entry?.stats || [];
+      for (const a of preferAbbrevs) {
+        const s = stats.find(x => x.abbreviation === a || x.name === a);
+        if (s?.displayValue != null) return s.displayValue;
+        if (s?.value != null) return String(s.value);
+      }
+      return null;
+    }
+
+    function buildSeasonStats(team, entry) {
+      if (!entry) return [{ k: "Stats", v: "Unavailable" }];
+
+      if (team.league === "nhl") {
+        const pts = stat(entry, ["PTS"]);
+        const gp  = stat(entry, ["GP"]);
+        const gf  = stat(entry, ["GF","PF"]);
+        const ga  = stat(entry, ["GA","PA"]);
+        return [
+          { k:"PTS", v:pts }, { k:"GP", v:gp }, { k:"GF", v:gf }, { k:"GA", v:ga }
+        ].filter(x => x.v != null).slice(0,4);
+      }
+
+      if (team.league === "nba") {
+        const gb  = stat(entry, ["GB"]);
+        const pct = stat(entry, ["PCT"]);
+        const pf  = stat(entry, ["PF"]);
+        const pa  = stat(entry, ["PA"]);
+        return [
+          { k:"GB", v:gb }, { k:"PCT", v:pct }, { k:"PF", v:pf }, { k:"PA", v:pa }
+        ].filter(x => x.v != null).slice(0,4);
+      }
+
+      if (team.league === "mlb") {
+        const gb  = stat(entry, ["GB"]);
+        const pct = stat(entry, ["PCT"]);
+        const rs  = stat(entry, ["RS","PF"]);
+        const ra  = stat(entry, ["RA","PA"]);
+        return [
+          { k:"GB", v:gb }, { k:"PCT", v:pct }, { k:"RS", v:rs }, { k:"RA", v:ra }
+        ].filter(x => x.v != null).slice(0,4);
+      }
+
+      // nfl
+      const pf  = stat(entry, ["PF"]);
+      const pa  = stat(entry, ["PA"]);
+      const diff= stat(entry, ["DIFF"]);
+      const pct = stat(entry, ["PCT"]);
+      return [
+        { k:"PF", v:pf }, { k:"PA", v:pa }, { k:"DIFF", v:diff }, { k:"PCT", v:pct }
+      ].filter(x => x.v != null).slice(0,4);
+    }
+
+    /***********************
+     * TEAM DATA (cards)
+     ***********************/
     async function getTeamData(team) {
-      const scoreboardUrl = `https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`;
-      const teamUrl      = `https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`;
+      const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
+      const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
+      const standings = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/standings`);
 
-      const [scoreboard, teamDetails] = await Promise.all([
-        fetchJsonThroughWorker(scoreboardUrl),
-        fetchJsonThroughWorker(teamUrl)
-      ]);
+      const record =
+        teamDetails?.team?.record?.items?.[0]?.summary ||
+        teamDetails?.team?.recordSummary ||
+        "—";
 
-      const record = getRecord(teamDetails);
-      const teamObj = teamDetails?.team || teamDetails?.team?.team || teamDetails?.team; // defensive
-      const logo = safeLogo(teamObj, team.league, team.id);
+      const logo = safeLogo(teamDetails?.team, team.league, team.id);
+
+      const entry = findTeamEntryInStandings(standings, team.id);
+      const seasonStats = buildSeasonStats(team, entry);
 
       const game = findTeamGame(scoreboard, team.id);
 
-      // Next event (works only sometimes depending on ESPN response)
-      const nextEvent = teamDetails?.team?.nextEvent?.[0] || teamDetails?.team?.nextEvent?.[0];
-
       if (game) {
         const comp = game.competitions[0];
-        const { home, away } = pickHomeAway(comp);
-        const me = comp.competitors.find(c => String(c.team.id) === String(team.id));
-        const opp = comp.competitors.find(c => String(c.team.id) !== String(team.id));
-
         const state = normalizeState(game.status?.type?.state);
         const shortDetail = game.status?.type?.shortDetail || "";
-        const myLogo = safeLogo(me?.team, team.league, me?.team?.id);
+
+        const me  = comp.competitors.find(c => String(c.team.id) === String(team.id));
+        const opp = comp.competitors.find(c => String(c.team.id) !== String(team.id));
+
+        // Keep score orientation correct by always pairing logo with the same team’s score
+        const myLogo  = safeLogo(me?.team,  team.league, me?.team?.id);
         const oppLogo = safeLogo(opp?.team, team.league, opp?.team?.id);
 
         return {
           mode: "game",
-          state,
-          statusText: state === "in" ? "LIVE" : (state === "post" ? "FINAL" : "UPCOMING"),
+          status: state,
           detail: shortDetail,
           myScore: me?.score ?? "",
           oppScore: opp?.score ?? "",
-          myLogo,
-          oppLogo,
-          record,
-          logo
+          myAbbr: me?.team?.abbreviation || "MIN",
+          oppAbbr: opp?.team?.abbreviation || "OPP",
+          myLogo, oppLogo,
+          logo, record,
+          seasonStats
+        };
+      } else {
+        // Next game from team endpoint (if present)
+        const next = teamDetails?.team?.nextEvent?.[0];
+        let nextOpponent = "TBD";
+        let nextTime = "TBD";
+
+        if (next?.competitions?.[0]?.competitors?.length) {
+          const comp = next.competitions[0];
+          const { home, away } = pickHomeAway(comp);
+          const opp = [home, away].find(c => String(c?.team?.id) !== String(team.id)) || home || away;
+
+          nextOpponent = opp?.team?.abbreviation || opp?.team?.shortDisplayName || next?.shortName || "TBD";
+          nextTime = next?.date ? (fmtCT(next.date) + " CT") : "TBD";
+        } else if (next?.shortName) {
+          nextOpponent = next.shortName;
+          nextTime = next?.date ? (fmtCT(next.date) + " CT") : "TBD";
+        }
+
+        return {
+          mode: "off",
+          status: "none",
+          record, logo,
+          nextOpponent, nextTime,
+          seasonStats
         };
       }
-
-      // No game found on today's scoreboard for that team
-      let nextOpponent = "TBD";
-      let nextTime = "TBD";
-
-      // Try to infer opponent/time from nextEvent (if provided)
-      if (nextEvent?.competitions?.[0]?.competitors?.length) {
-        const comp = nextEvent.competitions[0];
-        const { home, away } = pickHomeAway(comp);
-        // show "MIN @ OPP" style if possible
-        const opp = [home, away].find(c => String(c?.team?.id) !== String(team.id)) || home || away;
-        nextOpponent = opp?.team?.abbreviation || opp?.team?.shortDisplayName || nextEvent?.shortName || "TBD";
-        nextTime = nextEvent?.date ? CT_FORMAT_TIME(nextEvent.date) + " CT" : "TBD";
-      } else if (nextEvent?.shortName) {
-        nextOpponent = nextEvent.shortName;
-        nextTime = nextEvent?.date ? CT_FORMAT_TIME(nextEvent.date) + " CT" : "TBD";
-      }
-
-      return {
-        mode: "off",
-        state: "none",
-        statusText: "OFF DAY",
-        record,
-        logo,
-        nextOpponent,
-        nextTime
-      };
     }
 
-    async function getTickerGames() {
-      const leagues = [
-        { l: "nhl", s: "hockey" },
-        { l: "nba", s: "basketball" },
-        { l: "mlb", s: "baseball" },
-        { l: "nfl", s: "football" }
-      ];
-
-      const results = [];
-
-      for (const league of leagues) {
-        const url = `https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`;
-        const data = await fetchJsonThroughWorker(url);
-        const events = data?.events || [];
-
-        for (const game of events) {
-          const comp = game?.competitions?.[0];
-          if (!comp?.competitors?.length) continue;
-
-          const { home, away } = pickHomeAway(comp);
-          const state = normalizeState(game?.status?.type?.state);
-          const shortDetail = game?.status?.type?.shortDetail || "";
-
-          const homeLogo = safeLogo(home?.team, league.l, home?.team?.id);
-          const awayLogo = safeLogo(away?.team, league.l, away?.team?.id);
-
-          results.push({
-            league: league.l.toUpperCase(),
-            state,
-            shortDetail,
-            homeAbbr: home?.team?.abbreviation || "",
-            awayAbbr: away?.team?.abbreviation || "",
-            homeScore: home?.score ?? "",
-            awayScore: away?.score ?? "",
-            homeLogo,
-            awayLogo
-          });
-        }
-      }
-
-      return results;
+    /***********************
+     * DASHBOARD RENDER
+     ***********************/
+    function statsLine(statsArr) {
+      if (!statsArr || !statsArr.length) return "Stats unavailable";
+      return statsArr.map(s => `${s.k}: ${s.v}`).join(" • ");
     }
 
-    // ====== RENDER ======
-    function renderCards(teamResults) {
+    async function updateDashboard() {
       const container = document.getElementById('cards-container');
+      const teamResults = await Promise.all(TEAMS.map(team => getTeamData(team)));
+
       container.innerHTML = '';
-
-      teamResults.forEach((data, idx) => {
-        const t = TEAMS[idx];
-
-        const badgeClass = data.state === "in" ? "status-in" : (data.state === "post" ? "status-post" : (data.state === "pre" ? "status-pre" : "status-none"));
-
+      teamResults.forEach((data, index) => {
+        const t = TEAMS[index];
         const card = document.createElement('div');
         card.className = 'card';
 
-        const midHtml = (data.mode === "game")
+        const badgeClass =
+          data.status === 'in' ? 'status-in' :
+          data.status === 'post' ? 'status-post' :
+          data.status === 'pre' ? 'status-pre' :
+          'status-none';
+
+        const statusText =
+          data.status === 'in' ? 'LIVE' :
+          data.status === 'post' ? 'FINAL' :
+          data.status === 'pre' ? 'TODAY' :
+          'OFF DAY';
+
+        const statsHtml = `
+          <div class="stat-box">
+            <div class="stat-label">Season Stats</div>
+            <div class="stat-value">${statsLine(data.seasonStats)}</div>
+          </div>
+        `;
+
+        const bottomHtml = (data.mode === "game")
           ? `
-              <div class="midBlock">
-                <div class="scoreRow">
-                  <img class="miniLogo" src="${data.oppLogo}" alt="opp">
+              <div style="width:100%;">
+                <div class="scoreRow" style="display:flex;align-items:center;justify-content:center;gap:14px;">
+                  <img class="miniLogo" src="${data.myLogo}" alt="MIN">
                   <div class="scoreBox">${data.myScore} - ${data.oppScore}</div>
-                  <img class="miniLogo" src="${data.myLogo}" alt="me">
+                  <img class="miniLogo" src="${data.oppLogo}" alt="OPP">
                 </div>
                 <div class="detailLine">${data.detail || ""}</div>
-
-                <div class="stat-box">
-                  <div class="stat-label">${t.statLabel}</div>
-                  <div class="stat-value">${t.statVal}</div>
-                </div>
               </div>
             `
           : `
-              <div class="midBlock">
-                <div class="nextBlock">
-                  <div class="nextLabel">NEXT</div>
-                  <div class="nextText">${data.nextOpponent}</div>
-                  <div class="nextTime">${data.nextTime}</div>
-                </div>
-
-                <div class="stat-box">
-                  <div class="stat-label">${t.statLabel}</div>
-                  <div class="stat-value">${t.statVal}</div>
-                </div>
+              <div class="nextBlock">
+                <div class="nextLabel">NEXT</div>
+                <div class="nextText">${data.nextOpponent}</div>
+                <div class="nextTime">${data.nextTime}</div>
               </div>
             `;
 
         card.innerHTML = `
-          <div class="topRow">
-            <div class="teamTitle">${t.name}</div>
-            <div class="leaguePill">${t.leagueLabel}</div>
+          <div class="topRow" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:32px; font-weight:900;">${t.name}</div>
+            <div class="league-badge" style="font-size:18px;">${t.league.toUpperCase()}</div>
           </div>
 
-          <div class="status-badge ${badgeClass}">${data.statusText}</div>
-          <img class="team-logo" src="${data.logo}" alt="logo">
+          <div class="status-badge ${badgeClass}">${statusText}</div>
+          <img class="team-logo" src="${data.logo}" alt="${t.name} logo">
+          <div><div style="color:#888; font-size:16px; font-weight:900;">${data.record}</div></div>
 
-          <div class="recordLine">Record: <span style="color:#d8d8d8">${data.record || "—"}</span></div>
-
-          ${midHtml}
+          ${statsHtml}
+          ${bottomHtml}
         `;
 
         container.appendChild(card);
       });
     }
 
-    function renderTicker(games) {
-      const ticker = document.getElementById('ticker-content');
-
-      if (!games.length) {
-        ticker.innerHTML = `
-          <div class="ticker-item">
-            <span class="league-badge">TICKER</span>
-            <span class="statusText">No games</span>
-          </div>
-          <div class="ticker-item">
-            <span class="league-badge">TICKER</span>
-            <span class="statusText">No games</span>
-          </div>
-        `;
-        return;
-      }
-
-      const items = games.map(g => {
-        const isLive = g.state === "in";
-        const isFinal = g.state === "post";
-        const itemClass = isLive ? "live" : (isFinal ? "final" : "");
-        const statusClass = isLive ? "live" : (isFinal ? "final" : "");
-        const label = isLive ? "LIVE" : (isFinal ? "FINAL" : "UPCOMING");
-
-        // If pre-game and no scores, avoid showing blank scores
-        const awayScore = (g.awayScore !== "" && g.awayScore != null) ? g.awayScore : (g.state === "pre" ? "" : "");
-        const homeScore = (g.homeScore !== "" && g.homeScore != null) ? g.homeScore : (g.state === "pre" ? "" : "");
-
-        const statusText = g.shortDetail || "";
-
-        return `
-          <div class="ticker-item ${itemClass}">
-            <span class="league-badge">${g.league}</span>
-            <span class="badge ${statusClass}">${label}</span>
-
-            <img class="ticker-logo" src="${g.awayLogo}" alt="away">
-            <span>${g.awayAbbr} ${awayScore}</span>
-
-            <span class="mutedSep">@</span>
-
-            <img class="ticker-logo" src="${g.homeLogo}" alt="home">
-            <span>${g.homeAbbr} ${homeScore}</span>
-
-            <span class="statusText ${statusClass}">${statusText}</span>
-          </div>
-        `;
-      });
-
-      // Duplicate list for seamless scroll
-      ticker.innerHTML = items.concat(items).join('');
-    }
-
-    // ====== UPDATE LOOP ======
-    async function updateDashboard() {
-      const teamResults = await Promise.all(TEAMS.map(getTeamData));
-      renderCards(teamResults);
+    /***********************
+     * TICKER
+     ***********************/
+    function buildTickerState(state, shortDetail, timeIso){
+      if (state === "in") return { cls:"live", text:"LIVE", meta: shortDetail || "" };
+      if (state === "post") return { cls:"final", text:"FINAL", meta: "" };
+      // pre
+      return { cls:"", text:"UPCOMING", meta: timeIso ? (fmtCT(timeIso) + " CT") : (shortDetail || "") };
     }
 
     async function updateTicker() {
-      const games = await getTickerGames();
-      renderTicker(games);
+      const ticker = document.getElementById('ticker-content');
+      let allItems = [];
+
+      for (const league of TICKER_LEAGUES) {
+        const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`);
+        const events = data?.events || [];
+
+        events.forEach(game => {
+          const comp = game?.competitions?.[0];
+          if (!comp?.competitors?.length) return;
+
+          const { home, away } = pickHomeAway(comp);
+          const state = normalizeState(game?.status?.type?.state);
+          const shortDetail = game?.status?.type?.shortDetail || "";
+          const whenIso = game?.date || comp?.date || "";
+
+          const sit = comp?.situation;
+
+          // POWER PLAY / RED ZONE LOGIC (works when situation exists)
+          let alertClass = "";
+          let alertLabel = "";
+          if (state === 'in' && sit) {
+            if (league.l === 'nhl' && sit.onPowerPlay) {
+              alertClass = "ticker-alert-pulse";
+              alertLabel = '<span class="alert-badge">POWER PLAY</span>';
+            } else if (league.l === 'nfl' && sit.isRedZone) {
+              alertClass = "ticker-alert-pulse";
+              alertLabel = '<span class="alert-badge">RED ZONE</span>';
+            }
+          }
+
+          const st = buildTickerState(state, shortDetail, whenIso);
+
+          const itemClass = (state === "in") ? "live" : (state === "post") ? "final" : "";
+          const awayScore = (state === "in" || state === "post") ? (away?.score ?? "") : "";
+          const homeScore = (state === "in" || state === "post") ? (home?.score ?? "") : "";
+
+          allItems.push(`
+            <div class="ticker-item ${itemClass} ${alertClass}">
+              <div class="league-badge">${league.l.toUpperCase()}</div>
+
+              <span class="state-badge ${st.cls}">
+                ${state === "in" ? `<span class="state-dot"></span>` : ``}
+                ${st.text}
+              </span>
+
+              <div class="ticker-logo-container">
+                <img class="ticker-team-logo" src="${safeLogo(away?.team, league.l, away?.team?.id)}" alt="">
+              </div>
+              <span>${away?.team?.abbreviation || ""} ${awayScore}</span>
+
+              <span style="color:#222; margin:0 15px;">@</span>
+
+              <div class="ticker-logo-container">
+                <img class="ticker-team-logo" src="${safeLogo(home?.team, league.l, home?.team?.id)}" alt="">
+              </div>
+              <span>${home?.team?.abbreviation || ""} ${homeScore}</span>
+
+              ${st.meta ? `<span class="meta-time">${st.meta}</span>` : ``}
+              ${alertLabel}
+            </div>
+          `);
+        });
+      }
+
+      ticker.innerHTML = [...allItems, ...allItems].join('');
     }
 
-    // First paint
+    // Initial + refresh
     updateDashboard();
     updateTicker();
-
-    // Refresh intervals
-    setInterval(updateDashboard, 60_000);
-    setInterval(updateTicker, 180_000);
+    setInterval(updateDashboard, 60000);
+    setInterval(updateTicker, 180000);
   </script>
 </body>
 </html>
