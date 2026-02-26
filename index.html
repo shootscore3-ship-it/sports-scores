@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - 2026 Edition</title>
+    <title>MN Sports Center - 2026 Pro Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,7 +17,6 @@
             overflow: hidden; display: flex; flex-direction: column;
         }
 
-        /* Dashboard Grid */
         .dashboard {
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
             padding: 20px; flex: 1; box-sizing: border-box;
@@ -32,7 +31,6 @@
 
         .team-logo { width: 140px; height: 140px; object-fit: contain; }
 
-        /* Stat Styling */
         .stat-box {
             background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
             padding: 12px; border-radius: 12px; width: 90%; margin: 10px 0;
@@ -40,13 +38,12 @@
         .stat-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { color: var(--final-gold); font-size: 17px; font-weight: 800; margin-top: 4px; }
 
-        /* Status Badges */
         .status-badge { font-size: 18px; font-weight: 900; padding: 6px 15px; border-radius: 6px; }
         .status-in { background: var(--live); animation: pulse 2s infinite; }
         .status-post { color: var(--final-gold); border: 1px solid var(--final-gold); }
         .status-none { color: #444; border: 1px solid #222; }
 
-        /* Ticker Styling */
+        /* TICKER STYLES */
         .ticker-wrap {
             background: #000; height: 215px; border-top: 6px solid var(--accent);
             display: flex; align-items: center; overflow: hidden;
@@ -58,6 +55,11 @@
             background: #151515; margin: 0 40px; padding: 0 50px; 
             border-radius: 20px; font-size: 72px; font-weight: 900;
         }
+
+        .ticker-alert-pulse { border: 4px solid var(--live) !important; animation: alert-glow 1s infinite alternate !important; }
+        @keyframes alert-glow { from { box-shadow: 0 0 10px rgba(255, 59, 59, 0.2); } to { box-shadow: 0 0 50px rgba(255, 59, 59, 0.8); } }
+
+        .alert-badge { background: var(--live); color: white; font-size: 24px; padding: 4px 12px; border-radius: 4px; margin-left: 20px; }
 
         .ticker-logo-container { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin: 0 15px; }
         .ticker-team-logo { width: 115px; height: 115px; object-fit: contain; }
@@ -91,16 +93,19 @@
             const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
             let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
+            
             let record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
+            // FALLBACK LOGO LOGIC
+            let logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
             
             if (game) {
                 const comp = game.competitions[0];
                 const me = comp.competitors.find(c => c.team.id === team.id);
                 const opp = comp.competitors.find(c => c.team.id !== team.id);
-                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: me.team.logo, record: record };
+                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
             } else {
                 const next = teamDetails?.team?.nextEvent?.[0];
-                return { status: 'none', record: record, logo: teamDetails?.team?.logo, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : "TBD" };
+                return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : "TBD" };
             }
         }
 
@@ -135,9 +140,23 @@
                     const comp = game.competitions[0];
                     const away = comp.competitors[1], home = comp.competitors[0];
                     const state = game.status.type.state;
+                    const sit = comp.situation;
+
+                    // POWER PLAY / RED ZONE LOGIC
+                    let alertClass = "";
+                    let alertLabel = "";
+                    if (state === 'in' && sit) {
+                        if (league.l === 'nhl' && sit.onPowerPlay) {
+                            alertClass = "ticker-alert-pulse";
+                            alertLabel = '<span class="alert-badge">POWER PLAY</span>';
+                        } else if (league.l === 'nfl' && sit.isRedZone) {
+                            alertClass = "ticker-alert-pulse";
+                            alertLabel = '<span class="alert-badge">RED ZONE</span>';
+                        }
+                    }
 
                     allItems.push(`
-                        <div class="ticker-item">
+                        <div class="ticker-item ${alertClass}">
                             <div class="league-badge">${league.l.toUpperCase()}</div>
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}"></div>
                             <span>${away.team.abbreviation} ${away.score || ''}</span>
@@ -145,6 +164,7 @@
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}"></div>
                             <span>${home.team.abbreviation} ${home.score || ''}</span>
                             <span style="margin-left:30px; color:${state === 'in' ? 'var(--live)' : (state === 'post' ? 'var(--final-gold)' : '#555')}">${game.status.type.shortDetail}</span>
+                            ${alertLabel}
                         </div>
                     `);
                 });
