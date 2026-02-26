@@ -38,7 +38,6 @@
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
     .status-none{ color:#444; border:1px solid #222; }
 
-    /* Standings line (only shows when we have data) */
     .standings-line{
       margin-top:6px;
       font-size:14px;
@@ -47,7 +46,6 @@
       letter-spacing:0.2px;
     }
 
-    /* Next/Opponent block */
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:18px; }
@@ -73,7 +71,6 @@
       letter-spacing:0.2px;
     }
 
-    /* LIVE/FINAL score row with logos */
     .score-row{
       display:flex; align-items:center; justify-content:center;
       gap:18px; margin-top:4px;
@@ -88,6 +85,7 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
+    /* ✅ game pill stays as "clock/inning/period" */
     .game-pill{
       margin-top:12px;
       padding:8px 14px;
@@ -101,7 +99,7 @@
       text-transform:uppercase;
     }
 
-    /* Alert badges row for LIVE moments (top cards) */
+    /* ✅ Alerts row (we'll render it ABOVE the game-pill now) */
     .alert-row{
       margin-top:10px;
       display:flex;
@@ -219,10 +217,8 @@
       return `${label} • ${time} CT`;
     }
 
-    /* -------------------------
-       Standings (reliable-first)
-       ------------------------- */
-    const standingsCache = new Map(); // key sport:league -> { ts, map }
+    /* Standings (team endpoint first) */
+    const standingsCache = new Map();
     const STANDINGS_TTL_MS = 10 * 60 * 1000;
 
     function statPick(entry, predicate){
@@ -264,9 +260,7 @@
         const teamId = e?.team?.id;
         if (!teamId) continue;
         const parsed = parseStandingsEntry(e);
-        if (parsed.rank || parsed.gb || parsed.group) {
-          map.set(String(teamId), parsed);
-        }
+        if (parsed.rank || parsed.gb || parsed.group) map.set(String(teamId), parsed);
       }
 
       standingsCache.set(key, { ts: Date.now(), map });
@@ -274,16 +268,12 @@
     }
 
     async function standingsText(team, teamDetails){
-      // 1) Best: team endpoint usually includes a ready-to-use standing summary
       const summary =
         teamDetails?.team?.standingSummary ||
         teamDetails?.team?.standingsSummary ||
-        teamDetails?.team?.record?.items?.find(r => /stand/i.test(r?.type || r?.name || ""))?.summary ||
         "";
-
       if (summary) return String(summary);
 
-      // 2) Fallback: standings endpoint (may or may not exist in offseason)
       const smap = await getStandingsMap(team.sport, team.league);
       const info = smap.get(String(team.id));
       if (!info) return "";
@@ -292,13 +282,10 @@
       if (info.rank) parts.push(`#${info.rank}`);
       if (info.group) parts.push(String(info.group));
       if (info.gb) parts.push(`GB ${info.gb}`);
-
       return parts.length ? `Standings: ${parts.join(" • ")}` : "";
     }
 
-    /* -------------------------
-       Urgent Moments detection
-       ------------------------- */
+    /* Urgent Moments */
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -309,11 +296,9 @@
       const sit = comp?.situation;
       if (!sit) return [];
 
-      const on1 = !!sit.onFirst;
-      const on2 = !!sit.onSecond;
-      const on3 = !!sit.onThird;
-
+      const on1 = !!sit.onFirst, on2 = !!sit.onSecond, on3 = !!sit.onThird;
       const inning = toNum(sit.inning) ?? null;
+
       const awayScore = toNum(comp?.competitors?.[1]?.score);
       const homeScore = toNum(comp?.competitors?.[0]?.score);
 
@@ -496,6 +481,7 @@
                </div>`
             : "";
 
+          /* ✅ Change: alerts now render BEFORE the game-pill */
           return `
             <div class="score-row">
               <div class="score-team">
@@ -509,8 +495,8 @@
               </div>
             </div>
 
-            ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
             ${alertsHtml}
+            ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
           `;
         };
 
