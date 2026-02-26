@@ -6,19 +6,9 @@
   <title>Live Scores</title>
 
   <style>
-    body {
-      margin:0;
-      background:#0b0d10;
-      font-family: Arial, Helvetica, sans-serif;
-    }
+    body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; }
+    .wrap { height:100vh; display:flex; flex-direction:column; }
 
-    .wrap {
-      height:100vh;
-      display:flex;
-      flex-direction:column;
-    }
-
-    /* Minnesota Teams Section */
     .mn {
       display:grid;
       grid-template-columns:repeat(4, 1fr);
@@ -35,68 +25,48 @@
       box-shadow:0 0 20px rgba(0,0,0,0.5);
     }
 
-    /* Ticker Section */
     .tickerWrap {
       height:110px;
       background:#07090c;
       border-top:2px solid rgba(255,255,255,.1);
-      padding:10px 0;
+      overflow:hidden;
     }
 
-    iframe {
-      width:100%;
-      height:100%;
-      border:0;
-    }
+    iframe { width:100%; height:100%; border:0; }
   </style>
 </head>
 
 <body>
+  <div class="wrap">
 
-<div class="wrap">
-
-  <!-- Minnesota Teams -->
-  <div class="mn">
-    <div class="card">
-      <div class="scorestream-widget-container"
-           data-ss_widget_type="vertScoreboard"
-           style="height:100%;"
-           data-user-widget-id="68173"></div>
+    <!-- 4 static boards -->
+    <div class="mn">
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe></div>
     </div>
 
-    <div class="card">
-      <div class="scorestream-widget-container"
-           data-ss_widget_type="vertScoreboard"
-           style="height:100%;"
-           data-user-widget-id="68174"></div>
+    <!-- "Ticker" (auto-advancing by reload) -->
+    <div class="tickerWrap">
+      <iframe id="tickerFrame" src=""></iframe>
     </div>
 
-    <div class="card">
-      <div class="scorestream-widget-container"
-           data-ss_widget_type="vertScoreboard"
-           style="height:100%;"
-           data-user-widget-id="68175"></div>
-    </div>
-
-    <div class="card">
-      <div class="scorestream-widget-container"
-           data-ss_widget_type="vertScoreboard"
-           style="height:100%;"
-           data-user-widget-id="68177"></div>
-    </div>
   </div>
 
-  <!-- Mixed League Ticker -->
-  <div class="tickerWrap">
-    <div class="scorestream-widget-container"
-         data-ss_widget_type="horzScoreboard"
-         data-user-widget-id="68178"></div>
-  </div>
+  <script>
+    // ScoreStream horizontal widget (manual arrows). We "auto-advance" by reloading it.
+    const base = "https://scorestream.com/widgets/scoreboards/horz?userWidgetId=68178";
+    const frame = document.getElementById("tickerFrame");
 
-</div>
+    function loadTicker() {
+      // cache-bust forces reload so it rotates/updates
+      frame.src = base + "&t=" + Date.now();
+    }
 
-<script async type="text/javascript"
-        src="https://scorestream.com/apiJsCdn/widgets/embed.js"></script>
-
+    loadTicker();
+    // Adjust speed here: 8000–12000 is usually perfect on bar TVs
+    setInterval(loadTicker, 10000);
+  </script>
 </body>
 </html>
