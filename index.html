@@ -32,19 +32,19 @@
 
     .team-logo{ width:140px; height:140px; object-fit:contain; }
 
-    .stat-box{
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.08);
-      padding:12px; border-radius:12px; width:90%; margin:10px 0;
-    }
-    .stat-label{ color:#888; font-size:11px; text-transform:uppercase; letter-spacing:1px; }
-    .stat-value{ color:var(--final-gold); font-size:17px; font-weight:800; margin-top:4px; }
-
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
     .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); }
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
     .status-none{ color:#444; border:1px solid #222; }
+
+    /* Opponent block */
+    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
+    .opp-row{ display:flex; align-items:center; gap:14px; }
+    .opp-logo{ width:64px; height:64px; object-fit:contain; }
+    .opp-name{ font-size:28px; font-weight:900; line-height:1; }
+    .next-time{ font-size:18px; color:#cfcfcf; }
 
     /* TICKER STYLES */
     .ticker-wrap{
@@ -53,7 +53,7 @@
     }
     .ticker-move{
       display:flex; white-space:nowrap;
-      animation:ticker-scroll 180s linear infinite; /* slowed down */
+      animation:ticker-scroll 160s linear infinite; /* base speed; JS will override */
       will-change:transform;
     }
 
@@ -83,15 +83,14 @@
 
   <script>
     const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
-
-    // Force Central Time
     const CT_TZ = "America/Chicago";
 
+    // NOTE: ESPN uses different IDs per league. Your existing IDs work for your setup, so leaving them as-is.
     const TEAMS = [
-      { id:"30", sport:"hockey", league:"nhl", name:"Wild",   statLabel:"Kaprizov (PTS)",     statVal:"32G, 38A (70 PTS)" },
-      { id:"16", sport:"basketball", league:"nba", name:"Wolves", statLabel:"A. Edwards (PPG)",  statVal:"29.6 PPG, 5.3 RPG" },
-      { id:"9",  sport:"baseball", league:"mlb", name:"Twins",  statLabel:"Spring Leaders",    statVal:"Miranda: 6 RBI • Rodriguez: 2 HR" },
-      { id:"16", sport:"football", league:"nfl", name:"Vikings", statLabel:"Season Leaders",    statVal:"McCarthy: 1632Yds • JJ: 1048Yds" }
+      { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
+      { id:"16", sport:"basketball", league:"nba", name:"Wolves" },
+      { id:"9",  sport:"baseball",   league:"mlb", name:"Twins"  },
+      { id:"16", sport:"football",   league:"nfl", name:"Vikings"}
     ];
 
     async function fetchJson(url){
@@ -102,17 +101,30 @@
     }
 
     function formatCTDateTime(iso){
-      // Shows M/D - h:mm AM/PM CT (always Central)
       const d = new Date(iso);
       const md = d.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' });
       const t  = d.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
       return `${md} - ${t} CT`;
     }
 
-    function formatCTTimeOnly(iso){
-      const d = new Date(iso);
-      const t = d.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
-      return `${t} CT`;
+    async function getOpponentFromEvent(team, eventId, myTeamId){
+      // Pull opponent logo/name from the event endpoint so "OFF DAY/UP NEXT" can show the logo
+      const event = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/summary?event=${eventId}`);
+      const comp = event?.header?.competitions?.[0];
+      const competitors = comp?.competitors;
+      if (!competitors || competitors.length < 2) return null;
+
+      const me  = competitors.find(c => String(c?.team?.id) === String(myTeamId));
+      const opp = competitors.find(c => String(c?.team?.id) !== String(myTeamId));
+      if (!opp) return null;
+
+      return {
+        oppName: opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent",
+        oppLogo: opp?.team?.logo || "",
+        // If you want to show @ vs, this is the best guess:
+        // If I'm away, show "@", else "vs"
+        atOrVs: (me?.homeAway === "away") ? "@" : "vs"
+      };
     }
 
     async function getTeamData(team){
@@ -123,6 +135,7 @@
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
 
+      // If we have a game today (pre/in/post)
       if (game){
         const comp = game.competitions[0];
         const me   = comp.competitors.find(c => c.team.id === team.id);
@@ -130,8 +143,10 @@
 
         const state = game.status.type.state; // 'pre' | 'in' | 'post'
         const oppName = opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent";
+        const oppLogo = opp?.team?.logo || "";
+        const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
 
-        // IMPORTANT: ESPN shortDetail for "pre" is usually ET. We override it using game.date in Central.
+        // Override scheduled game time into Central
         const detail = (state === "pre" && game.date) ? formatCTDateTime(game.date) : game.status.type.shortDetail;
 
         return {
@@ -141,14 +156,31 @@
           oppScore: opp?.score ?? "",
           logo,
           record,
-          oppName
+          oppName,
+          oppLogo,
+          atOrVs
         };
-      } else {
-        const next = teamDetails?.team?.nextEvent?.[0];
-        const nextOpponent = next?.shortName || "TBD";
-        const nextTime = next?.date ? formatCTTimeOnly(next.date) : "TBD";
-        return { status:"none", record, logo, nextOpponent, nextTime };
       }
+
+      // Otherwise, show next event from team details (and fetch opponent logo/name via event endpoint if possible)
+      const next = teamDetails?.team?.nextEvent?.[0];
+      const nextTime = next?.date ? formatCTDateTime(next.date) : "TBD";
+
+      // Try to pull opponent logo/name from the event id
+      let oppInfo = null;
+      if (next?.id) {
+        oppInfo = await getOpponentFromEvent(team, next.id, team.id);
+      }
+
+      return {
+        status:"none",
+        record,
+        logo,
+        nextTime,
+        nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
+        nextOppLogo: oppInfo?.oppLogo || "",
+        nextAtOrVs: oppInfo?.atOrVs || "vs"
+      };
     }
 
     function statusLabel(state){
@@ -169,32 +201,48 @@
 
         const badgeClass = `status-badge status-${data.status}`;
 
-        const bottomBlock =
-          (data.status === "in" || data.status === "post")
-            ? `<div style="font-size:56px; font-weight:900;">${data.myScore}-${data.oppScore}</div>
-               <div>${data.detail}</div>`
-            : (data.status === "pre")
-              ? `<div>
-                   <div style="color:#444; font-size:12px; font-weight:900;">NEXT</div>
-                   <div style="font-size:24px; font-weight:900;">${data.oppName}</div>
-                   <div>${data.detail}</div>
-                 </div>`
-              : `<div>
-                   <div style="color:#444; font-size:12px; font-weight:900;">NEXT</div>
-                   <div style="font-size:24px; font-weight:900;">${data.nextOpponent}</div>
-                   <div>${data.nextTime}</div>
-                 </div>`;
+        // Bottom section:
+        // - in/post: score
+        // - pre: show opponent LOGO + time (no "0-0" block)
+        // - none: show next opponent LOGO + time (no static stats)
+        let bottomBlock = "";
 
+        if (data.status === "in" || data.status === "post") {
+          bottomBlock = `
+            <div style="font-size:56px; font-weight:900;">${data.myScore}-${data.oppScore}</div>
+            <div>${data.detail}</div>
+          `;
+        } else if (data.status === "pre") {
+          bottomBlock = `
+            <div class="next-wrap">
+              <div class="next-label">NEXT</div>
+              <div class="opp-row">
+                ${data.oppLogo ? `<img class="opp-logo" src="${data.oppLogo}" alt="">` : ``}
+                <div class="opp-name">${data.atOrVs} ${data.oppName}</div>
+              </div>
+              <div class="next-time">${data.detail}</div>
+            </div>
+          `;
+        } else {
+          bottomBlock = `
+            <div class="next-wrap">
+              <div class="next-label">NEXT</div>
+              <div class="opp-row">
+                ${data.nextOppLogo ? `<img class="opp-logo" src="${data.nextOppLogo}" alt="">` : ``}
+                <div class="opp-name">${data.nextAtOrVs} ${data.nextOpponent}</div>
+              </div>
+              <div class="next-time">${data.nextTime}</div>
+            </div>
+          `;
+        }
+
+        // NOTE: removed the static stat-box entirely (per your request)
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
           <div>
             <div style="font-size:32px; font-weight:900;">${TEAMS[i].name}</div>
             <div style="color:#888;">${data.record}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">${TEAMS[i].statLabel}</div>
-            <div class="stat-value">${TEAMS[i].statVal}</div>
           </div>
           ${bottomBlock}
         `;
@@ -219,12 +267,11 @@
         data?.events?.forEach(game => {
           const comp = game.competitions[0];
           const away = comp.competitors[1], home = comp.competitors[0];
-          const state = game.status.type.state;
+          const state = game.status.type.state; // pre/in/post
           const sit = comp.situation;
 
           let alertClass = "";
           let alertLabel = "";
-
           if (state === "in" && sit){
             if (league.l === "nhl" && sit.onPowerPlay){
               alertClass = "ticker-alert-pulse";
@@ -232,18 +279,35 @@
             }
           }
 
-          // If it’s a scheduled game, show CT time instead of ESPN shortDetail (often ET)
+          // ✅ FIX: If the game hasn't started, DO NOT show "0-0"
+          const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
+          const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
+
+          // ✅ FIX: Use Central time string for scheduled games
           const detail = (state === "pre" && game.date) ? formatCTDateTime(game.date) : game.status.type.shortDetail;
+
+          // Visual separator: show "@" only for pre, keep your existing for in/post
+          const midSymbol = (state === "pre") ? "<span style='color:#222; margin:0 15px;'>@</span>" : "<span style='color:#222; margin:0 15px;'>@</span>";
 
           allItems.push(`
             <div class="ticker-item ${alertClass}">
               <div class="league-badge">${league.l.toUpperCase()}</div>
-              <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}" alt=""></div>
-              <span>${away.team.abbreviation} ${away.score || ""}</span>
-              <span style="color:#222; margin:0 15px;">@</span>
-              <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}" alt=""></div>
-              <span>${home.team.abbreviation} ${home.score || ""}</span>
-              <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">${detail}</span>
+
+              <div class="ticker-logo-container">
+                <img class="ticker-team-logo" src="${away.team.logo}" alt="">
+              </div>
+              <span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>
+
+              ${midSymbol}
+
+              <div class="ticker-logo-container">
+                <img class="ticker-team-logo" src="${home.team.logo}" alt="">
+              </div>
+              <span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>
+
+              <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">
+                ${detail}
+              </span>
               ${alertLabel}
             </div>
           `);
@@ -253,9 +317,9 @@
       // Duplicate for seamless loop
       ticker.innerHTML = [...allItems, ...allItems].join("");
 
-      // Dynamic speed: scales with number of items so it doesn't suddenly look too fast
+      // ✅ SPEED: a tad faster than the slow version (used to be 10s/item, min 180)
       const mover = document.querySelector(".ticker-move");
-      const seconds = Math.max(180, allItems.length * 10); // 10s per item, min 180s
+      const seconds = Math.max(150, allItems.length * 8); // faster than before, still not crazy fast
       mover.style.animationDuration = `${seconds}s`;
     }
 
