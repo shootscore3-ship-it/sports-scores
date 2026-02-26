@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - Clean Pro Ticker</title>
+    <title>MN Sports Center - Gold Final Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -11,7 +11,7 @@
             --card-bg: #111111;
             --text: #ffffff;
             --live: #ff3b3b;
-            --final: #ffcc00;
+            --final-gold: #D4AF37; /* Premium Metallic Gold */
             --accent: #1a1a1a;
             --ticker-item-bg: #151515; 
         }
@@ -53,7 +53,7 @@
         .team-logo { width: 170px; height: 170px; object-fit: contain; }
         .status-badge { font-size: 20px; font-weight: 900; padding: 6px 18px; border-radius: 8px; text-transform: uppercase; }
         .status-live { background: var(--live); animation: pulse 2s infinite; }
-        .status-final { color: var(--final); border: 1px solid var(--final); }
+        .status-final { color: var(--final-gold); border: 1px solid var(--final-gold); }
 
         .ticker-wrap {
             background: #000;
@@ -101,7 +101,6 @@
             object-fit: contain;
         }
 
-        /* Stylized Text Badge for Leagues */
         .league-label-badge {
             background: #222;
             color: #888;
@@ -116,6 +115,26 @@
 
         .ticker-live-dot { color: var(--live); margin-right: 15px; font-size: 40px; }
 
+        /* Gold styling for final scores */
+        .status-text-final {
+            color: var(--final-gold);
+            font-size: 42px;
+            margin-left: 25px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .status-text-live {
+            color: var(--live);
+            font-size: 42px;
+            margin-left: 25px;
+        }
+
+        .status-text-upcoming {
+            color: #888;
+            font-size: 42px;
+            margin-left: 25px;
+        }
+
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
@@ -126,7 +145,7 @@
 
     <div class="ticker-wrap">
         <div class="ticker-move" id="ticker-content">
-            <div class="ticker-item">RESTORING FEED...</div>
+            <div class="ticker-item">UPDATING SCORES...</div>
         </div>
     </div>
 
@@ -188,6 +207,11 @@
                     const comp = game.competitions[0];
                     const away = comp.competitors[1], home = comp.competitors[0];
                     const state = game.status.type.state;
+                    
+                    // Determine the status class based on game state
+                    let statusClass = 'status-text-upcoming';
+                    if (state === 'in') statusClass = 'status-text-live';
+                    if (state === 'post') statusClass = 'status-text-final';
 
                     allItems.push(`
                         <div class="ticker-item">
@@ -198,7 +222,7 @@
                             <span style="color:#2a2a2a;">@</span>
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}"></div>
                             <span>${home.team.abbreviation} ${home.score || ''}</span>
-                            <span style="color: ${state === 'in' ? 'var(--live)' : '#888'}; font-size:42px; margin-left:25px;">${game.status.type.shortDetail}</span>
+                            <span class="${statusClass}">${game.status.type.shortDetail}</span>
                         </div>
                     `);
                 });
