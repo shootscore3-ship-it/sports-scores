@@ -17,9 +17,8 @@
       padding:20px;
       box-sizing:border-box;
       flex:1;
-      min-height:0; /* helps in some browsers */
+      min-height:0;
     }
-
     .card {
       background:#12161c;
       border-radius:18px;
@@ -27,7 +26,6 @@
       box-shadow:0 0 20px rgba(0,0,0,0.5);
       min-height:0;
     }
-
     iframe { width:100%; height:100%; border:0; }
 
     /* Bottom: ESPN-style ticker */
@@ -39,25 +37,52 @@
       display:flex;
       align-items:center;
     }
-
     .tickerTrack{
       display:flex;
       white-space:nowrap;
       will-change:transform;
-      animation: tickerScroll 60s linear infinite;
+      /* Slower ticker: increase seconds to slow it down */
+      animation: tickerScroll 160s linear infinite;
     }
-
-    .tickerTrack span{
-      display:inline-block;
-      padding-right:80px;
-      font: 800 34px/1 Arial, sans-serif;
-      color:#fff;
-    }
-
     @keyframes tickerScroll{
       from{ transform:translateX(0); }
       to{ transform:translateX(-50%); }
     }
+
+    .lane{ display:flex; align-items:center; }
+
+    .tickItem{
+      display:inline-flex;
+      align-items:center;
+      gap:12px;
+      padding-right:72px;
+      font: 800 32px/1 Arial, sans-serif;
+      color:#fff;
+    }
+    .leagueTag{
+      opacity:.9;
+      font-weight:900;
+      letter-spacing:.5px;
+      margin-right:4px;
+    }
+    .team{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+    }
+    .logo{
+      width:34px;
+      height:34px;
+      object-fit:contain;
+      border-radius:6px;
+      background:rgba(255,255,255,.06);
+      padding:3px;
+      box-sizing:border-box;
+    }
+    .abbr{ font-weight:900; }
+    .score{ font-weight:900; opacity:.95; }
+    .sepDot{ opacity:.7; margin:0 10px; font-weight:900; }
+    .status{ opacity:.75; font-weight:800; }
   </style>
 </head>
 
@@ -83,67 +108,145 @@
     <!-- Bottom ticker -->
     <div class="tickerBar">
       <div class="tickerTrack">
-        <span id="tickerText">Loading scores...</span>
-        <span id="tickerText2">Loading scores...</span>
+        <span class="lane" id="lane1"></span>
+        <span class="lane" id="lane2"></span>
       </div>
     </div>
 
   </div>
 
   <script>
+    // Your Cloudflare Worker (scores)
     const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
-    function setTicker(text){
-      const a = document.getElementById("tickerText");
-      const b = document.getElementById("tickerText2");
-      if (a) a.textContent = text;
-      if (b) b.textContent = text;
+    // ESPN team list endpoints (logos + abbreviations)
+    // These endpoints commonly return "team.logos[].href" and "team.abbreviation".  [oai_citation:1‡Gist](https://gist.github.com/nntrn/ee26cb2a0716de0947a0a4e9a157bc1c?permalink_comment_id=5393643&utm_source=chatgpt.com)
+    const ESPN_TEAMS = {
+      nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
+      mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
+      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams",
+      // nhl (later): https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams
+    };
+
+    // logoMap[league][ABBR] = logoUrl
+    const logoMap = { nba:{}, mlb:{}, nfl:{} };
+
+    function esc(s){
+      return String(s ?? "").replace(/[&<>"']/g, m => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[m]));
     }
 
-    function teamName(t){
-      return t?.abbreviation || t?.name || t?.full_name || "";
+    function setTickerHTML(html){
+      const a = document.getElementById("lane1");
+      const b = document.getElementById("lane2");
+      if (a) a.innerHTML = html;
+      if (b) b.innerHTML = html; // duplicate for seamless scroll
     }
 
-    function formatGame(league, g){
-      const home = teamName(g.home_team);
-      const away = teamName(g.visitor_team || g.away_team);
+    function teamAbbr(t){
+      return (t?.abbreviation || t?.name || t?.full_name || "").toString().trim().toUpperCase();
+    }
+
+    async function loadEspnLogos(leagueKey){
+      try{
+        const r = await fetch(ESPN_TEAMS[leagueKey]);
+        if(!r.ok) throw new Error(`${leagueKey} teams HTTP ${r.status}`);
+        const j = await r.json();
+
+        // ESPN structure is usually: sports[0].leagues[0].teams[] with { team: {...} }
+        const teams = j?.sports?.[0]?.leagues?.[0]?.teams || [];
+        for (const entry of teams){
+          const t = entry?.team;
+          const abbr = (t?.abbreviation || "").toUpperCase();
+          const logo = t?.logos?.[0]?.href || t?.logo || "";
+          if (abbr && logo) logoMap[leagueKey][abbr] = logo;
+        }
+      } catch(e){
+        // If this fails (blocked in VXT), ticker still works without logos
+        console.log("Logo fetch failed for", leagueKey, e);
+      }
+    }
+
+    function teamHTML(leagueKey, abbr){
+      const A = (abbr || "").toUpperCase();
+      const url = logoMap?.[leagueKey]?.[A];
+
+      if(!url){
+        return `<span class="team"><span class="abbr">${esc(A)}</span></span>`;
+      }
+
+      return `
+        <span class="team">
+          <img class="logo" src="${esc(url)}" alt="${esc(A)}"
+               loading="lazy"
+               referrerpolicy="no-referrer"
+               onerror="this.style.display='none'">
+          <span class="abbr">${esc(A)}</span>
+        </span>
+      `;
+    }
+
+    function formatGameHTML(leagueKey, leagueLabel, g){
+      const home = teamAbbr(g.home_team);
+      const away = teamAbbr(g.visitor_team || g.away_team);
 
       const homeScore = g.home_team_score ?? g.home_score ?? "";
       const awayScore = g.visitor_team_score ?? g.away_score ?? "";
-
       const status = (g.status || g.game_status || "").toString().trim();
 
-      if(homeScore !== "" || awayScore !== ""){
-        return `${league}: ${away} ${awayScore}–${homeScore} ${home}${status ? ` (${status})` : ""}`;
-      }
-      return `${league}: ${away} @ ${home}${status ? ` (${status})` : ""}`;
+      const statusShort = status ? ` <span class="status">(${esc(status)})</span>` : "";
+
+      return `
+        <span class="tickItem">
+          <span class="leagueTag">${esc(leagueLabel)}:</span>
+          ${teamHTML(leagueKey, away)}
+          <span class="score">${esc(awayScore)}</span>
+          <span class="sepDot">•</span>
+          <span class="score">${esc(homeScore)}</span>
+          ${teamHTML(leagueKey, home)}
+          ${statusShort}
+        </span>
+      `;
     }
 
     async function refreshTicker(){
       try{
         const r = await fetch(WORKER_URL + "?t=" + Date.now());
         if(!r.ok) throw new Error("Worker HTTP " + r.status);
-
         const j = await r.json();
+
         const parts = [];
 
-        // NHL is 401 on your current plan, so we skip it for now
-        (j.nba?.data || []).forEach(g => parts.push(formatGame("NBA", g)));
-        (j.mlb?.data || []).forEach(g => parts.push(formatGame("MLB", g)));
-        (j.nfl?.data || []).forEach(g => parts.push(formatGame("NFL", g)));
+        // NHL is skipped here because BALLDONTLIE NHL is 401 on your plan.
+        (j.nba?.data || []).forEach(g => parts.push(formatGameHTML("nba","NBA",g)));
+        (j.mlb?.data || []).forEach(g => parts.push(formatGameHTML("mlb","MLB",g)));
+        (j.nfl?.data || []).forEach(g => parts.push(formatGameHTML("nfl","NFL",g)));
 
-        const text = parts.length ? parts.join("  •  ") : "No games today";
-        setTicker(text);
+        const html = parts.length ? parts.join("") : `<span class="tickItem">No games today</span>`;
+        setTickerHTML(html);
 
       }catch(e){
         console.log("Ticker error:", e);
-        setTicker("Ticker error (worker).");
+        setTickerHTML(`<span class="tickItem">Ticker error (worker).</span>`);
       }
     }
 
-    setTicker("Loading scores...");
-    refreshTicker();
-    setInterval(refreshTicker, 60000);
+    // Boot
+    (async () => {
+      setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
+
+      // Load logo maps in the background
+      await Promise.all([
+        loadEspnLogos("nba"),
+        loadEspnLogos("mlb"),
+        loadEspnLogos("nfl"),
+      ]);
+
+      // Load ticker now + refresh every minute
+      await refreshTicker();
+      setInterval(refreshTicker, 60000);
+    })();
   </script>
 </body>
 </html>
