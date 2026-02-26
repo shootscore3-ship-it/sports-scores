@@ -36,14 +36,13 @@
             padding: 12px; border-radius: 12px; width: 90%; margin: 10px 0;
         }
         .stat-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { color: var(--final-gold); font-size: 17px; font-weight: 800; margin-top: 4px; }
+        .stat-value { color: var(--final-gold); font-size: 15px; font-weight: 800; margin-top: 4px; }
 
         .status-badge { font-size: 18px; font-weight: 900; padding: 6px 15px; border-radius: 6px; }
         .status-in { background: var(--live); animation: pulse 2s infinite; }
         .status-post { color: var(--final-gold); border: 1px solid var(--final-gold); }
         .status-none { color: #444; border: 1px solid #222; }
 
-        /* TICKER STYLES */
         .ticker-wrap {
             background: #000; height: 215px; border-top: 6px solid var(--accent);
             display: flex; align-items: center; overflow: hidden;
@@ -75,11 +74,13 @@
 
     <script>
         const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
+        
+        // TEAMS list no longer needs hardcoded athlete IDs!
         const TEAMS = [
-            { id: "30", sport: "hockey", league: "nhl", name: "Wild", statLabel: "Kaprizov (PTS)", statVal: "32G, 38A (70 PTS)" },
-            { id: "16", sport: "basketball", league: "nba", name: "Wolves", statLabel: "A. Edwards (PPG)", statVal: "29.6 PPG, 5.3 RPG" },
-            { id: "9", sport: "baseball", league: "mlb", name: "Twins", statLabel: "Spring Leaders", statVal: "Miranda: 6 RBI • Rodriguez: 2 HR" },
-            { id: "16", sport: "football", league: "nfl", name: "Vikings", statLabel: "Season Leaders", statVal: "McCarthy: 1632Yds • JJ: 1048Yds" }
+            { id: "30", sport: "hockey", league: "nhl", name: "Wild" },
+            { id: "16", sport: "basketball", league: "nba", name: "Wolves" },
+            { id: "9", sport: "baseball", league: "mlb", name: "Twins" },
+            { id: "16", sport: "football", league: "nfl", name: "Vikings" }
         ];
 
         async function fetchJson(url) {
@@ -89,13 +90,35 @@
             } catch (e) { return null; }
         }
 
+        // AUTO-DETECT TEAM LEADERS
+        async function getTeamLeader(team) {
+            try {
+                const url = `https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}?enable=roster`;
+                const data = await fetchJson(url);
+                
+                // Pulls the "Top Leader" defined by ESPN for that team
+                const leaders = data.team.record.items[0].stats; 
+                // We fetch the team summary which includes key leaders
+                const leaderObj = data.team.leaders[0]; // Usually Points, PPG, or Yards
+                const topAthlete = leaderObj.leaders[0].athlete;
+                const statValue = leaderObj.leaders[0].displayValue;
+                const statName = leaderObj.displayName;
+
+                return {
+                    label: `${topAthlete.shortName} (${statName})`,
+                    value: statValue
+                };
+            } catch (e) { 
+                return { label: "Team Leader", value: "Loading..." }; 
+            }
+        }
+
         async function getTeamData(team) {
             const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
             let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
             
             let record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
-            // FALLBACK LOGO LOGIC
             let logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
             
             if (game) {
@@ -111,7 +134,11 @@
 
         async function updateDashboard() {
             const container = document.getElementById('cards-container');
-            const teamResults = await Promise.all(TEAMS.map(team => getTeamData(team)));
+            const [teamResults, autoLeaders] = await Promise.all([
+                Promise.all(TEAMS.map(team => getTeamData(team))),
+                Promise.all(TEAMS.map(team => getTeamLeader(team)))
+            ]);
+
             container.innerHTML = ''; 
             teamResults.forEach((data, index) => {
                 const card = document.createElement('div');
@@ -121,8 +148,8 @@
                     <img class="team-logo" src="${data.logo}">
                     <div><div style="font-size:32px; font-weight:900;">${TEAMS[index].name}</div><div style="color:#888;">${data.record}</div></div>
                     <div class="stat-box">
-                        <div class="stat-label">${TEAMS[index].statLabel}</div>
-                        <div class="stat-value">${TEAMS[index].statVal}</div>
+                        <div class="stat-label">${autoLeaders[index].label}</div>
+                        <div class="stat-value">${autoLeaders[index].value}</div>
                     </div>
                     ${data.status !== 'none' ? `<div style="font-size:56px; font-weight:900;">${data.myScore}-${data.oppScore}</div><div>${data.detail}</div>` : `<div><div style="color:#444; font-size:12px; font-weight:900;">NEXT</div><div style="font-size:24px; font-weight:900;">${data.nextOpponent}</div><div>${data.nextTime}</div></div>`}`;
                 container.appendChild(card);
@@ -142,7 +169,6 @@
                     const state = game.status.type.state;
                     const sit = comp.situation;
 
-                    // POWER PLAY / RED ZONE LOGIC
                     let alertClass = "";
                     let alertLabel = "";
                     if (state === 'in' && sit) {
