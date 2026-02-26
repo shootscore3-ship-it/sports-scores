@@ -171,12 +171,14 @@
   <script>
     const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
+    // ESPN teams endpoints for logos (now includes NHL)
     const ESPN_TEAMS = {
+      nhl: "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
       nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
       mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
-      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams",
     };
-    const logoMap = { nba:{}, mlb:{}, nfl:{} };
+    const logoMap = { nhl:{}, nba:{}, mlb:{}, nfl:{} };
 
     function esc(s){
       return String(s ?? "").replace(/[&<>"']/g, m => ({
@@ -191,13 +193,17 @@
       if (b) b.innerHTML = html;
     }
 
-    function teamAbbr(t){
-      return (t?.abbreviation || t?.name || t?.full_name || "").toString().trim().toUpperCase();
-    }
-
-    function looksLikeIsoDate(s){
-      if (!s) return false;
-      return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(s).trim());
+    function toCTDateYYYYMMDD(){
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Chicago",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(new Date());
+      const y = parts.find(p=>p.type==="year").value;
+      const m = parts.find(p=>p.type==="month").value;
+      const d = parts.find(p=>p.type==="day").value;
+      return `${y}-${m}-${d}`;
     }
 
     function toCentral12h(iso){
@@ -249,103 +255,66 @@
       `;
     }
 
-    // Robust live/final detection using both status text AND period/time fields
-    function classifyGame(g){
-      const raw = (g.status || g.game_status || "").toString().trim();
-      const s = raw.toLowerCase();
+    function formatGame(leagueKey, g){
+      const away = g.away?.abbr || "";
+      const home = g.home?.abbr || "";
+      const awayScore = (g.away?.score ?? "").toString();
+      const homeScore = (g.home?.score ?? "").toString();
 
-      const period = Number(g?.period ?? 0);
-      const clock  = (g?.time ?? g?.clock ?? "").toString().trim();
-
-      const isFinal =
-        s.includes("final") || s === "f" || s.includes("final/ot") || s.includes("final/so");
-
-      // Many APIs mark live via period/time rather than text
-      const isLive = !isFinal && (period > 0 || (clock && clock !== "0:00"));
-
-      // “Not started” often comes through as 0–0 with period 0 and blank clock
-      const hs = Number(g.home_team_score ?? g.home_score ?? 0);
-      const as = Number(g.visitor_team_score ?? g.away_score ?? 0);
-      const looksPregame = (hs === 0 && as === 0) && (period === 0) && (!clock || clock === "0:00");
-
-      return { rawStatus: raw, isFinal, isLive, looksPregame, period, clock };
-    }
-
-    function formatGameHTML(leagueKey, leagueLabel, g){
-      const home = teamAbbr(g.home_team);
-      const away = teamAbbr(g.visitor_team || g.away_team);
-
-      // IMPORTANT: NBA uses visitor_team_score + home_team_score
-      const hsRaw = g.home_team_score ?? g.home_score ?? "";
-      const asRaw = g.visitor_team_score ?? g.away_score ?? "";
-
-      const hs = (hsRaw === null || hsRaw === undefined) ? "" : String(hsRaw);
-      const as = (asRaw === null || asRaw === undefined) ? "" : String(asRaw);
-
-      const { rawStatus, isFinal, isLive, looksPregame, period, clock } = classifyGame(g);
-
-      // Sometimes NBA puts ISO datetime in status
-      const statusIsIso = looksLikeIsoDate(rawStatus);
-      const statusTimeCT = statusIsIso ? toCentral12h(rawStatus) : "";
-
-      // Upcoming: prefer g.date, else ISO-in-status
-      const startTimeCT = (g.date ? toCentral12h(g.date) : "") || statusTimeCT;
+      const state = (g.statusState || "").toLowerCase(); // pre/in/post
+      const detail = g.shortDetail || g.statusDetail || "";
+      const start = g.startTime || "";
 
       let metaHTML = "";
-
-      if (looksPregame && !isFinal && !isLive) {
-        if (startTimeCT) {
-          metaHTML = `<span class="meta"><span class="timeTag">${esc(startTimeCT)}</span></span>`;
-        } else if (rawStatus && !statusIsIso) {
-          metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
-        }
-      } else if (isFinal) {
+      if (state === "pre") {
+        const t = start ? toCentral12h(start) : "";
+        metaHTML = t
+          ? `<span class="meta"><span class="timeTag">${esc(t)}</span></span>`
+          : `<span class="meta"><span class="statusText">${esc(detail)}</span></span>`;
+      } else if (state === "post") {
         metaHTML = `<span class="meta"><span class="finalTag">FINAL</span></span>`;
-      } else if (isLive) {
-        // Build a readable live detail
-        const pieces = [];
-        if (rawStatus && !statusIsIso) pieces.push(rawStatus);
-        if (period > 0) pieces.push(`P${period}`);
-        if (clock) pieces.push(clock);
-        const detail = pieces.join(" • ");
+      } else if (state === "in") {
         metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(detail)}</span></span>`;
-      } else if (rawStatus && !statusIsIso) {
-        metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
+      } else if (detail) {
+        metaHTML = `<span class="meta"><span class="statusText">${esc(detail)}</span></span>`;
       }
 
       return `
         <span class="tickItem">
           ${teamHTML(leagueKey, away)}
-          <span class="score">${esc(as)}</span>
+          <span class="score">${esc(awayScore)}</span>
           <span class="sepDot">•</span>
-          <span class="score">${esc(hs)}</span>
+          <span class="score">${esc(homeScore)}</span>
           ${teamHTML(leagueKey, home)}
           ${metaHTML}
         </span>
       `;
     }
 
-    function leagueSectionHTML(leagueKey, leagueLabel, games){
+    function leagueSection(leagueKey, label, games){
       if (!games || !games.length) return "";
-      const header = `<span class="leagueHeader">${esc(leagueLabel)}</span>`;
-      const items = games.map(g => formatGameHTML(leagueKey, leagueLabel, g)).join("");
+      const header = `<span class="leagueHeader">${esc(label)}</span>`;
+      const items = games.map(g => formatGame(leagueKey, g)).join("");
       return header + items + `<span class="divider"></span>`;
     }
 
     async function refreshTicker(){
       try{
-        const r = await fetch(WORKER_URL + "?t=" + Date.now());
+        const dateCT = toCTDateYYYYMMDD();
+        const r = await fetch(WORKER_URL + "?date=" + encodeURIComponent(dateCT) + "&t=" + Date.now());
         if(!r.ok) throw new Error("Worker HTTP " + r.status);
         const j = await r.json();
 
-        const nbaGames = (j.nba?.data || []);
-        const mlbGames = (j.mlb?.data || []);
-        const nflGames = (j.nfl?.data || []);
+        const nhl = j.nhl?.games || [];
+        const nba = j.nba?.games || [];
+        const mlb = j.mlb?.games || [];
+        const nfl = j.nfl?.games || [];
 
         let html = "";
-        html += leagueSectionHTML("nba", "NBA", nbaGames);
-        html += leagueSectionHTML("mlb", "MLB", mlbGames);
-        html += leagueSectionHTML("nfl", "NFL", nflGames);
+        html += leagueSection("nhl", "NHL", nhl);
+        html += leagueSection("nba", "NBA", nba);
+        html += leagueSection("mlb", "MLB", mlb);
+        html += leagueSection("nfl", "NFL", nfl);
 
         if (!html) html = `<span class="tickItem">No games today</span>`;
         setTickerHTML(html);
@@ -358,9 +327,13 @@
 
     (async () => {
       setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
-      await Promise.all([ loadEspnLogos("nba"), loadEspnLogos("mlb"), loadEspnLogos("nfl") ]);
+      await Promise.all([
+        loadEspnLogos("nhl"),
+        loadEspnLogos("nba"),
+        loadEspnLogos("mlb"),
+        loadEspnLogos("nfl"),
+      ]);
       await refreshTicker();
-      // Faster refresh for live scores (30s)
       setInterval(refreshTicker, 30000);
     })();
   </script>
