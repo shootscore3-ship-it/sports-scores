@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - 215px Pro Edition</title>
+    <title>MN Sports Center - High Contrast Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -27,7 +27,6 @@
             flex-direction: column;
         }
 
-        /* Top Grid - Adjusted to make room for 215px ticker */
         .dashboard {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -50,6 +49,14 @@
             justify-content: space-around;
         }
 
+        .team-logo { 
+            width: 170px; 
+            height: 170px; 
+            object-fit: contain;
+            /* Added shadow to main cards too just in case */
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+        }
+
         .status-badge {
             font-size: 20px;
             font-weight: 900;
@@ -59,22 +66,11 @@
         }
         .status-live { background: var(--live); animation: pulse 2s infinite; }
         .status-final { color: var(--final); border: 1px solid var(--final); }
-        .status-none { color: #555; border: 1px solid #333; }
 
-        .team-logo { width: 170px; height: 170px; object-fit: contain; }
-        .team-name { font-size: 32px; font-weight: 900; margin-top: 5px; }
-        .record { font-size: 22px; color: #888; font-weight: bold; }
+        .score-container { font-size: 70px; font-weight: 900; }
+        .game-info { font-size: 24px; color: #ccc; }
 
-        .score-container {
-            font-size: 70px;
-            font-weight: 900;
-            letter-spacing: -2px;
-        }
-
-        .game-info { font-size: 24px; color: #ccc; line-height: 1.2; }
-        .next-label { font-size: 14px; color: #444; text-transform: uppercase; letter-spacing: 3px; }
-
-        /* THE PERFECT 215PX TICKER */
+        /* THE 215PX TICKER WITH LOGO FIXES */
         .ticker-wrap {
             background: #000;
             height: 215px; 
@@ -95,18 +91,31 @@
             display: flex;
             align-items: center;
             padding: 0 90px;
-            font-size: 72px; /* Balanced large font */
+            font-size: 72px;
             font-weight: 800;
             border-right: 4px solid #111;
         }
 
         .ticker-item span { margin: 0 18px; }
         
-        .ticker-team-logo {
-            width: 100px; /* Scaled to fit 215px height comfortably */
-            height: 100px;
-            object-fit: contain;
+        /* LOGO POPPER: This makes dark logos visible on black */
+        .ticker-logo-container {
+            background: rgba(255, 255, 255, 0.1); /* Slight light circle behind logo */
+            border-radius: 50%;
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin: 0 12px;
+        }
+
+        .ticker-team-logo {
+            width: 85px;
+            height: 85px;
+            object-fit: contain;
+            /* White glow effect around the logo shape */
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
         }
 
         .ticker-live-dot { color: var(--live); margin-right: 18px; font-size: 50px; }
@@ -118,23 +127,20 @@
         }
 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        #last-updated { position: absolute; bottom: 225px; right: 25px; font-size: 12px; color: #222; }
     </style>
 </head>
 <body>
 
     <div class="dashboard" id="cards-container"></div>
-    <div id="last-updated">Updating...</div>
 
     <div class="ticker-wrap">
         <div class="ticker-move" id="ticker-content">
-            <div class="ticker-item">REFRESHING MN SPORTS FEED...</div>
+            <div class="ticker-item">REFRESHING FEED...</div>
         </div>
     </div>
 
     <script>
         const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
-
         const TEAMS = [
             { id: "30", sport: "hockey", league: "nhl", name: "Wild" },
             { id: "16", sport: "basketball", league: "nba", name: "Timberwolves" },
@@ -149,43 +155,19 @@
             } catch (e) { return null; }
         }
 
-        function formatTime(dateStr) {
-            if (!dateStr) return "TBD";
-            return new Date(dateStr).toLocaleTimeString('en-US', { 
-                timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', hour12: true 
-            }) + " CT";
-        }
-
         async function getTeamData(team) {
             const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
             let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             const teamData = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
-            
-            let record = "0-0";
-            if (teamData?.team?.record?.items?.[0]?.summary) record = teamData.team.record.items[0].summary;
+            let record = teamData?.team?.record?.items?.[0]?.summary || "0-0";
 
             if (game) {
-                const comp = game.competitions[0];
-                const me = comp.competitors.find(c => c.team.id === team.id);
-                const opp = comp.competitors.find(c => c.team.id !== team.id);
-                return {
-                    status: game.status.type.state, 
-                    detail: game.status.type.shortDetail,
-                    myScore: me.score || "0",
-                    oppScore: opp.score || "0",
-                    opponent: opp.team.shortDisplayName,
-                    logo: me.team.logo,
-                    record: record
-                };
+                const me = game.competitions[0].competitors.find(c => c.team.id === team.id);
+                const opp = game.competitions[0].competitors.find(c => c.team.id !== team.id);
+                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, opponent: opp.team.shortDisplayName, logo: me.team.logo, record: record };
             } else {
-                const nextEvent = teamData?.team?.nextEvent?.[0];
-                return {
-                    status: 'none',
-                    record: record,
-                    logo: `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`,
-                    nextOpponent: nextEvent?.shortName || "Check Schedule",
-                    nextTime: nextEvent?.date ? formatTime(nextEvent.date) : "TBD"
-                };
+                const next = teamData?.team?.nextEvent?.[0];
+                return { status: 'none', record: record, logo: `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`, nextOpponent: next?.shortName || "Check Schedule", nextTime: next?.date ? new Date(next.date).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}) : "TBD" };
             }
         }
 
@@ -193,28 +175,15 @@
             const container = document.getElementById('cards-container');
             const teamResults = await Promise.all(TEAMS.map(team => getTeamData(team)));
             container.innerHTML = ''; 
-
             teamResults.forEach((data, index) => {
-                const team = TEAMS[index];
                 const card = document.createElement('div');
                 card.className = 'card';
-                let statusHtml, contentHtml;
-
-                if (data.status === 'in') {
-                    statusHtml = `<div class="status-badge status-live">LIVE</div>`;
-                    contentHtml = `<div class="score-container">${data.myScore}-${data.oppScore}</div><div class="game-info">${data.detail}<br>vs ${data.opponent}</div>`;
-                } else if (data.status === 'post') {
-                    statusHtml = `<div class="status-badge status-final">FINAL</div>`;
-                    contentHtml = `<div class="score-container">${data.myScore}-${data.oppScore}</div><div class="game-info">vs ${data.opponent}</div>`;
-                } else {
-                    statusHtml = `<div class="status-badge status-none">OFF DAY</div>`;
-                    contentHtml = `<div><div class="next-label">Next Game</div><div class="game-info" style="font-weight:900; color:white; margin-top:8px;">${data.nextOpponent}</div><div class="game-info">${data.nextTime}</div></div>`;
-                }
-
-                card.innerHTML = `${statusHtml}<img class="team-logo" src="${data.logo}"><div><div class="team-name">${team.name}</div><div class="record">${data.record}</div></div>${contentHtml}`;
+                card.innerHTML = `<div class="status-badge status-${data.status}">${data.status === 'in' ? 'LIVE' : (data.status === 'post' ? 'FINAL' : 'OFF DAY')}</div>
+                    <img class="team-logo" src="${data.logo}">
+                    <div><div style="font-size:32px; font-weight:900;">${TEAMS[index].name}</div><div style="color:#888;">${data.record}</div></div>
+                    ${data.status !== 'none' ? `<div class="score-container">${data.myScore}-${data.oppScore}</div><div>${data.detail}</div>` : `<div><div style="color:#444; font-size:12px; letter-spacing:2px;">NEXT</div><div style="font-weight:900;">${data.nextOpponent}</div><div>${data.nextTime}</div></div>`}`;
                 container.appendChild(card);
             });
-            document.getElementById('last-updated').innerText = "Last Sync: " + new Date().toLocaleTimeString();
         }
 
         async function updateTicker() {
@@ -227,25 +196,21 @@
                 data?.events?.forEach(game => {
                     const comp = game.competitions[0];
                     const away = comp.competitors[1], home = comp.competitors[0];
-                    const state = game.status.type.state;
-                    let color = state === 'in' ? 'var(--live)' : (state === 'post' ? 'var(--final)' : '#222');
-                    
                     allItems.push(`
                         <div class="ticker-item">
-                            ${state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
+                            ${game.status.type.state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
                             <span class="league-label">${league.l.toUpperCase()}</span>
-                            <img class="ticker-team-logo" src="${away.team.logo}">
+                            <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}"></div>
                             <span>${away.team.abbreviation} ${away.score || ''}</span>
-                            <span style="color:#1a1a1a; margin:0 5px;">@</span>
-                            <img class="ticker-team-logo" src="${home.team.logo}">
+                            <span style="color:#1a1a1a;">@</span>
+                            <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}"></div>
                             <span>${home.team.abbreviation} ${home.score || ''}</span>
-                            <span style="color: ${color}; margin-left:35px; font-size:48px;">${game.status.type.shortDetail}</span>
+                            <span style="color: ${game.status.type.state === 'in' ? 'var(--live)' : '#444'}; font-size:48px;">${game.status.type.shortDetail}</span>
                         </div>
                     `);
                 });
             }
-            if (allItems.length > 0) ticker.innerHTML = [...allItems, ...allItems].join('');
-            else ticker.innerHTML = '<div class="ticker-item">MN SPORTS NETWORK - STANDBY</div>';
+            ticker.innerHTML = [...allItems, ...allItems].join('');
         }
 
         updateDashboard(); updateTicker();
