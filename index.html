@@ -9,7 +9,6 @@
     body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; color:#fff; }
     .wrap { height:100vh; display:flex; flex-direction:column; }
 
-    /* Top: 4 static boards */
     .mn {
       display:grid;
       grid-template-columns:repeat(4, 1fr);
@@ -28,7 +27,6 @@
     }
     iframe { width:100%; height:100%; border:0; }
 
-    /* Bottom ticker */
     .tickerBar{
       height:95px;
       background:#07090c;
@@ -41,7 +39,7 @@
       display:flex;
       white-space:nowrap;
       will-change:transform;
-      animation: tickerScroll 170s linear infinite; /* speed */
+      animation: tickerScroll 170s linear infinite;
     }
     @keyframes tickerScroll{
       from{ transform:translateX(0); }
@@ -97,7 +95,6 @@
       font: 900 22px/1 Arial, sans-serif;
       opacity:.98;
     }
-
     .timeTag{
       display:inline-flex;
       align-items:center;
@@ -108,14 +105,12 @@
       color:#fff;
       letter-spacing:.4px;
     }
-
     .statusText{
       opacity:.80;
       font-weight:900;
       font-size:22px;
       letter-spacing:.2px;
     }
-
     .liveTag{
       display:inline-flex;
       align-items:center;
@@ -133,7 +128,6 @@
       background:#ff2b2b;
       box-shadow:0 0 10px rgba(255,43,43,.9);
     }
-
     .finalTag{
       display:inline-flex;
       align-items:center;
@@ -141,10 +135,9 @@
       border-radius:999px;
       background:rgba(255,205,0,.18);
       border:1px solid rgba(255,205,0,.35);
-      color:#ffd24d; /* gold */
+      color:#ffd24d;
       letter-spacing:.4px;
     }
-
     .divider{
       display:inline-block;
       width:2px;
@@ -159,23 +152,13 @@
 <body>
   <div class="wrap">
 
-    <!-- 4 static boards (ScoreStream) -->
     <div class="mn">
-      <div class="card">
-        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe>
-      </div>
-      <div class="card">
-        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe>
-      </div>
-      <div class="card">
-        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe>
-      </div>
-      <div class="card">
-        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe>
-      </div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe></div>
+      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe></div>
     </div>
 
-    <!-- Bottom ticker -->
     <div class="tickerBar">
       <div class="tickerTrack">
         <span class="lane" id="lane1"></span>
@@ -188,13 +171,11 @@
   <script>
     const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
-    // ESPN team endpoints for logo URLs
     const ESPN_TEAMS = {
       nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
       mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
       nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams"
     };
-
     const logoMap = { nba:{}, mlb:{}, nfl:{} };
 
     function esc(s){
@@ -214,13 +195,11 @@
       return (t?.abbreviation || t?.name || t?.full_name || "").toString().trim().toUpperCase();
     }
 
-    // Detect ISO strings like "2026-02-27T00:30:00Z"
     function looksLikeIsoDate(s){
       if (!s) return false;
       return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(s).trim());
     }
 
-    // Always produce 12-hour Central Time
     function toCentral12h(iso){
       try{
         const d = new Date(iso);
@@ -241,7 +220,6 @@
         const r = await fetch(ESPN_TEAMS[leagueKey]);
         if(!r.ok) throw new Error(`${leagueKey} teams HTTP ${r.status}`);
         const j = await r.json();
-
         const teams = j?.sports?.[0]?.leagues?.[0]?.teams || [];
         for (const entry of teams){
           const t = entry?.team;
@@ -257,11 +235,9 @@
     function teamHTML(leagueKey, abbr){
       const A = (abbr || "").toUpperCase();
       const url = logoMap?.[leagueKey]?.[A];
-
       if(!url){
         return `<span class="team"><span class="abbr">${esc(A)}</span></span>`;
       }
-
       return `
         <span class="team">
           <img class="logo" src="${esc(url)}" alt="${esc(A)}"
@@ -273,41 +249,51 @@
       `;
     }
 
-    // Infer live/final from status strings across leagues
-    function classifyStatus(raw){
-      const s = (raw || "").toString().trim().toLowerCase();
+    // Robust live/final detection using both status text AND period/time fields
+    function classifyGame(g){
+      const raw = (g.status || g.game_status || "").toString().trim();
+      const s = raw.toLowerCase();
 
-      const isFinal = s.includes("final") || s === "f" || s.includes("final/ot") || s.includes("final/so");
-      const isLive =
-        s.includes("q1") || s.includes("q2") || s.includes("q3") || s.includes("q4") ||
-        s.includes("1st") || s.includes("2nd") || s.includes("3rd") ||
-        s.includes("top") || s.includes("bot") || s.includes("mid") ||
-        s.includes("in progress") || s.includes("live") || s.includes("half");
+      const period = Number(g?.period ?? 0);
+      const clock  = (g?.time ?? g?.clock ?? "").toString().trim();
 
-      return { isFinal, isLive };
+      const isFinal =
+        s.includes("final") || s === "f" || s.includes("final/ot") || s.includes("final/so");
+
+      // Many APIs mark live via period/time rather than text
+      const isLive = !isFinal && (period > 0 || (clock && clock !== "0:00"));
+
+      // “Not started” often comes through as 0–0 with period 0 and blank clock
+      const hs = Number(g.home_team_score ?? g.home_score ?? 0);
+      const as = Number(g.visitor_team_score ?? g.away_score ?? 0);
+      const looksPregame = (hs === 0 && as === 0) && (period === 0) && (!clock || clock === "0:00");
+
+      return { rawStatus: raw, isFinal, isLive, looksPregame, period, clock };
     }
 
     function formatGameHTML(leagueKey, leagueLabel, g){
       const home = teamAbbr(g.home_team);
       const away = teamAbbr(g.visitor_team || g.away_team);
 
-      const homeScore = g.home_team_score ?? g.home_score ?? "";
-      const awayScore = g.visitor_team_score ?? g.away_score ?? "";
+      // IMPORTANT: NBA uses visitor_team_score + home_team_score
+      const hsRaw = g.home_team_score ?? g.home_score ?? "";
+      const asRaw = g.visitor_team_score ?? g.away_score ?? "";
 
-      const rawStatus = (g.status || g.game_status || "").toString().trim();
-      const { isFinal, isLive } = classifyStatus(rawStatus);
-      const hasScore = (homeScore !== "" || awayScore !== "");
+      const hs = (hsRaw === null || hsRaw === undefined) ? "" : String(hsRaw);
+      const as = (asRaw === null || asRaw === undefined) ? "" : String(asRaw);
 
-      // If status is an ISO string, treat it as a start time
+      const { rawStatus, isFinal, isLive, looksPregame, period, clock } = classifyGame(g);
+
+      // Sometimes NBA puts ISO datetime in status
       const statusIsIso = looksLikeIsoDate(rawStatus);
       const statusTimeCT = statusIsIso ? toCentral12h(rawStatus) : "";
 
-      // Upcoming start time: prefer g.date, otherwise ISO-in-status
+      // Upcoming: prefer g.date, else ISO-in-status
       const startTimeCT = (g.date ? toCentral12h(g.date) : "") || statusTimeCT;
 
       let metaHTML = "";
 
-      if (!hasScore && !isFinal && !isLive) {
+      if (looksPregame && !isFinal && !isLive) {
         if (startTimeCT) {
           metaHTML = `<span class="meta"><span class="timeTag">${esc(startTimeCT)}</span></span>`;
         } else if (rawStatus && !statusIsIso) {
@@ -316,7 +302,13 @@
       } else if (isFinal) {
         metaHTML = `<span class="meta"><span class="finalTag">FINAL</span></span>`;
       } else if (isLive) {
-        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(rawStatus)}</span></span>`;
+        // Build a readable live detail
+        const pieces = [];
+        if (rawStatus && !statusIsIso) pieces.push(rawStatus);
+        if (period > 0) pieces.push(`P${period}`);
+        if (clock) pieces.push(clock);
+        const detail = pieces.join(" • ");
+        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(detail)}</span></span>`;
       } else if (rawStatus && !statusIsIso) {
         metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
       }
@@ -324,9 +316,9 @@
       return `
         <span class="tickItem">
           ${teamHTML(leagueKey, away)}
-          <span class="score">${esc(awayScore)}</span>
+          <span class="score">${esc(as)}</span>
           <span class="sepDot">•</span>
-          <span class="score">${esc(homeScore)}</span>
+          <span class="score">${esc(hs)}</span>
           ${teamHTML(leagueKey, home)}
           ${metaHTML}
         </span>
@@ -366,15 +358,10 @@
 
     (async () => {
       setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
-
-      await Promise.all([
-        loadEspnLogos("nba"),
-        loadEspnLogos("mlb"),
-        loadEspnLogos("nfl"),
-      ]);
-
+      await Promise.all([ loadEspnLogos("nba"), loadEspnLogos("mlb"), loadEspnLogos("nfl") ]);
       await refreshTicker();
-      setInterval(refreshTicker, 60000);
+      // Faster refresh for live scores (30s)
+      setInterval(refreshTicker, 30000);
     })();
   </script>
 </body>
