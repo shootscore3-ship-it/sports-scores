@@ -103,7 +103,7 @@
                 return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
             } else {
                 const next = teamDetails?.team?.nextEvent?.[0];
-                // FORCED CENTRAL TIME ZONE FIX BELOW
+                // Timezone set to CST
                 return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone: 'America/Chicago'}) : "TBD" };
             }
         }
