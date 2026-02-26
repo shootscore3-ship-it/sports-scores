@@ -59,7 +59,7 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    /* ✅ Updated "time" line styling (now shows TODAY/TOMORROW/SAT 2/28 • time) */
+    /* TODAY • 8:00 PM CT */
     .next-time{
       font-size:18px;
       color:#cfcfcf;
@@ -94,6 +94,33 @@
       font-weight:900;
       letter-spacing:0.6px;
       text-transform:uppercase;
+    }
+
+    /* ✅ NEW: Alert badges row for LIVE moments (top cards) */
+    .alert-row{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    .alert-pill{
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+      background:rgba(255,59,59,0.12);
+      border:1px solid rgba(255,59,59,0.55);
+      color:#fff;
+      box-shadow:0 0 18px rgba(255,59,59,0.18);
+    }
+    .alert-pill.alt{
+      background:rgba(212,175,55,0.10);
+      border:1px solid rgba(212,175,55,0.45);
+      box-shadow:none;
+      color:var(--final-gold);
     }
 
     /* Ticker */
@@ -169,18 +196,13 @@
       return `Starts in ${mins}m`;
     }
 
-    /* ✅ NEW: format "TODAY • 8:00 PM CT" / "TOMORROW • ..." / "SAT 2/28 • ..." */
     function nextLabelAndTime(iso){
       if (!iso) return "TBD";
-
       const start = new Date(iso);
 
-      // "Now" in Central time, but without depending on timeZone math for comparisons:
-      // Use local Date objects but compare by Central calendar date via toLocaleDateString in CT.
       const todayCT = new Date().toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
       const startCT = start.toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
 
-      // Build a "tomorrowCT" string by taking today's CT date parts and adding 1 day safely in UTC.
       const [mm, dd, yyyy] = todayCT.split('/').map(x => parseInt(x, 10));
       const tomorrowDate = new Date(Date.UTC(yyyy, mm - 1, dd + 1, 12, 0, 0));
       const tomorrowCT = tomorrowDate.toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
@@ -191,13 +213,122 @@
       } else if (startCT === tomorrowCT) {
         label = "TOMORROW";
       } else {
-        const dow = start.toLocaleDateString('en-US', { timeZone: CT_TZ, weekday:'short' }).toUpperCase(); // SAT
-        const md = start.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' }); // 2/28
+        const dow = start.toLocaleDateString('en-US', { timeZone: CT_TZ, weekday:'short' }).toUpperCase();
+        const md = start.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' });
         label = `${dow} ${md}`;
       }
 
-      const time = start.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' }); // 8:00 PM
+      const time = start.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
       return `${label} • ${time} CT`;
+    }
+
+    /* -------------------------
+       ✅ URGENT MOMENTS DETECTION
+       ------------------------- */
+
+    function toNum(v){
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    // MLB: BASES LOADED / RISP / GO-AHEAD RUN ON (tie 9th+ with runners)
+    function mlbAlerts(game){
+      const comp = game?.competitions?.[0];
+      const sit = comp?.situation || game?.competitions?.[0]?.situation;
+      if (!sit) return [];
+
+      // ESPN sometimes uses these booleans:
+      const on1 = !!sit.onFirst;
+      const on2 = !!sit.onSecond;
+      const on3 = !!sit.onThird;
+
+      const inning = toNum(sit.inning) ?? null;
+      const isTop = (sit.inningHalf || "").toLowerCase().includes("top");
+      const isBot = (sit.inningHalf || "").toLowerCase().includes("bottom");
+
+      const awayScore = toNum(comp?.competitors?.[1]?.score);
+      const homeScore = toNum(comp?.competitors?.[0]?.score);
+
+      const alerts = [];
+      if (on1 && on2 && on3) alerts.push("BASES LOADED");
+      else if (on2 || on3) alerts.push("RISP");
+
+      // Optional: GO-AHEAD RUN ON (tie game 9th+ with any runner on)
+      if (inning !== null && inning >= 9 && (on1 || on2 || on3) && awayScore !== null && homeScore !== null && awayScore === homeScore) {
+        alerts.push("GO-AHEAD RUN ON");
+      }
+
+      return alerts;
+    }
+
+    // NHL: POWER PLAY
+    function nhlAlerts(game){
+      const comp = game?.competitions?.[0];
+      const sit = comp?.situation;
+      if (!sit) return [];
+      return sit.onPowerPlay ? ["POWER PLAY"] : [];
+    }
+
+    // NBA: CLUTCH (4Q/OT, <= 5:00, diff <= 6)
+    function nbaAlerts(game){
+      const comp = game?.competitions?.[0];
+      const sit = comp?.situation;
+      if (!sit) return [];
+
+      const period = toNum(sit.period);
+      const clock = (sit.clock || "").trim(); // "4:32"
+      if (!period || !clock) return [];
+
+      const isClutchPeriod = (period >= 4); // 4th or OT
+      if (!isClutchPeriod) return [];
+
+      const [mStr, sStr] = clock.split(":");
+      const mins = toNum(mStr);
+      const secs = toNum(sStr);
+      if (mins === null || secs === null) return [];
+
+      const secondsLeft = mins * 60 + secs;
+      if (secondsLeft > 300) return []; // > 5:00
+
+      const a = toNum(comp?.competitors?.[1]?.score);
+      const h = toNum(comp?.competitors?.[0]?.score);
+      if (a === null || h === null) return [];
+
+      const diff = Math.abs(a - h);
+      if (diff <= 6) return ["CLUTCH"];
+      return [];
+    }
+
+    // NFL: RED ZONE (for later; ESPN may expose sit.isRedZone)
+    function nflAlerts(game){
+      const comp = game?.competitions?.[0];
+      const sit = comp?.situation;
+      if (!sit) return [];
+      return sit.isRedZone ? ["RED ZONE"] : [];
+    }
+
+    function getAlertsForGame(league, sport, game){
+      const state = game?.status?.type?.state;
+      if (state !== "in") return []; // only during LIVE
+
+      // Route by league (most reliable)
+      if (league === "mlb") return mlbAlerts(game);
+      if (league === "nhl") return nhlAlerts(game);
+      if (league === "nba") return nbaAlerts(game);
+      if (league === "nfl") return nflAlerts(game);
+
+      // fallback
+      return [];
+    }
+
+    // For TOP CARDS: compute alerts from the "game" object we already found
+    function getAlertsForTopCard(team, game){
+      return getAlertsForGame(team.league, team.sport, game);
+    }
+
+    // For TICKER: compute alerts from that ticker game
+    function getAlertsForTicker(leagueObj, game){
+      return getAlertsForGame(leagueObj.l, leagueObj.s, game);
     }
 
     async function getOpponentFromEvent(team, eventId, myTeamId){
@@ -236,9 +367,10 @@
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
 
         const startIso = game.date || null;
-
-        // ✅ For pre games, use the new "TODAY • 8:00 PM CT" format
         const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : game.status.type.shortDetail;
+
+        // ✅ NEW: top-card urgent alerts (live only)
+        const alerts = getAlertsForTopCard(team, game);
 
         return {
           status: state,
@@ -253,7 +385,8 @@
           oppLogo,
           atOrVs,
           myLogo: me?.team?.logo || logo,
-          theirLogo: oppLogo
+          theirLogo: oppLogo,
+          alerts
         };
       }
 
@@ -269,11 +402,11 @@
         logo,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
-        // ✅ This is the line that gets displayed under countdown
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
         nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
         nextOppLogo: oppInfo?.oppLogo || "",
-        nextAtOrVs: oppInfo?.atOrVs || "vs"
+        nextAtOrVs: oppInfo?.atOrVs || "vs",
+        alerts: []
       };
     }
 
@@ -317,6 +450,13 @@
 
         const scoreBlock = () => {
           const pillText = normalizeDetailForPill(data.detail);
+
+          const alertsHtml = (data.alerts && data.alerts.length)
+            ? `<div class="alert-row">
+                 ${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}
+               </div>`
+            : "";
+
           return `
             <div class="score-row">
               <div class="score-team">
@@ -329,7 +469,9 @@
                 <img class="score-logo" src="${data.theirLogo}" alt="">
               </div>
             </div>
+
             ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
+            ${alertsHtml}
           `;
         };
 
@@ -375,19 +517,24 @@
           const state = game.status.type.state; // pre/in/post
           const sit = comp.situation;
 
+          // ✅ existing NHL glow when power play
           let alertClass = "";
           let alertLabel = "";
-          if (state === "in" && sit){
-            if (league.l === "nhl" && sit.onPowerPlay){
-              alertClass = "ticker-alert-pulse";
-              alertLabel = '<span class="alert-badge">POWER PLAY</span>';
-            }
+
+          // ✅ NEW: urgent callouts (ticker) for all supported leagues
+          const alerts = getAlertsForTicker(league, game);
+          if (alerts.length) {
+            alertClass = "ticker-alert-pulse";
+            // show first alert only to keep ticker clean
+            alertLabel = `<span class="alert-badge">${alerts[0]}</span>`;
+          } else if (state === "in" && league.l === "nhl" && sit && sit.onPowerPlay) {
+            alertClass = "ticker-alert-pulse";
+            alertLabel = '<span class="alert-badge">POWER PLAY</span>';
           }
 
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
           const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
 
-          // Keep ticker detail as before (CT date/time for pre)
           const detail = (state === "pre" && game.date)
             ? (() => {
                 const d = new Date(game.date);
