@@ -28,7 +28,7 @@
     }
     iframe { width:100%; height:100%; border:0; }
 
-    /* Bottom: ESPN-style ticker */
+    /* Bottom: ticker */
     .tickerBar{
       height:95px;
       background:#07090c;
@@ -41,8 +41,8 @@
       display:flex;
       white-space:nowrap;
       will-change:transform;
-      /* Slower ticker: increase seconds to slow it down */
-      animation: tickerScroll 160s linear infinite;
+      /* SLOWER = bigger number */
+      animation: tickerScroll 170s linear infinite;
     }
     @keyframes tickerScroll{
       from{ transform:translateX(0); }
@@ -51,20 +51,27 @@
 
     .lane{ display:flex; align-items:center; }
 
+    .leagueHeader{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 16px;
+      margin-right:28px;
+      border-radius:999px;
+      background:rgba(255,255,255,.10);
+      font: 900 28px/1 Arial, sans-serif;
+      letter-spacing:.8px;
+    }
+
     .tickItem{
       display:inline-flex;
       align-items:center;
       gap:12px;
-      padding-right:72px;
+      padding-right:64px;
       font: 800 32px/1 Arial, sans-serif;
       color:#fff;
     }
-    .leagueTag{
-      opacity:.9;
-      font-weight:900;
-      letter-spacing:.5px;
-      margin-right:4px;
-    }
+
     .team{
       display:inline-flex;
       align-items:center;
@@ -82,7 +89,65 @@
     .abbr{ font-weight:900; }
     .score{ font-weight:900; opacity:.95; }
     .sepDot{ opacity:.7; margin:0 10px; font-weight:900; }
-    .status{ opacity:.75; font-weight:800; }
+
+    .meta{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      margin-left:8px;
+      font: 900 24px/1 Arial, sans-serif;
+      opacity:.95;
+    }
+    .liveTag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,0,0,.18);
+      border:1px solid rgba(255,0,0,.35);
+      color:#fff;
+    }
+    .liveDot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#ff2b2b;
+      box-shadow:0 0 10px rgba(255,43,43,.9);
+    }
+    .finalTag{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,205,0,.18);
+      border:1px solid rgba(255,205,0,.35);
+      color:#ffd24d; /* gold */
+    }
+    .timeTag{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.14);
+      color:#fff;
+      opacity:.92;
+    }
+    .statusText{
+      opacity:.75;
+      font-weight:900;
+      font-size:22px;
+    }
+
+    .divider{
+      display:inline-block;
+      width:2px;
+      height:38px;
+      background:rgba(255,255,255,.18);
+      margin:0 22px;
+      border-radius:2px;
+    }
   </style>
 </head>
 
@@ -116,19 +181,18 @@
   </div>
 
   <script>
-    // Your Cloudflare Worker (scores)
+    // Your Cloudflare Worker scores endpoint
     const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
-    // ESPN team list endpoints (logos + abbreviations)
-    // These endpoints commonly return "team.logos[].href" and "team.abbreviation".  [oai_citation:1‡Gist](https://gist.github.com/nntrn/ee26cb2a0716de0947a0a4e9a157bc1c?permalink_comment_id=5393643&utm_source=chatgpt.com)
+    // ESPN team list endpoints for logos (no uploads needed)
     const ESPN_TEAMS = {
       nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
       mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
       nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams",
-      // nhl (later): https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams
+      // NHL later if we add it:
+      // nhl: "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
     };
 
-    // logoMap[league][ABBR] = logoUrl
     const logoMap = { nba:{}, mlb:{}, nfl:{} };
 
     function esc(s){
@@ -148,13 +212,29 @@
       return (t?.abbreviation || t?.name || t?.full_name || "").toString().trim().toUpperCase();
     }
 
+    // Convert an ISO date string to Central Time in 24h HH:MM format
+    function toCentral24h(iso){
+      try{
+        const d = new Date(iso);
+        const ct = d.toLocaleString("en-US", {
+          timeZone: "America/Chicago",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        });
+        // toLocaleString may return "19:30" or "07:30" depending; we keep as-is
+        return `${ct} CT`;
+      }catch(e){
+        return "";
+      }
+    }
+
     async function loadEspnLogos(leagueKey){
       try{
         const r = await fetch(ESPN_TEAMS[leagueKey]);
         if(!r.ok) throw new Error(`${leagueKey} teams HTTP ${r.status}`);
         const j = await r.json();
 
-        // ESPN structure is usually: sports[0].leagues[0].teams[] with { team: {...} }
         const teams = j?.sports?.[0]?.leagues?.[0]?.teams || [];
         for (const entry of teams){
           const t = entry?.team;
@@ -162,8 +242,7 @@
           const logo = t?.logos?.[0]?.href || t?.logo || "";
           if (abbr && logo) logoMap[leagueKey][abbr] = logo;
         }
-      } catch(e){
-        // If this fails (blocked in VXT), ticker still works without logos
+      }catch(e){
         console.log("Logo fetch failed for", leagueKey, e);
       }
     }
@@ -187,27 +266,65 @@
       `;
     }
 
+    // Try to infer if a game is live or final from status text
+    function classifyStatus(raw){
+      const s = (raw || "").toString().trim().toLowerCase();
+
+      // Very common patterns
+      const isFinal = s.includes("final") || s === "f" || s === "final/ot" || s === "final/so";
+      const isLive =
+        s.includes("q1") || s.includes("q2") || s.includes("q3") || s.includes("q4") ||
+        s.includes("1st") || s.includes("2nd") || s.includes("3rd") ||
+        s.includes("top") || s.includes("bot") || s.includes("mid") ||
+        s.includes("in progress") || s.includes("live") || s.includes("half");
+
+      return { isFinal, isLive };
+    }
+
     function formatGameHTML(leagueKey, leagueLabel, g){
       const home = teamAbbr(g.home_team);
       const away = teamAbbr(g.visitor_team || g.away_team);
 
       const homeScore = g.home_team_score ?? g.home_score ?? "";
       const awayScore = g.visitor_team_score ?? g.away_score ?? "";
-      const status = (g.status || g.game_status || "").toString().trim();
 
-      const statusShort = status ? ` <span class="status">(${esc(status)})</span>` : "";
+      const rawStatus = (g.status || g.game_status || "").toString().trim();
+      const { isFinal, isLive } = classifyStatus(rawStatus);
+
+      // Upcoming time (CT 24h) if not live and no score yet
+      let metaHTML = "";
+      const hasScore = (homeScore !== "" || awayScore !== "");
+
+      if (!hasScore && g.date && !isFinal && !isLive){
+        const ct = toCentral24h(g.date);
+        metaHTML = ct ? `<span class="meta"><span class="timeTag">${esc(ct)}</span></span>` : "";
+      } else if (isFinal){
+        metaHTML = `<span class="meta"><span class="finalTag">FINAL</span></span>`;
+      } else if (isLive){
+        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span> <span class="statusText">${esc(rawStatus)}</span></span>`;
+      } else if (rawStatus){
+        // fallback status
+        metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
+      }
 
       return `
         <span class="tickItem">
-          <span class="leagueTag">${esc(leagueLabel)}:</span>
           ${teamHTML(leagueKey, away)}
           <span class="score">${esc(awayScore)}</span>
           <span class="sepDot">•</span>
           <span class="score">${esc(homeScore)}</span>
           ${teamHTML(leagueKey, home)}
-          ${statusShort}
+          ${metaHTML}
         </span>
       `;
+    }
+
+    function leagueSectionHTML(leagueKey, leagueLabel, games){
+      if (!games || !games.length) return "";
+
+      const header = `<span class="leagueHeader">${esc(leagueLabel)}</span>`;
+      const items = games.map(g => formatGameHTML(leagueKey, leagueLabel, g)).join("");
+      return header + items + `<span class="divider"></span>`;
     }
 
     async function refreshTicker(){
@@ -216,14 +333,17 @@
         if(!r.ok) throw new Error("Worker HTTP " + r.status);
         const j = await r.json();
 
-        const parts = [];
+        // NHL is not included here because your Worker shows NHL 401 on free plan.
+        const nbaGames = (j.nba?.data || []);
+        const mlbGames = (j.mlb?.data || []);
+        const nflGames = (j.nfl?.data || []);
 
-        // NHL is skipped here because BALLDONTLIE NHL is 401 on your plan.
-        (j.nba?.data || []).forEach(g => parts.push(formatGameHTML("nba","NBA",g)));
-        (j.mlb?.data || []).forEach(g => parts.push(formatGameHTML("mlb","MLB",g)));
-        (j.nfl?.data || []).forEach(g => parts.push(formatGameHTML("nfl","NFL",g)));
+        let html = "";
+        html += leagueSectionHTML("nba", "NBA", nbaGames);
+        html += leagueSectionHTML("mlb", "MLB", mlbGames);
+        html += leagueSectionHTML("nfl", "NFL", nflGames);
 
-        const html = parts.length ? parts.join("") : `<span class="tickItem">No games today</span>`;
+        if (!html) html = `<span class="tickItem">No games today</span>`;
         setTickerHTML(html);
 
       }catch(e){
@@ -236,14 +356,13 @@
     (async () => {
       setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
 
-      // Load logo maps in the background
+      // Load logos first (still ok if blocked; ticker works without)
       await Promise.all([
         loadEspnLogos("nba"),
         loadEspnLogos("mlb"),
         loadEspnLogos("nfl"),
       ]);
 
-      // Load ticker now + refresh every minute
       await refreshTicker();
       setInterval(refreshTicker, 60000);
     })();
