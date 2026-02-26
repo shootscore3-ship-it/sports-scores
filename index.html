@@ -82,7 +82,7 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    /* ✅ NEW: MLB batting highlight */
+    /* MLB batting highlight (top cards) */
     .score-team.batting{
       border:2px solid var(--live);
       box-shadow:0 0 22px rgba(255,59,59,0.35);
@@ -149,6 +149,18 @@
     .ticker-logo-container{ width:120px; height:120px; display:flex; align-items:center; justify-content:center; margin:0 15px; }
     .ticker-team-logo{ width:115px; height:115px; object-fit:contain; }
     .league-badge{ background:#222; color:#888; font-size:24px; padding:5px 15px; border-radius:5px; margin-right:25px; }
+
+    /* ✅ NEW: ticker batting highlight around the batting team's abbreviation */
+    .ticker-batting{
+      display:inline-flex;
+      align-items:center;
+      padding:8px 14px;
+      border-radius:14px;
+      border:3px solid var(--live);
+      background:rgba(255,59,59,0.08);
+      box-shadow:0 0 24px rgba(255,59,59,0.28);
+      line-height:1;
+    }
 
     @keyframes ticker-scroll{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
     @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:0.5;} }
@@ -235,12 +247,10 @@
 
     function parseStandingsEntry(entry){
       const rank =
-        statPick(entry, s => /rank|seed/i.test(s?.name || "") || /rank|seed/i.test(s?.abbreviation || ""))?.displayValue ||
-        null;
+        statPick(entry, s => /rank|seed/i.test(s?.name || "") || /rank|seed/i.test(s?.abbreviation || ""))?.displayValue || null;
 
       const gb =
-        statPick(entry, s => (s?.abbreviation || "").toUpperCase() === "GB" || /games? behind|games? back/i.test(s?.name || ""))?.displayValue ||
-        null;
+        statPick(entry, s => (s?.abbreviation || "").toUpperCase() === "GB" || /games? behind|games? back/i.test(s?.name || ""))?.displayValue || null;
 
       const group =
         entry?.group?.shortName || entry?.group?.name ||
@@ -274,10 +284,7 @@
     }
 
     async function standingsText(team, teamDetails){
-      const summary =
-        teamDetails?.team?.standingSummary ||
-        teamDetails?.team?.standingsSummary ||
-        "";
+      const summary = teamDetails?.team?.standingSummary || teamDetails?.team?.standingsSummary || "";
       if (summary) return String(summary);
 
       const smap = await getStandingsMap(team.sport, team.league);
@@ -361,9 +368,9 @@
       return [];
     }
 
-    /* ✅ NEW: determine which side is batting in MLB (top=away, bottom=home) */
-    function mlbBattingSide(game){
-      const comp = game?.competitions?.[0];
+    /* Determine who is batting in MLB (top=away, bottom=home) */
+    function mlbBattingSideFromEvent(event){
+      const comp = event?.competitions?.[0];
       const sit = comp?.situation;
       if (!sit) return null;
 
@@ -415,11 +422,11 @@
 
         const alerts = getAlertsForGame(team.league, game);
 
-        // ✅ MLB batting highlight flags
+        // MLB batting highlight for top cards
         let myBatting = false;
         let oppBatting = false;
         if (team.league === "mlb" && state === "in") {
-          const battingSide = mlbBattingSide(game);
+          const battingSide = mlbBattingSideFromEvent(game);
           if (battingSide) {
             myBatting = (me?.homeAway === battingSide);
             oppBatting = (opp?.homeAway === battingSide);
@@ -514,7 +521,6 @@
                </div>`
             : "";
 
-          // ✅ Apply .batting class only when flags are true (MLB live)
           const myBattingClass = data.myBatting ? "batting" : "";
           const oppBattingClass = data.oppBatting ? "batting" : "";
 
@@ -597,17 +603,26 @@
               })()
             : game.status.type.shortDetail;
 
+          /* ✅ NEW: ticker batting highlight (MLB live only) */
+          let awayWrapStart = "", awayWrapEnd = "";
+          let homeWrapStart = "", homeWrapEnd = "";
+          if (league.l === "mlb" && state === "in") {
+            const battingSide = mlbBattingSideFromEvent(game);
+            if (battingSide === "away") { awayWrapStart = `<span class="ticker-batting">`; awayWrapEnd = `</span>`; }
+            if (battingSide === "home") { homeWrapStart = `<span class="ticker-batting">`; homeWrapEnd = `</span>`; }
+          }
+
           allItems.push(`
             <div class="ticker-item ${alertClass}">
               <div class="league-badge">${league.l.toUpperCase()}</div>
 
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}" alt=""></div>
-              <span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>
+              ${awayWrapStart}<span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>${awayWrapEnd}
 
               <span style="color:#222; margin:0 15px;">@</span>
 
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}" alt=""></div>
-              <span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>
+              ${homeWrapStart}<span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>${homeWrapEnd}
 
               <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">
                 ${detail}
