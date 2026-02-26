@@ -1,50 +1,149 @@
-<script>
-const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Scores</title>
 
-function teamName(t){
-  return t?.abbreviation || t?.name || t?.full_name || "";
-}
+  <style>
+    body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; color:#fff; }
+    .wrap { height:100vh; display:flex; flex-direction:column; }
 
-function formatGame(league, g){
-  const home = teamName(g.home_team);
-  const away = teamName(g.visitor_team || g.away_team);
+    /* Top: 4 static boards */
+    .mn {
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:16px;
+      padding:20px;
+      box-sizing:border-box;
+      flex:1;
+      min-height:0; /* helps in some browsers */
+    }
 
-  const homeScore = g.home_team_score ?? g.home_score ?? "";
-  const awayScore = g.visitor_team_score ?? g.away_score ?? "";
-  const status = g.status || g.game_status || "";
+    .card {
+      background:#12161c;
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:0 0 20px rgba(0,0,0,0.5);
+      min-height:0;
+    }
 
-  if(homeScore !== "" || awayScore !== ""){
-    return `${league}: ${away} ${awayScore}–${homeScore} ${home} (${status})`;
-  }
-  return `${league}: ${away} @ ${home} (${status})`;
-}
+    iframe { width:100%; height:100%; border:0; }
 
-async function refreshTicker(){
-  try{
-    const r = await fetch(WORKER_URL + "?t=" + Date.now());
-    if(!r.ok) throw new Error("Worker HTTP " + r.status);
+    /* Bottom: ESPN-style ticker */
+    .tickerBar{
+      height:95px;
+      background:#07090c;
+      border-top:2px solid rgba(255,255,255,.12);
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+    }
 
-    const j = await r.json();
-    const parts = [];
+    .tickerTrack{
+      display:flex;
+      white-space:nowrap;
+      will-change:transform;
+      animation: tickerScroll 60s linear infinite;
+    }
 
-    // NHL may be 401 on free plan — this just skips it
-    if(j.nhl?.data) j.nhl.data.forEach(g => parts.push(formatGame("NHL", g)));
-    if(j.nba?.data) j.nba.data.forEach(g => parts.push(formatGame("NBA", g)));
-    if(j.mlb?.data) j.mlb.data.forEach(g => parts.push(formatGame("MLB", g)));
-    if(j.nfl?.data) j.nfl.data.forEach(g => parts.push(formatGame("NFL", g)));
+    .tickerTrack span{
+      display:inline-block;
+      padding-right:80px;
+      font: 800 34px/1 Arial, sans-serif;
+      color:#fff;
+    }
 
-    const text = parts.length ? parts.join("  •  ") : "No games today";
+    @keyframes tickerScroll{
+      from{ transform:translateX(0); }
+      to{ transform:translateX(-50%); }
+    }
+  </style>
+</head>
 
-    document.getElementById("tickerText").textContent = text;
-    document.getElementById("tickerText2").textContent = text;
+<body>
+  <div class="wrap">
 
-  }catch(e){
-    document.getElementById("tickerText").textContent = "Ticker error (worker).";
-    document.getElementById("tickerText2").textContent = "Ticker error (worker).";
-    console.log(e);
-  }
-}
+    <!-- 4 static boards (ScoreStream) -->
+    <div class="mn">
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe>
+      </div>
+    </div>
 
-refreshTicker();
-setInterval(refreshTicker, 60000);
-</script>
+    <!-- Bottom ticker -->
+    <div class="tickerBar">
+      <div class="tickerTrack">
+        <span id="tickerText">Loading scores...</span>
+        <span id="tickerText2">Loading scores...</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
+
+    function setTicker(text){
+      const a = document.getElementById("tickerText");
+      const b = document.getElementById("tickerText2");
+      if (a) a.textContent = text;
+      if (b) b.textContent = text;
+    }
+
+    function teamName(t){
+      return t?.abbreviation || t?.name || t?.full_name || "";
+    }
+
+    function formatGame(league, g){
+      const home = teamName(g.home_team);
+      const away = teamName(g.visitor_team || g.away_team);
+
+      const homeScore = g.home_team_score ?? g.home_score ?? "";
+      const awayScore = g.visitor_team_score ?? g.away_score ?? "";
+
+      const status = (g.status || g.game_status || "").toString().trim();
+
+      if(homeScore !== "" || awayScore !== ""){
+        return `${league}: ${away} ${awayScore}–${homeScore} ${home}${status ? ` (${status})` : ""}`;
+      }
+      return `${league}: ${away} @ ${home}${status ? ` (${status})` : ""}`;
+    }
+
+    async function refreshTicker(){
+      try{
+        const r = await fetch(WORKER_URL + "?t=" + Date.now());
+        if(!r.ok) throw new Error("Worker HTTP " + r.status);
+
+        const j = await r.json();
+        const parts = [];
+
+        // NHL is 401 on your current plan, so we skip it for now
+        (j.nba?.data || []).forEach(g => parts.push(formatGame("NBA", g)));
+        (j.mlb?.data || []).forEach(g => parts.push(formatGame("MLB", g)));
+        (j.nfl?.data || []).forEach(g => parts.push(formatGame("NFL", g)));
+
+        const text = parts.length ? parts.join("  •  ") : "No games today";
+        setTicker(text);
+
+      }catch(e){
+        console.log("Ticker error:", e);
+        setTicker("Ticker error (worker).");
+      }
+    }
+
+    setTicker("Loading scores...");
+    refreshTicker();
+    setInterval(refreshTicker, 60000);
+  </script>
+</body>
+</html>
