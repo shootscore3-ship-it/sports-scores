@@ -46,7 +46,7 @@
     .opp-logo{ width:88px; height:88px; object-fit:contain; }
     .opp-text{ font-size:44px; font-weight:900; line-height:1; }
 
-    /* ✅ NEW: countdown line (Starts in ...) */
+    /* Countdown line (Starts in ...) */
     .countdown{
       font-size:16px;
       font-weight:900;
@@ -59,7 +59,13 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    .next-time{ font-size:18px; color:#cfcfcf; }
+    /* ✅ Updated "time" line styling (now shows TODAY/TOMORROW/SAT 2/28 • time) */
+    .next-time{
+      font-size:18px;
+      color:#cfcfcf;
+      font-weight:800;
+      letter-spacing:0.2px;
+    }
 
     /* LIVE/FINAL score row with logos */
     .score-row{
@@ -141,26 +147,16 @@
       }catch(e){ return null; }
     }
 
-    function formatCTDateTime(iso){
-      const d = new Date(iso);
-      const md = d.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' });
-      const t  = d.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
-      return `${md} - ${t} CT`;
-    }
-
     function normalizeDetailForPill(detail){
       if (!detail) return "";
       return String(detail).replace(/\s+/g, " ").trim();
     }
 
-    /* ✅ NEW: countdown helper */
     function countdownText(iso){
       if (!iso) return "";
       const start = new Date(iso).getTime();
       const now = Date.now();
-      let diff = start - now;
-
-      // If game already started or is super close, don't show countdown
+      const diff = start - now;
       if (diff <= 0) return "";
 
       const totalMinutes = Math.floor(diff / 60000);
@@ -168,16 +164,40 @@
       const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
       const mins = totalMinutes % 60;
 
-      if (days >= 1) {
-        // e.g. "Starts in 1d 3h"
-        return `Starts in ${days}d ${hours}h`;
-      }
-      if (hours >= 1) {
-        // e.g. "Starts in 2h 15m"
-        return `Starts in ${hours}h ${mins}m`;
-      }
-      // e.g. "Starts in 35m"
+      if (days >= 1) return `Starts in ${days}d ${hours}h`;
+      if (hours >= 1) return `Starts in ${hours}h ${mins}m`;
       return `Starts in ${mins}m`;
+    }
+
+    /* ✅ NEW: format "TODAY • 8:00 PM CT" / "TOMORROW • ..." / "SAT 2/28 • ..." */
+    function nextLabelAndTime(iso){
+      if (!iso) return "TBD";
+
+      const start = new Date(iso);
+
+      // "Now" in Central time, but without depending on timeZone math for comparisons:
+      // Use local Date objects but compare by Central calendar date via toLocaleDateString in CT.
+      const todayCT = new Date().toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
+      const startCT = start.toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
+
+      // Build a "tomorrowCT" string by taking today's CT date parts and adding 1 day safely in UTC.
+      const [mm, dd, yyyy] = todayCT.split('/').map(x => parseInt(x, 10));
+      const tomorrowDate = new Date(Date.UTC(yyyy, mm - 1, dd + 1, 12, 0, 0));
+      const tomorrowCT = tomorrowDate.toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
+
+      let label = "";
+      if (startCT === todayCT) {
+        label = "TODAY";
+      } else if (startCT === tomorrowCT) {
+        label = "TOMORROW";
+      } else {
+        const dow = start.toLocaleDateString('en-US', { timeZone: CT_TZ, weekday:'short' }).toUpperCase(); // SAT
+        const md = start.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' }); // 2/28
+        label = `${dow} ${md}`;
+      }
+
+      const time = start.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' }); // 8:00 PM
+      return `${label} • ${time} CT`;
     }
 
     async function getOpponentFromEvent(team, eventId, myTeamId){
@@ -214,10 +234,11 @@
         const oppName = opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent";
         const oppLogo = opp?.team?.logo || "";
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
-        const detail = (state === "pre" && game.date) ? formatCTDateTime(game.date) : game.status.type.shortDetail;
 
-        // ✅ Add event start time to support countdown on "pre"
         const startIso = game.date || null;
+
+        // ✅ For pre games, use the new "TODAY • 8:00 PM CT" format
+        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : game.status.type.shortDetail;
 
         return {
           status: state,
@@ -237,7 +258,6 @@
       }
 
       const next = teamDetails?.team?.nextEvent?.[0];
-      const nextTime = next?.date ? formatCTDateTime(next.date) : "TBD";
       const startIso = next?.date || null;
 
       let oppInfo = null;
@@ -247,9 +267,10 @@
         status:"none",
         record,
         logo,
-        nextTime,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
+        // ✅ This is the line that gets displayed under countdown
+        nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
         nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
         nextOppLogo: oppInfo?.oppLogo || "",
         nextAtOrVs: oppInfo?.atOrVs || "vs"
@@ -365,7 +386,16 @@
 
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
           const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
-          const detail = (state === "pre" && game.date) ? formatCTDateTime(game.date) : game.status.type.shortDetail;
+
+          // Keep ticker detail as before (CT date/time for pre)
+          const detail = (state === "pre" && game.date)
+            ? (() => {
+                const d = new Date(game.date);
+                const md = d.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' });
+                const t  = d.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
+                return `${md} - ${t} CT`;
+              })()
+            : game.status.type.shortDetail;
 
           allItems.push(`
             <div class="ticker-item ${alertClass}">
@@ -398,7 +428,6 @@
     updateDashboard();
     updateTicker();
 
-    // ✅ Make countdown update live (every minute) without refetching ESPN
     setInterval(updateDashboard, 60000);
     setInterval(updateTicker, 300000);
   </script>
