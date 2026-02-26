@@ -38,28 +38,7 @@
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
     .status-none{ color:#444; border:1px solid #222; }
 
-    /* ✅ #11: Mini league pill next to team name */
-    .team-title-row{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      margin-top:2px;
-    }
-    .league-mini{
-      font-size:12px;
-      font-weight:900;
-      letter-spacing:1px;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.10);
-      color:#d6d6d6;
-      text-transform:uppercase;
-      line-height:1;
-    }
-
-    /* ✅ #12: standings line */
+    /* Standings line (only shows when we have data) */
     .standings-line{
       margin-top:6px;
       font-size:14px;
@@ -68,6 +47,7 @@
       letter-spacing:0.2px;
     }
 
+    /* Next/Opponent block */
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:18px; }
@@ -93,6 +73,7 @@
       letter-spacing:0.2px;
     }
 
+    /* LIVE/FINAL score row with logos */
     .score-row{
       display:flex; align-items:center; justify-content:center;
       gap:18px; margin-top:4px;
@@ -120,6 +101,7 @@
       text-transform:uppercase;
     }
 
+    /* Alert badges row for LIVE moments (top cards) */
     .alert-row{
       margin-top:10px;
       display:flex;
@@ -140,6 +122,7 @@
       box-shadow:0 0 18px rgba(255,59,59,0.18);
     }
 
+    /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -237,61 +220,32 @@
     }
 
     /* -------------------------
-       #12: Standings cache (safe)
+       Standings (reliable-first)
        ------------------------- */
-    const standingsCache = new Map(); // key: league -> { ts, map }
+    const standingsCache = new Map(); // key sport:league -> { ts, map }
     const STANDINGS_TTL_MS = 10 * 60 * 1000;
 
-    function statValue(entry, statName){
-      const stats = entry?.stats || entry?.stats?.items;
+    function statPick(entry, predicate){
+      const stats = entry?.stats;
       const arr = Array.isArray(stats) ? stats : [];
-      const found = arr.find(s => (s?.name || s?.type || "").toLowerCase() === statName.toLowerCase());
-      return found?.value ?? found?.displayValue ?? null;
+      return arr.find(s => predicate(s));
     }
 
-    function bestRankLabel(entry){
-      // Try common ESPN stat names across leagues
-      const candidates = [
-        "conferenceRank", "divisionRank", "overallRank",
-        "playoffSeed", "seed"
-      ];
-      for (const c of candidates){
-        const v = statValue(entry, c);
-        if (v !== null && v !== undefined && v !== "") return String(v);
-      }
-      return null;
-    }
+    function parseStandingsEntry(entry){
+      const rank =
+        statPick(entry, s => /rank|seed/i.test(s?.name || "") || /rank|seed/i.test(s?.abbreviation || ""))?.displayValue ||
+        null;
 
-    function bestGamesBehind(entry){
-      const candidates = ["gamesBehind", "gb", "gamesBack"];
-      for (const c of candidates){
-        const v = statValue(entry, c);
-        if (v !== null && v !== undefined && v !== "") return String(v);
-      }
-      return null;
-    }
+      const gb =
+        statPick(entry, s => (s?.abbreviation || "").toUpperCase() === "GB" || /games? behind|games? back/i.test(s?.name || ""))?.displayValue ||
+        null;
 
-    function bestGroupAbbrev(entry){
-      // Try to extract a group name like "West", "Central", etc.
-      const groups = entry?.team?.groups;
-      const groupName =
-        groups?.shortName || groups?.name ||
+      const group =
         entry?.group?.shortName || entry?.group?.name ||
-        entry?.conference?.name || entry?.conference?.shortName ||
-        entry?.division?.name || entry?.division?.shortName;
+        entry?.division?.name || entry?.conference?.name ||
+        null;
 
-      if (!groupName) return null;
-
-      // Make it short & broadcast-y
-      const up = String(groupName).toUpperCase();
-      if (up.includes("WEST")) return "West";
-      if (up.includes("EAST")) return "East";
-      if (up.includes("CENTRAL")) return "Central";
-      if (up.includes("PACIFIC")) return "Pacific";
-      if (up.includes("ATLANTIC")) return "Atlantic";
-      if (up.includes("NORTH")) return "North";
-      if (up.includes("SOUTH")) return "South";
-      return String(groupName).split(" ")[0];
+      return { rank, gb, group };
     }
 
     async function getStandingsMap(sport, league){
@@ -300,20 +254,18 @@
       if (cached && (Date.now() - cached.ts) < STANDINGS_TTL_MS) return cached.map;
 
       const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/standings`);
-      const entries = data?.standings?.entries || data?.children?.flatMap(c => c?.standings?.entries || []) || [];
+      const entries =
+        data?.standings?.entries ||
+        data?.children?.flatMap(c => c?.standings?.entries || []) ||
+        [];
 
-      const map = new Map(); // teamId -> { rankLabel, gb, group }
+      const map = new Map();
       for (const e of entries){
         const teamId = e?.team?.id;
         if (!teamId) continue;
-
-        const rank = bestRankLabel(e);
-        const gb = bestGamesBehind(e);
-        const group = bestGroupAbbrev(e);
-
-        // Only store if we have something useful
-        if (rank || gb || group) {
-          map.set(String(teamId), { rank, gb, group });
+        const parsed = parseStandingsEntry(e);
+        if (parsed.rank || parsed.gb || parsed.group) {
+          map.set(String(teamId), parsed);
         }
       }
 
@@ -321,24 +273,31 @@
       return map;
     }
 
-    async function standingsTextForTeam(team){
-      // NFL often missing out of season; safe to just return ""
+    async function standingsText(team, teamDetails){
+      // 1) Best: team endpoint usually includes a ready-to-use standing summary
+      const summary =
+        teamDetails?.team?.standingSummary ||
+        teamDetails?.team?.standingsSummary ||
+        teamDetails?.team?.record?.items?.find(r => /stand/i.test(r?.type || r?.name || ""))?.summary ||
+        "";
+
+      if (summary) return String(summary);
+
+      // 2) Fallback: standings endpoint (may or may not exist in offseason)
       const smap = await getStandingsMap(team.sport, team.league);
       const info = smap.get(String(team.id));
       if (!info) return "";
 
-      // Build: "Standings: #3 West • GB 2.5"
       const parts = [];
-      if (info.rank) parts.push(`#${info.rank}${info.group ? " " + info.group : ""}`);
-      else if (info.group) parts.push(info.group);
+      if (info.rank) parts.push(`#${info.rank}`);
+      if (info.group) parts.push(String(info.group));
       if (info.gb) parts.push(`GB ${info.gb}`);
 
-      if (!parts.length) return "";
-      return `Standings: ${parts.join(" • ")}`;
+      return parts.length ? `Standings: ${parts.join(" • ")}` : "";
     }
 
     /* -------------------------
-       Urgent Moments detection (kept from your current build)
+       Urgent Moments detection
        ------------------------- */
     function toNum(v){
       const n = Number(v);
@@ -347,7 +306,7 @@
 
     function mlbAlerts(game){
       const comp = game?.competitions?.[0];
-      const sit = comp?.situation || game?.competitions?.[0]?.situation;
+      const sit = comp?.situation;
       if (!sit) return [];
 
       const on1 = !!sit.onFirst;
@@ -369,10 +328,8 @@
     }
 
     function nhlAlerts(game){
-      const comp = game?.competitions?.[0];
-      const sit = comp?.situation;
-      if (!sit) return [];
-      return sit.onPowerPlay ? ["POWER PLAY"] : [];
+      const sit = game?.competitions?.[0]?.situation;
+      return sit?.onPowerPlay ? ["POWER PLAY"] : [];
     }
 
     function nbaAlerts(game){
@@ -382,12 +339,10 @@
 
       const period = toNum(sit.period);
       const clock = (sit.clock || "").trim();
-      if (!period || !clock) return [];
-      if (period < 4) return [];
+      if (!period || !clock || period < 4) return [];
 
       const [mStr, sStr] = clock.split(":");
-      const mins = toNum(mStr);
-      const secs = toNum(sStr);
+      const mins = toNum(mStr), secs = toNum(sStr);
       if (mins === null || secs === null) return [];
 
       const secondsLeft = mins * 60 + secs;
@@ -401,10 +356,8 @@
     }
 
     function nflAlerts(game){
-      const comp = game?.competitions?.[0];
-      const sit = comp?.situation;
-      if (!sit) return [];
-      return sit.isRedZone ? ["RED ZONE"] : [];
+      const sit = game?.competitions?.[0]?.situation;
+      return sit?.isRedZone ? ["RED ZONE"] : [];
     }
 
     function getAlertsForGame(league, game){
@@ -442,8 +395,7 @@
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
 
-      // ✅ #12: standings snippet (safe: may return "")
-      const standings = await standingsTextForTeam(team);
+      const standings = await standingsText(team, teamDetails);
 
       if (game){
         const comp = game.competitions[0];
@@ -525,14 +477,11 @@
               <div class="next-label">NEXT</div>
               <div class="opp-row">
                 <div class="opp-text">${atOrVs}</div>
-                ${hasLogo
-                  ? `<img class="opp-logo" src="${oppLogo}" alt="">`
-                  : `<div class="opp-text">${oppName}</div>`
-                }
+                ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
+                          : `<div class="opp-text">${oppName}</div>`}
               </div>
 
               ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
-
               <div class="next-time">${timeText}</div>
             </div>
           `;
@@ -575,11 +524,7 @@
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
 
           <div>
-            <div class="team-title-row">
-              <span class="league-mini">${TEAMS[i].league.toUpperCase()}</span>
-              <span style="font-size:32px; font-weight:900;">${TEAMS[i].name}</span>
-            </div>
-
+            <div style="font-size:32px; font-weight:900;">${TEAMS[i].name}</div>
             <div style="color:#888;">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
           </div>
