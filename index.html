@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - High Contrast Edition</title>
+    <title>MN Sports Center - Modular Ticker Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,6 +13,7 @@
             --live: #ff3b3b;
             --final: #ffcc00;
             --accent: #1a1a1a;
+            --ticker-item-bg: #151515; /* Subtle grey for the game segments */
         }
 
         body {
@@ -49,28 +50,11 @@
             justify-content: space-around;
         }
 
-        .team-logo { 
-            width: 170px; 
-            height: 170px; 
-            object-fit: contain;
-            /* Added shadow to main cards too just in case */
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-        }
-
-        .status-badge {
-            font-size: 20px;
-            font-weight: 900;
-            padding: 6px 18px;
-            border-radius: 8px;
-            text-transform: uppercase;
-        }
+        .team-logo { width: 170px; height: 170px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,255,255,0.1)); }
+        .status-badge { font-size: 20px; font-weight: 900; padding: 6px 18px; border-radius: 8px; text-transform: uppercase; }
         .status-live { background: var(--live); animation: pulse 2s infinite; }
         .status-final { color: var(--final); border: 1px solid var(--final); }
 
-        .score-container { font-size: 70px; font-weight: 900; }
-        .game-info { font-size: 24px; color: #ccc; }
-
-        /* THE 215PX TICKER WITH LOGO FIXES */
         .ticker-wrap {
             background: #000;
             height: 215px; 
@@ -87,45 +71,46 @@
             animation: ticker-scroll 100s linear infinite;
         }
 
+        /* INDIVIDUAL GAME SEGMENT STYLE */
         .ticker-item {
             display: flex;
             align-items: center;
-            padding: 0 90px;
+            height: 160px; /* Centered within the 215px wrap */
+            background: var(--ticker-item-bg);
+            margin: 0 40px; /* Space between the "game cards" */
+            padding: 0 50px;
+            border-radius: 15px;
             font-size: 72px;
             font-weight: 800;
-            border-right: 4px solid #111;
+            /* Modular shadow across the whole game */
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.05), inset 0 0 10px rgba(0,0,0,0.5);
+            border: 1px solid #252525;
         }
 
-        .ticker-item span { margin: 0 18px; }
+        .ticker-item span { margin: 0 15px; }
         
-        /* LOGO POPPER: This makes dark logos visible on black */
         .ticker-logo-container {
-            background: rgba(255, 255, 255, 0.1); /* Slight light circle behind logo */
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 50%;
-            width: 110px;
-            height: 110px;
+            width: 100px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 12px;
+            margin: 0 10px;
         }
 
         .ticker-team-logo {
-            width: 85px;
-            height: 85px;
+            width: 80px;
+            height: 80px;
             object-fit: contain;
-            /* White glow effect around the logo shape */
-            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6));
         }
 
-        .ticker-live-dot { color: var(--live); margin-right: 18px; font-size: 50px; }
-        .league-label { color: #333; font-size: 44px; margin-right: 30px; font-weight: 900; }
+        .league-label { color: #555; font-size: 36px; margin-right: 20px; font-weight: 900; }
+        .ticker-live-dot { color: var(--live); margin-right: 15px; font-size: 40px; }
 
-        @keyframes ticker-scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
+        @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
@@ -135,7 +120,7 @@
 
     <div class="ticker-wrap">
         <div class="ticker-move" id="ticker-content">
-            <div class="ticker-item">REFRESHING FEED...</div>
+            <div class="ticker-item">LOADING MODULAR FEED...</div>
         </div>
     </div>
 
@@ -196,16 +181,17 @@
                 data?.events?.forEach(game => {
                     const comp = game.competitions[0];
                     const away = comp.competitors[1], home = comp.competitors[0];
+                    const state = game.status.type.state;
                     allItems.push(`
                         <div class="ticker-item">
-                            ${game.status.type.state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
+                            ${state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
                             <span class="league-label">${league.l.toUpperCase()}</span>
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}"></div>
                             <span>${away.team.abbreviation} ${away.score || ''}</span>
-                            <span style="color:#1a1a1a;">@</span>
+                            <span style="color:#333;">@</span>
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}"></div>
                             <span>${home.team.abbreviation} ${home.score || ''}</span>
-                            <span style="color: ${game.status.type.state === 'in' ? 'var(--live)' : '#444'}; font-size:48px;">${game.status.type.shortDetail}</span>
+                            <span style="color: ${state === 'in' ? 'var(--live)' : '#888'}; font-size:42px; margin-left:25px;">${game.status.type.shortDetail}</span>
                         </div>
                     `);
                 });
