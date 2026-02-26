@@ -30,7 +30,6 @@
       border:2px solid #222; text-align:center; justify-content:space-between;
     }
 
-    /* Main team logos */
     .team-logo{ width:185px; height:185px; object-fit:contain; }
 
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
@@ -39,14 +38,42 @@
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
     .status-none{ color:#444; border:1px solid #222; }
 
-    /* Next/Opponent block */
+    /* ✅ #11: Mini league pill next to team name */
+    .team-title-row{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-top:2px;
+    }
+    .league-mini{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:1px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      color:#d6d6d6;
+      text-transform:uppercase;
+      line-height:1;
+    }
+
+    /* ✅ #12: standings line */
+    .standings-line{
+      margin-top:6px;
+      font-size:14px;
+      font-weight:800;
+      color:#9a9a9a;
+      letter-spacing:0.2px;
+    }
+
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:18px; }
     .opp-logo{ width:88px; height:88px; object-fit:contain; }
     .opp-text{ font-size:44px; font-weight:900; line-height:1; }
 
-    /* Countdown line (Starts in ...) */
     .countdown{
       font-size:16px;
       font-weight:900;
@@ -59,7 +86,6 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    /* TODAY • 8:00 PM CT */
     .next-time{
       font-size:18px;
       color:#cfcfcf;
@@ -67,7 +93,6 @@
       letter-spacing:0.2px;
     }
 
-    /* LIVE/FINAL score row with logos */
     .score-row{
       display:flex; align-items:center; justify-content:center;
       gap:18px; margin-top:4px;
@@ -82,7 +107,6 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* Game status pill under score */
     .game-pill{
       margin-top:12px;
       padding:8px 14px;
@@ -96,7 +120,6 @@
       text-transform:uppercase;
     }
 
-    /* ✅ NEW: Alert badges row for LIVE moments (top cards) */
     .alert-row{
       margin-top:10px;
       display:flex;
@@ -116,14 +139,7 @@
       color:#fff;
       box-shadow:0 0 18px rgba(255,59,59,0.18);
     }
-    .alert-pill.alt{
-      background:rgba(212,175,55,0.10);
-      border:1px solid rgba(212,175,55,0.45);
-      box-shadow:none;
-      color:var(--final-gold);
-    }
 
-    /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -208,11 +224,9 @@
       const tomorrowCT = tomorrowDate.toLocaleDateString('en-US', { timeZone: CT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
 
       let label = "";
-      if (startCT === todayCT) {
-        label = "TODAY";
-      } else if (startCT === tomorrowCT) {
-        label = "TOMORROW";
-      } else {
+      if (startCT === todayCT) label = "TODAY";
+      else if (startCT === tomorrowCT) label = "TOMORROW";
+      else {
         const dow = start.toLocaleDateString('en-US', { timeZone: CT_TZ, weekday:'short' }).toUpperCase();
         const md = start.toLocaleDateString('en-US', { timeZone: CT_TZ, month:'numeric', day:'numeric' });
         label = `${dow} ${md}`;
@@ -223,29 +237,124 @@
     }
 
     /* -------------------------
-       ✅ URGENT MOMENTS DETECTION
+       #12: Standings cache (safe)
        ------------------------- */
+    const standingsCache = new Map(); // key: league -> { ts, map }
+    const STANDINGS_TTL_MS = 10 * 60 * 1000;
 
+    function statValue(entry, statName){
+      const stats = entry?.stats || entry?.stats?.items;
+      const arr = Array.isArray(stats) ? stats : [];
+      const found = arr.find(s => (s?.name || s?.type || "").toLowerCase() === statName.toLowerCase());
+      return found?.value ?? found?.displayValue ?? null;
+    }
+
+    function bestRankLabel(entry){
+      // Try common ESPN stat names across leagues
+      const candidates = [
+        "conferenceRank", "divisionRank", "overallRank",
+        "playoffSeed", "seed"
+      ];
+      for (const c of candidates){
+        const v = statValue(entry, c);
+        if (v !== null && v !== undefined && v !== "") return String(v);
+      }
+      return null;
+    }
+
+    function bestGamesBehind(entry){
+      const candidates = ["gamesBehind", "gb", "gamesBack"];
+      for (const c of candidates){
+        const v = statValue(entry, c);
+        if (v !== null && v !== undefined && v !== "") return String(v);
+      }
+      return null;
+    }
+
+    function bestGroupAbbrev(entry){
+      // Try to extract a group name like "West", "Central", etc.
+      const groups = entry?.team?.groups;
+      const groupName =
+        groups?.shortName || groups?.name ||
+        entry?.group?.shortName || entry?.group?.name ||
+        entry?.conference?.name || entry?.conference?.shortName ||
+        entry?.division?.name || entry?.division?.shortName;
+
+      if (!groupName) return null;
+
+      // Make it short & broadcast-y
+      const up = String(groupName).toUpperCase();
+      if (up.includes("WEST")) return "West";
+      if (up.includes("EAST")) return "East";
+      if (up.includes("CENTRAL")) return "Central";
+      if (up.includes("PACIFIC")) return "Pacific";
+      if (up.includes("ATLANTIC")) return "Atlantic";
+      if (up.includes("NORTH")) return "North";
+      if (up.includes("SOUTH")) return "South";
+      return String(groupName).split(" ")[0];
+    }
+
+    async function getStandingsMap(sport, league){
+      const key = `${sport}:${league}`;
+      const cached = standingsCache.get(key);
+      if (cached && (Date.now() - cached.ts) < STANDINGS_TTL_MS) return cached.map;
+
+      const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/standings`);
+      const entries = data?.standings?.entries || data?.children?.flatMap(c => c?.standings?.entries || []) || [];
+
+      const map = new Map(); // teamId -> { rankLabel, gb, group }
+      for (const e of entries){
+        const teamId = e?.team?.id;
+        if (!teamId) continue;
+
+        const rank = bestRankLabel(e);
+        const gb = bestGamesBehind(e);
+        const group = bestGroupAbbrev(e);
+
+        // Only store if we have something useful
+        if (rank || gb || group) {
+          map.set(String(teamId), { rank, gb, group });
+        }
+      }
+
+      standingsCache.set(key, { ts: Date.now(), map });
+      return map;
+    }
+
+    async function standingsTextForTeam(team){
+      // NFL often missing out of season; safe to just return ""
+      const smap = await getStandingsMap(team.sport, team.league);
+      const info = smap.get(String(team.id));
+      if (!info) return "";
+
+      // Build: "Standings: #3 West • GB 2.5"
+      const parts = [];
+      if (info.rank) parts.push(`#${info.rank}${info.group ? " " + info.group : ""}`);
+      else if (info.group) parts.push(info.group);
+      if (info.gb) parts.push(`GB ${info.gb}`);
+
+      if (!parts.length) return "";
+      return `Standings: ${parts.join(" • ")}`;
+    }
+
+    /* -------------------------
+       Urgent Moments detection (kept from your current build)
+       ------------------------- */
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     }
 
-    // MLB: BASES LOADED / RISP / GO-AHEAD RUN ON (tie 9th+ with runners)
     function mlbAlerts(game){
       const comp = game?.competitions?.[0];
       const sit = comp?.situation || game?.competitions?.[0]?.situation;
       if (!sit) return [];
 
-      // ESPN sometimes uses these booleans:
       const on1 = !!sit.onFirst;
       const on2 = !!sit.onSecond;
       const on3 = !!sit.onThird;
 
       const inning = toNum(sit.inning) ?? null;
-      const isTop = (sit.inningHalf || "").toLowerCase().includes("top");
-      const isBot = (sit.inningHalf || "").toLowerCase().includes("bottom");
-
       const awayScore = toNum(comp?.competitors?.[1]?.score);
       const homeScore = toNum(comp?.competitors?.[0]?.score);
 
@@ -253,15 +362,12 @@
       if (on1 && on2 && on3) alerts.push("BASES LOADED");
       else if (on2 || on3) alerts.push("RISP");
 
-      // Optional: GO-AHEAD RUN ON (tie game 9th+ with any runner on)
       if (inning !== null && inning >= 9 && (on1 || on2 || on3) && awayScore !== null && homeScore !== null && awayScore === homeScore) {
         alerts.push("GO-AHEAD RUN ON");
       }
-
       return alerts;
     }
 
-    // NHL: POWER PLAY
     function nhlAlerts(game){
       const comp = game?.competitions?.[0];
       const sit = comp?.situation;
@@ -269,18 +375,15 @@
       return sit.onPowerPlay ? ["POWER PLAY"] : [];
     }
 
-    // NBA: CLUTCH (4Q/OT, <= 5:00, diff <= 6)
     function nbaAlerts(game){
       const comp = game?.competitions?.[0];
       const sit = comp?.situation;
       if (!sit) return [];
 
       const period = toNum(sit.period);
-      const clock = (sit.clock || "").trim(); // "4:32"
+      const clock = (sit.clock || "").trim();
       if (!period || !clock) return [];
-
-      const isClutchPeriod = (period >= 4); // 4th or OT
-      if (!isClutchPeriod) return [];
+      if (period < 4) return [];
 
       const [mStr, sStr] = clock.split(":");
       const mins = toNum(mStr);
@@ -288,18 +391,15 @@
       if (mins === null || secs === null) return [];
 
       const secondsLeft = mins * 60 + secs;
-      if (secondsLeft > 300) return []; // > 5:00
+      if (secondsLeft > 300) return [];
 
       const a = toNum(comp?.competitors?.[1]?.score);
       const h = toNum(comp?.competitors?.[0]?.score);
       if (a === null || h === null) return [];
 
-      const diff = Math.abs(a - h);
-      if (diff <= 6) return ["CLUTCH"];
-      return [];
+      return Math.abs(a - h) <= 6 ? ["CLUTCH"] : [];
     }
 
-    // NFL: RED ZONE (for later; ESPN may expose sit.isRedZone)
     function nflAlerts(game){
       const comp = game?.competitions?.[0];
       const sit = comp?.situation;
@@ -307,28 +407,14 @@
       return sit.isRedZone ? ["RED ZONE"] : [];
     }
 
-    function getAlertsForGame(league, sport, game){
+    function getAlertsForGame(league, game){
       const state = game?.status?.type?.state;
-      if (state !== "in") return []; // only during LIVE
-
-      // Route by league (most reliable)
+      if (state !== "in") return [];
       if (league === "mlb") return mlbAlerts(game);
       if (league === "nhl") return nhlAlerts(game);
       if (league === "nba") return nbaAlerts(game);
       if (league === "nfl") return nflAlerts(game);
-
-      // fallback
       return [];
-    }
-
-    // For TOP CARDS: compute alerts from the "game" object we already found
-    function getAlertsForTopCard(team, game){
-      return getAlertsForGame(team.league, team.sport, game);
-    }
-
-    // For TICKER: compute alerts from that ticker game
-    function getAlertsForTicker(leagueObj, game){
-      return getAlertsForGame(leagueObj.l, leagueObj.s, game);
     }
 
     async function getOpponentFromEvent(team, eventId, myTeamId){
@@ -356,12 +442,15 @@
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
 
+      // ✅ #12: standings snippet (safe: may return "")
+      const standings = await standingsTextForTeam(team);
+
       if (game){
         const comp = game.competitions[0];
         const me   = comp.competitors.find(c => c.team.id === team.id);
         const opp  = comp.competitors.find(c => c.team.id !== team.id);
 
-        const state = game.status.type.state; // pre/in/post
+        const state = game.status.type.state;
         const oppName = opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent";
         const oppLogo = opp?.team?.logo || "";
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
@@ -369,8 +458,7 @@
         const startIso = game.date || null;
         const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : game.status.type.shortDetail;
 
-        // ✅ NEW: top-card urgent alerts (live only)
-        const alerts = getAlertsForTopCard(team, game);
+        const alerts = getAlertsForGame(team.league, game);
 
         return {
           status: state,
@@ -381,6 +469,7 @@
           oppScore: opp?.score ?? "",
           logo,
           record,
+          standings,
           oppName,
           oppLogo,
           atOrVs,
@@ -400,6 +489,7 @@
         status:"none",
         record,
         logo,
+        standings,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
@@ -476,21 +566,24 @@
         };
 
         let bottomBlock = "";
-        if (data.status === "in" || data.status === "post") {
-          bottomBlock = scoreBlock();
-        } else if (data.status === "pre") {
-          bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
-        } else {
-          bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
-        }
+        if (data.status === "in" || data.status === "post") bottomBlock = scoreBlock();
+        else if (data.status === "pre") bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
+        else bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
 
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
+
           <div>
-            <div style="font-size:32px; font-weight:900;">${TEAMS[i].name}</div>
+            <div class="team-title-row">
+              <span class="league-mini">${TEAMS[i].league.toUpperCase()}</span>
+              <span style="font-size:32px; font-weight:900;">${TEAMS[i].name}</span>
+            </div>
+
             <div style="color:#888;">${data.record}</div>
+            ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
           </div>
+
           ${bottomBlock}
         `;
 
@@ -514,22 +607,15 @@
         data?.events?.forEach(game => {
           const comp = game.competitions[0];
           const away = comp.competitors[1], home = comp.competitors[0];
-          const state = game.status.type.state; // pre/in/post
-          const sit = comp.situation;
+          const state = game.status.type.state;
 
-          // ✅ existing NHL glow when power play
           let alertClass = "";
           let alertLabel = "";
 
-          // ✅ NEW: urgent callouts (ticker) for all supported leagues
-          const alerts = getAlertsForTicker(league, game);
+          const alerts = getAlertsForGame(league.l, game);
           if (alerts.length) {
             alertClass = "ticker-alert-pulse";
-            // show first alert only to keep ticker clean
             alertLabel = `<span class="alert-badge">${alerts[0]}</span>`;
-          } else if (state === "in" && league.l === "nhl" && sit && sit.onPowerPlay) {
-            alertClass = "ticker-alert-pulse";
-            alertLabel = '<span class="alert-badge">POWER PLAY</span>';
           }
 
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
