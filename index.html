@@ -31,7 +31,7 @@
     }
 
     /* ✅ Bigger main team logos */
-    .team-logo{ width:165px; height:165px; object-fit:contain; }
+    .team-logo{ width:185px; height:185px; object-fit:contain; }
 
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
@@ -40,15 +40,15 @@
     .status-none{ color:#444; border:1px solid #222; }
 
     /* Next/Opponent block */
-    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
-    .opp-row{ display:flex; align-items:center; gap:16px; }
+    .opp-row{ display:flex; align-items:center; gap:18px; }
 
-    /* ✅ Slightly bigger opponent logo */
-    .opp-logo{ width:76px; height:76px; object-fit:contain; }
+    /* ✅ Bigger opponent logo */
+    .opp-logo{ width:88px; height:88px; object-fit:contain; }
 
-    /* Keep the @ / vs big enough too */
-    .opp-text{ font-size:38px; font-weight:900; line-height:1; }
+    /* ✅ Slightly bigger @ / vs */
+    .opp-text{ font-size:44px; font-weight:900; line-height:1; }
 
     .next-time{ font-size:18px; color:#cfcfcf; }
 
@@ -185,7 +185,7 @@
 
         const badgeClass = `status-badge status-${data.status}`;
 
-        const preOrNoneOpponentBlock = (atOrVs, oppLogo, oppName, timeText) => {
+        const opponentBlock = (atOrVs, oppLogo, oppName, timeText) => {
           const hasLogo = !!oppLogo;
           return `
             <div class="next-wrap">
@@ -209,9 +209,9 @@
             <div>${data.detail}</div>
           `;
         } else if (data.status === "pre") {
-          bottomBlock = preOrNoneOpponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail);
+          bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail);
         } else {
-          bottomBlock = preOrNoneOpponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime);
+          bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime);
         }
 
         card.innerHTML = `
