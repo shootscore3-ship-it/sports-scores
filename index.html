@@ -89,38 +89,36 @@
         }
 
         async function getTeamData(team) {
-    const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-    let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
-    const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
-    
-    let record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
-    let logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
-    
-    if (game) {
-        const comp = game.competitions[0];
-        const me = comp.competitors.find(c => c.team.id === team.id);
-        const opp = comp.competitors.find(c => c.team.id !== team.id);
-        return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
-    } else {
-        const next = teamDetails?.team?.nextEvent?.[0];
-        
-        let formattedTime = "TBD";
-        if (next?.date) {
-            // Force the string into a strict Date object
-            const eventDate = new Date(next.date); 
+            const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
+            let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
+            const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
             
-            // This is the most bulletproof way to format for a specific zone
-            formattedTime = eventDate.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                timeZone: 'America/Chicago',
-                hour12: true
-            });
-        }
+            let record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
+            let logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
+            
+            if (game) {
+                const comp = game.competitions[0];
+                const me = comp.competitors.find(c => c.team.id === team.id);
+                const opp = comp.competitors.find(c => c.team.id !== team.id);
+                return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
+            } else {
+                const next = teamDetails?.team?.nextEvent?.[0];
+                
+                let timeStr = "TBD";
+                if (next?.date) {
+                    const eventDate = new Date(next.date);
+                    // MANUAL OFFSET: Subtract 1 hour from the date
+                    eventDate.setHours(eventDate.getHours() - 1);
+                    
+                    timeStr = eventDate.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                }
 
-        return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: formattedTime };
-    }
-}
+                return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: timeStr };
+            }
         }
 
         async function updateDashboard() {
