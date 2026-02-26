@@ -30,7 +30,8 @@
       border:2px solid #222; text-align:center; justify-content:space-between;
     }
 
-    .team-logo{ width:140px; height:140px; object-fit:contain; }
+    /* ✅ Bigger main team logos */
+    .team-logo{ width:165px; height:165px; object-fit:contain; }
 
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
@@ -39,11 +40,16 @@
     .status-none{ color:#444; border:1px solid #222; }
 
     /* Next/Opponent block */
-    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
-    .opp-row{ display:flex; align-items:center; gap:14px; }
-    .opp-logo{ width:64px; height:64px; object-fit:contain; }
-    .opp-text{ font-size:34px; font-weight:900; line-height:1; }
+    .opp-row{ display:flex; align-items:center; gap:16px; }
+
+    /* ✅ Slightly bigger opponent logo */
+    .opp-logo{ width:76px; height:76px; object-fit:contain; }
+
+    /* Keep the @ / vs big enough too */
+    .opp-text{ font-size:38px; font-weight:900; line-height:1; }
+
     .next-time{ font-size:18px; color:#cfcfcf; }
 
     /* TICKER STYLES */
@@ -53,7 +59,7 @@
     }
     .ticker-move{
       display:flex; white-space:nowrap;
-      animation:ticker-scroll 140s linear infinite; /* base; JS overrides */
+      animation:ticker-scroll 140s linear infinite;
       will-change:transform;
     }
     .ticker-item{
@@ -179,8 +185,6 @@
 
         const badgeClass = `status-badge status-${data.status}`;
 
-        // ✅ CLEANUP: show "@"/"vs" + opponent LOGO ONLY (no duplicate name)
-        // If for any reason a logo is missing, fall back to text.
         const preOrNoneOpponentBlock = (atOrVs, oppLogo, oppName, timeText) => {
           const hasLogo = !!oppLogo;
           return `
@@ -252,11 +256,8 @@
             }
           }
 
-          // ✅ If game is pre, don't show 0-0
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
           const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
-
-          // ✅ Scheduled games show CT time
           const detail = (state === "pre" && game.date) ? formatCTDateTime(game.date) : game.status.type.shortDetail;
 
           allItems.push(`
@@ -282,9 +283,6 @@
 
       ticker.innerHTML = [...allItems, ...allItems].join("");
 
-      // ✅ SPEED: a bit faster than the previous “8s per item”
-      // Old: Math.max(150, allItems.length * 8)
-      // New: Math.max(120, allItems.length * 7)  -> slightly faster
       const mover = document.querySelector(".ticker-move");
       const seconds = Math.max(120, allItems.length * 7);
       mover.style.animationDuration = `${seconds}s`;
