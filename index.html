@@ -18,20 +18,20 @@
     flex-direction:column;
   }
 
-  /* ===== TOP: Minnesota cards ===== */
+  /* ===== TOP: Minnesota cards (slightly smaller now) ===== */
   .mn{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
-    gap:18px;
-    padding:20px;
+    gap:16px;
+    padding:16px 18px 12px;
     box-sizing:border-box;
     flex:1;
     min-height:0;
   }
   .mnCard{
-    background:#12161c;
-    border-radius:22px;
-    box-shadow:0 0 22px rgba(0,0,0,.55);
+    background:#11161d;
+    border-radius:18px;
+    box-shadow:0 0 18px rgba(0,0,0,.55);
     border:1px solid rgba(255,255,255,.10);
     overflow:hidden;
     display:flex;
@@ -42,113 +42,122 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:16px 18px;
+    padding:12px 14px;
     background:rgba(255,255,255,.06);
     border-bottom:1px solid rgba(255,255,255,.10);
   }
-  .mnHeaderLeft{
-    display:flex;
-    align-items:center;
-    gap:14px;
-  }
   .mnTitle{
-    font:900 30px/1 Arial;
-    letter-spacing:.8px;
+    font:900 22px/1.1 Arial;
+    letter-spacing:.6px;
   }
   .mnLeaguePill{
-    font:900 18px/1 Arial;
+    font:900 14px/1 Arial;
     opacity:.9;
-    padding:8px 12px;
+    padding:7px 10px;
     border-radius:999px;
     background:rgba(255,255,255,.12);
     border:1px solid rgba(255,255,255,.16);
   }
 
   .mnBody{
-    padding:18px;
+    padding:14px;
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:12px;
     flex:1;
     justify-content:center;
   }
 
-  .matchRow{
-    display:flex;
+  /* New layout so NOTHING overlaps */
+  .matchGrid{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items:center;
-    justify-content:space-between;
-    gap:16px;
+    gap:14px;
   }
+
   .side{
     display:flex;
     align-items:center;
-    gap:14px;
+    gap:10px;
     min-width:0;
   }
+  .side.right{ justify-content:flex-end; }
+
   .abbr{
     font-weight:900;
-    font-size:34px;
+    font-size:22px;
     letter-spacing:.5px;
     white-space:nowrap;
   }
-  .teamName{
+  .name{
     font-weight:900;
-    font-size:24px;
-    opacity:.88;
+    font-size:16px;
+    opacity:.82;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-    max-width:220px;
+    max-width:160px;
   }
 
+  /* Logo badge to prevent black-on-black issues */
+  .logo{
+    width:44px;
+    height:44px;
+    object-fit:contain;
+    border-radius:12px;
+    background:rgba(255,255,255,.22);
+    border:1px solid rgba(255,255,255,.28);
+    padding:6px;
+    box-shadow:0 2px 12px rgba(0,0,0,.60);
+    box-sizing:border-box;
+    flex:0 0 auto;
+  }
+
+  .scoreBox{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    border-radius:16px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+  }
   .scoreBig{
-    font:900 56px/1 Arial;
+    font:900 34px/1 Arial;
     letter-spacing:.5px;
   }
   .dash{
-    font:900 44px/1 Arial;
-    opacity:.7;
-    padding:0 10px;
-  }
-
-  /* Better logo visibility */
-  .logo{
-    width:62px;
-    height:62px;
-    object-fit:contain;
-    border-radius:14px;
-    background:rgba(255,255,255,.22);
-    border:1px solid rgba(255,255,255,.28);
-    padding:7px;
-    box-shadow:0 3px 14px rgba(0,0,0,.60);
-    box-sizing:border-box;
+    font:900 28px/1 Arial;
+    opacity:.75;
+    padding:0 2px;
   }
 
   .statusLine{
     display:flex;
     align-items:center;
-    gap:14px;
+    gap:10px;
     flex-wrap:wrap;
   }
   .pill{
     display:inline-flex;
     align-items:center;
-    gap:10px;
-    padding:10px 16px;
+    gap:8px;
+    padding:8px 12px;
     border-radius:999px;
-    font:900 22px/1 Arial;
-    letter-spacing:.4px;
+    font:900 16px/1 Arial;
+    letter-spacing:.3px;
   }
   .pillLive{
     background:rgba(255,0,0,.20);
     border:1px solid rgba(255,0,0,.45);
   }
   .liveDot{
-    width:14px;
-    height:14px;
+    width:10px;
+    height:10px;
     border-radius:50%;
     background:#ff2b2b;
-    box-shadow:0 0 16px rgba(255,43,43,.95);
+    box-shadow:0 0 14px rgba(255,43,43,.95);
   }
   .pillFinal{
     background:rgba(255,205,0,.22);
@@ -160,13 +169,17 @@
     border:1px solid rgba(255,255,255,.22);
   }
   .detailText{
-    font:900 22px/1 Arial;
+    font:900 16px/1.2 Arial;
+    opacity:.85;
+  }
+  .mutedBig{
+    font:900 22px/1.2 Arial;
     opacity:.85;
   }
 
-  /* ===== BOTTOM: Ticker (even bigger) ===== */
+  /* ===== BOTTOM: Ticker (BIGGER now) ===== */
   .tickerBar{
-    height:165px;                 /* EVEN BIGGER */
+    height:190px;                 /* BIGGER */
     background:#0d131a;
     border-top:2px solid rgba(255,255,255,.15);
     overflow:hidden;
@@ -188,42 +201,55 @@
   .leagueHeader{
     display:inline-flex;
     align-items:center;
-    padding:16px 26px;
-    margin-right:34px;
+    padding:18px 28px;
+    margin-right:36px;
     border-radius:999px;
     background:rgba(255,255,255,.14);
-    font:900 44px/1 Arial;
+    font:900 54px/1 Arial;        /* BIGGER */
     letter-spacing:1px;
   }
 
   .tickItem{
     display:inline-flex;
     align-items:center;
-    gap:20px;
-    padding-right:105px;
-    font:900 60px/1 Arial;
+    gap:22px;
+    padding-right:120px;
+    font:900 72px/1 Arial;        /* BIGGER */
   }
 
-  .score{
+  .tScore{
     font-weight:900;
-    font-size:64px;
+    font-size:78px;
   }
   .sepDot{
     opacity:.7;
-    margin:0 16px;
+    margin:0 18px;
     font-weight:900;
-    font-size:56px;
+    font-size:68px;
+  }
+
+  /* ticker logo bigger too */
+  .tlogo{
+    width:64px;
+    height:64px;
+    object-fit:contain;
+    border-radius:14px;
+    background:rgba(255,255,255,.22);
+    border:1px solid rgba(255,255,255,.28);
+    padding:7px;
+    box-shadow:0 3px 14px rgba(0,0,0,.60);
+    box-sizing:border-box;
   }
 
   .meta{
     display:inline-flex;
     align-items:center;
     gap:18px;
-    margin-left:34px;
-    font:900 34px/1 Arial;
+    margin-left:38px;
+    font:900 38px/1 Arial;        /* BIGGER */
   }
   .timeTag{
-    padding:10px 20px;
+    padding:12px 22px;
     border-radius:999px;
     background:rgba(255,255,255,.18);
     border:1px solid rgba(255,255,255,.25);
@@ -235,13 +261,13 @@
     display:inline-flex;
     align-items:center;
     gap:12px;
-    padding:10px 18px;
+    padding:12px 20px;
     border-radius:999px;
     background:rgba(255,0,0,.20);
     border:1px solid rgba(255,0,0,.45);
   }
   .finalTag{
-    padding:10px 18px;
+    padding:12px 20px;
     border-radius:999px;
     background:rgba(255,205,0,.22);
     border:1px solid rgba(255,205,0,.45);
@@ -249,10 +275,10 @@
   }
   .divider{
     display:inline-block;
-    width:3px;
-    height:74px;
+    width:4px;
+    height:92px;
     background:rgba(255,255,255,.2);
-    margin:0 34px;
+    margin:0 38px;
     border-radius:2px;
   }
 </style>
@@ -292,14 +318,20 @@
 
   function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
-  function toCTDateYYYYMMDD(){
+  function toCTDateYYYYMMDD(d=new Date()){
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone:"America/Chicago", year:"numeric", month:"2-digit", day:"2-digit"
-    }).formatToParts(new Date());
+    }).formatToParts(d);
     const y = parts.find(p=>p.type==="year").value;
     const m = parts.find(p=>p.type==="month").value;
-    const d = parts.find(p=>p.type==="day").value;
-    return `${y}-${m}-${d}`;
+    const da = parts.find(p=>p.type==="day").value;
+    return `${y}-${m}-${da}`;
+  }
+
+  function addDaysCT(dateObj, days){
+    // add days in UTC then format in CT (good enough for day stepping)
+    const d = new Date(dateObj.getTime() + days*86400000);
+    return d;
   }
 
   function toCentral12h(iso){
@@ -332,43 +364,53 @@
     }
   }
 
-  function teamLogoHTML(league, abbr){
+  function logoHTML(league, abbr, cls="logo"){
     const A = (abbr||"").toUpperCase();
     const url = logoMap?.[league]?.[A];
     if(!url) return "";
-    return `<img class="logo" src="${esc(url)}" alt="${esc(A)}" loading="lazy" referrerpolicy="no-referrer"
+    return `<img class="${cls}" src="${esc(url)}" alt="${esc(A)}" loading="lazy" referrerpolicy="no-referrer"
              onerror="this.style.display='none'">`;
   }
 
-  function teamInGame(g, abbr){
+  function isTeamInGame(g, abbr){
     const A = (abbr||"").toUpperCase();
     return (g?.home?.abbr || "").toUpperCase() === A || (g?.away?.abbr || "").toUpperCase() === A;
   }
 
-  function buildMnCard(leagueKey, title, leagueLabel, games){
-    const el = document.getElementById(`card-${leagueKey}`);
-    if(!el) return;
+  // Find the team's game for a given league from a games array
+  function findGameForTeam(games, teamAbbr){
+    return (games || []).find(g => isTeamInGame(g, teamAbbr));
+  }
 
-    const game = (games || []).find(g => teamInGame(g, "MIN"));
+  // Look ahead for the next game (up to maxDays)
+  async function findNextGame(leagueKey, teamAbbr, maxDays=14){
+    const now = new Date();
+    for(let i=1; i<=maxDays; i++){
+      const d = addDaysCT(now, i);
+      const dateStr = toCTDateYYYYMMDD(d);
+      const r = await fetch(WORKER_URL + "?date=" + encodeURIComponent(dateStr) + "&t=" + Date.now());
+      if(!r.ok) continue;
+      const j = await r.json();
+      const games = j?.[leagueKey]?.games || [];
+      const g = findGameForTeam(games, teamAbbr);
+      if(g) return { game: g, dateStr };
+    }
+    return null;
+  }
 
-    const header = `
+  function buildMnCardShell(leagueKey, title, leagueLabel){
+    return `
       <div class="mnHeader">
-        <div class="mnHeaderLeft">
-          <div class="mnTitle">${esc(title)}</div>
-        </div>
+        <div class="mnTitle">${esc(title)}</div>
         <div class="mnLeaguePill">${esc(leagueLabel)}</div>
       </div>
+      <div class="mnBody" id="mnBody-${leagueKey}">
+        <div class="mutedBig">Loading…</div>
+      </div>
     `;
+  }
 
-    if(!game){
-      el.innerHTML = header + `
-        <div class="mnBody">
-          <div class="detailText" style="font-size:28px; opacity:.85;">No game today</div>
-        </div>
-      `;
-      return;
-    }
-
+  function renderMnGame(leagueKey, title, leagueLabel, game){
     const away = (game.away?.abbr || "").toUpperCase();
     const home = (game.home?.abbr || "").toUpperCase();
     const awayScore = (game.away?.score ?? "").toString();
@@ -393,29 +435,34 @@
         : `<span class="detailText">${esc(detail)}</span>`;
     }
 
-    el.innerHTML = header + `
+    return `
+      <div class="mnHeader">
+        <div class="mnTitle">${esc(title)}</div>
+        <div class="mnLeaguePill">${esc(leagueLabel)}</div>
+      </div>
+
       <div class="mnBody">
-        <div class="matchRow">
+        <div class="matchGrid">
           <div class="side">
-            ${teamLogoHTML(leagueKey, away)}
-            <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+            ${logoHTML(leagueKey, away, "logo")}
+            <div style="min-width:0;">
               <div class="abbr">${esc(away)}</div>
-              <div class="teamName">${esc(away)}</div>
+              <div class="name">${esc(away)}</div>
             </div>
           </div>
 
-          <div style="display:flex; align-items:center;">
+          <div class="scoreBox">
             <div class="scoreBig">${esc(awayScore)}</div>
             <div class="dash">–</div>
             <div class="scoreBig">${esc(homeScore)}</div>
           </div>
 
-          <div class="side" style="justify-content:flex-end;">
-            <div style="display:flex; flex-direction:column; gap:4px; min-width:0; text-align:right;">
+          <div class="side right">
+            <div style="min-width:0; text-align:right;">
               <div class="abbr">${esc(home)}</div>
-              <div class="teamName" style="margin-left:auto;">${esc(home)}</div>
+              <div class="name" style="margin-left:auto;">${esc(home)}</div>
             </div>
-            ${teamLogoHTML(leagueKey, home)}
+            ${logoHTML(leagueKey, home, "logo")}
           </div>
         </div>
 
@@ -426,16 +473,42 @@
     `;
   }
 
+  function renderMnNoGame(leagueKey, title, leagueLabel, nextGame){
+    let nextLine = `<div class="mutedBig">No game today</div>`;
+    if(nextGame && nextGame.game){
+      const g = nextGame.game;
+      const away = (g.away?.abbr || "").toUpperCase();
+      const home = (g.home?.abbr || "").toUpperCase();
+      const when = g.startTime ? toCentral12h(g.startTime) : "";
+      nextLine = `
+        <div class="mutedBig">No game today</div>
+        <div class="detailText" style="font-size:18px;">
+          Next: ${esc(away)} @ ${esc(home)}${when ? " • " + esc(when) : ""}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="mnHeader">
+        <div class="mnTitle">${esc(title)}</div>
+        <div class="mnLeaguePill">${esc(leagueLabel)}</div>
+      </div>
+      <div class="mnBody">
+        ${nextLine}
+      </div>
+    `;
+  }
+
   function setTickerHTML(html){
     document.getElementById("lane1").innerHTML = html;
     document.getElementById("lane2").innerHTML = html;
   }
 
-  function teamHTML(leagueKey, abbr){
+  function tickerTeamHTML(leagueKey, abbr){
     const A = (abbr||"").toUpperCase();
     const url = logoMap?.[leagueKey]?.[A];
-    if(!url) return `<span class="team"><span class="abbr">${esc(A)}</span></span>`;
-    return `<span class="team">${teamLogoHTML(leagueKey, A)}<span class="abbr">${esc(A)}</span></span>`;
+    if(!url) return `<span class="abbr">${esc(A)}</span>`;
+    return `${logoHTML(leagueKey, A, "tlogo")}<span class="abbr">${esc(A)}</span>`;
   }
 
   function formatTickerGame(leagueKey, g){
@@ -463,11 +536,11 @@
 
     return `
       <span class="tickItem">
-        ${teamHTML(leagueKey, away)}
-        <span class="score">${esc(awayScore)}</span>
+        ${tickerTeamHTML(leagueKey, away)}
+        <span class="tScore">${esc(awayScore)}</span>
         <span class="sepDot">•</span>
-        <span class="score">${esc(homeScore)}</span>
-        ${teamHTML(leagueKey, home)}
+        <span class="tScore">${esc(homeScore)}</span>
+        ${tickerTeamHTML(leagueKey, home)}
         ${metaHTML}
       </span>
     `;
@@ -481,7 +554,7 @@
   }
 
   async function refreshAll(){
-    const dateCT = toCTDateYYYYMMDD();
+    const dateCT = toCTDateYYYYMMDD(new Date());
     const r = await fetch(WORKER_URL + "?date=" + encodeURIComponent(dateCT) + "&t=" + Date.now());
     if(!r.ok) throw new Error("Worker HTTP " + r.status);
     const j = await r.json();
@@ -491,11 +564,36 @@
     const mlb = j.mlb?.games || [];
     const nfl = j.nfl?.games || [];
 
-    // Minnesota cards
-    buildMnCard("nhl", "Minnesota Wild", "NHL", nhl);
-    buildMnCard("nba", "Minnesota Timberwolves", "NBA", nba);
-    buildMnCard("mlb", "Minnesota Twins", "MLB", mlb);
-    buildMnCard("nfl", "Minnesota Vikings", "NFL", nfl);
+    // Minnesota cards (team abbreviations)
+    const teamByLeague = { nhl:"MIN", nba:"MIN", mlb:"MIN", nfl:"MIN" };
+
+    const configs = [
+      { key:"nhl", title:"Minnesota Wild", league:"NHL", games:nhl },
+      { key:"nba", title:"Minnesota Timberwolves", league:"NBA", games:nba },
+      { key:"mlb", title:"Minnesota Twins", league:"MLB", games:mlb },
+      { key:"nfl", title:"Minnesota Vikings", league:"NFL", games:nfl },
+    ];
+
+    // Set shells fast
+    for(const c of configs){
+      const el = document.getElementById(`card-${c.key}`);
+      if(el) el.innerHTML = buildMnCardShell(c.key, c.title, c.league);
+    }
+
+    // Render actual or next game
+    for(const c of configs){
+      const el = document.getElementById(`card-${c.key}`);
+      if(!el) continue;
+
+      const todayGame = findGameForTeam(c.games, teamByLeague[c.key]);
+      if(todayGame){
+        el.innerHTML = renderMnGame(c.key, c.title, c.league, todayGame);
+      }else{
+        // look ahead for next game
+        const next = await findNextGame(c.key, teamByLeague[c.key], 14);
+        el.innerHTML = renderMnNoGame(c.key, c.title, c.league, next);
+      }
+    }
 
     // Ticker
     let html = "";
@@ -524,6 +622,7 @@
       setTickerHTML(`<span class="tickItem">Ticker error (worker).</span>`);
     }
 
+    // refresh today’s scores often
     setInterval(() => refreshAll().catch(console.log), 30000);
   })();
 </script>
