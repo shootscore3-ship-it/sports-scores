@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - Clean Modular Edition</title>
+    <title>MN Sports Center - Pro Shield Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -71,41 +71,46 @@
             animation: ticker-scroll 100s linear infinite;
         }
 
-        /* MODULAR GAME CARD */
         .ticker-item {
             display: flex;
             align-items: center;
-            height: 165px; 
+            height: 170px; 
             background: var(--ticker-item-bg);
             margin: 0 45px; 
             padding: 0 55px;
             border-radius: 18px;
             font-size: 72px;
             font-weight: 900;
-            /* Uniform shadow across the entire game segment */
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 0 1px #222;
-            border: none;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 0 1px #252525;
         }
 
         .ticker-item span { margin: 0 15px; }
         
-        /* Clean containers for logos (no background or shadow) */
         .ticker-logo-container {
-            width: 100px;
-            height: 100px;
+            width: 120px; /* Bigger container for bigger logos */
+            height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 8px;
+            margin: 0 5px;
         }
 
         .ticker-team-logo {
-            width: 95px;
-            height: 95px;
+            width: 115px; /* Increased from 95px */
+            height: 115px;
             object-fit: contain;
         }
 
-        .league-label { color: #333; font-size: 34px; margin-right: 25px; font-weight: 900; }
+        /* League Shield Styling */
+        .league-shield {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin-right: 25px;
+            filter: brightness(0) invert(1); /* Makes them clean white */
+            opacity: 0.8;
+        }
+
         .ticker-live-dot { color: var(--live); margin-right: 15px; font-size: 40px; }
 
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -118,12 +123,19 @@
 
     <div class="ticker-wrap">
         <div class="ticker-move" id="ticker-content">
-            <div class="ticker-item">LOADING MN SPORTS CENTER...</div>
+            <div class="ticker-item">PREPARING MN SPORTS NETWORK...</div>
         </div>
     </div>
 
     <script>
         const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
+        const LEAGUE_LOGOS = {
+            nhl: "https://a.espncdn.com/i/leaguelogos/nhl/500/dark/nhl.png",
+            nba: "https://a.espncdn.com/i/leaguelogos/nba/500/dark/nba.png",
+            mlb: "https://a.espncdn.com/i/leaguelogos/mlb/500/dark/mlb.png",
+            nfl: "https://a.espncdn.com/i/leaguelogos/nfl/500/dark/nfl.png"
+        };
+
         const TEAMS = [
             { id: "30", sport: "hockey", league: "nhl", name: "Wild" },
             { id: "16", sport: "basketball", league: "nba", name: "Timberwolves" },
@@ -180,10 +192,12 @@
                     const comp = game.competitions[0];
                     const away = comp.competitors[1], home = comp.competitors[0];
                     const state = game.status.type.state;
+                    const leagueShield = LEAGUE_LOGOS[league.l];
+
                     allItems.push(`
                         <div class="ticker-item">
                             ${state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
-                            <span class="league-label">${league.l.toUpperCase()}</span>
+                            <img src="${leagueShield}" class="league-shield">
                             <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}"></div>
                             <span>${away.team.abbreviation} ${away.score || ''}</span>
                             <span style="color:#2a2a2a;">@</span>
