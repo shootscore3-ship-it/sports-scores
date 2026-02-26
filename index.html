@@ -4,37 +4,81 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Grumpy's Live Scores</title>
-
 <style>
-body{margin:0;background:#0b0f14;font-family:Arial,Helvetica,sans-serif;color:#fff}
-.wrap{height:100vh;display:flex;flex-direction:column}
+  :root{
+    --bg:#0b0f14;
+    --panel:#11161d;
+    --panel2:rgba(255,255,255,.05);
+    --border:rgba(255,255,255,.10);
+    --text:#ffffff;
+    --muted:rgba(255,255,255,.75);
+    --gold:#ffd24d;
+    --live:#ff3b3b;
+  }
+  body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+  .wrap{height:100vh;display:flex;flex-direction:column}
 
-/* ==== MINNESOTA CARDS ==== */
-.mn{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:18px 20px;flex:1}
-.mnCard{background:#11161d;border-radius:20px;border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column}
-.mnHeader{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(255,255,255,.05)}
-.mnTitle{font:900 26px Arial}
-.mnLeague{font:900 14px Arial;background:rgba(255,255,255,.1);padding:6px 10px;border-radius:999px}
-.mnBody{padding:16px;display:flex;flex-direction:column;gap:14px;flex:1}
+  /* ===== TOP CARDS ===== */
+  .mn{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:18px 20px;flex:1;min-height:0}
+  .mnCard{background:var(--panel);border-radius:22px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .mnHeader{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--panel2)}
+  .mnTitle{font:900 28px Arial;line-height:1.05}
+  .mnLeague{font:900 14px Arial;background:rgba(255,255,255,.10);padding:6px 10px;border-radius:999px}
+  .mnBody{padding:18px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0}
 
-.scoreBox{display:flex;justify-content:center;align-items:center;gap:18px;font:900 48px Arial;background:rgba(255,255,255,.05);padding:14px;border-radius:16px}
-.status{font:900 18px Arial}
-.live{color:#ff3b3b}
-.final{color:#ffd24d}
+  .topLine{font:900 28px Arial}
+  .subLine{font:900 18px Arial;color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);font:900 20px Arial}
 
-.leaders{margin-top:auto;background:rgba(255,255,255,.05);padding:12px;border-radius:14px}
-.leaderRow{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
-.leaderLeft{display:flex;align-items:center;gap:10px}
-.headshot{width:40px;height:40px;border-radius:10px;object-fit:cover}
-.record{margin-top:8px;font:900 14px Arial;opacity:.8}
+  .matchup{display:flex;justify-content:center;align-items:center;gap:18px;margin-top:6px}
+  .teamSide{display:flex;align-items:center;gap:12px;min-width:170px;justify-content:flex-end}
+  .teamSide.right{justify-content:flex-start}
+  .logo{width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.08);object-fit:contain;padding:6px}
+  .abbr{font:900 28px Arial}
+  .scoreBox{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:12px 18px}
+  .scoreNum{font:900 44px Arial;letter-spacing:.5px}
+  .dash{font:900 34px Arial;color:rgba(255,255,255,.6)}
+  .statusRow{display:flex;justify-content:center;gap:12px;margin-top:10px}
+  .tagLive{background:rgba(255,59,59,.18);border:1px solid rgba(255,59,59,.35);color:#fff}
+  .dot{width:10px;height:10px;border-radius:999px;background:var(--live);display:inline-block}
+  .tagFinal{background:rgba(255,210,77,.16);border:1px solid rgba(255,210,77,.35);color:var(--gold)}
 
-/* ==== TICKER ==== */
-.tickerBar{height:180px;background:#0d131a;border-top:2px solid rgba(255,255,255,.1);overflow:hidden;display:flex;align-items:center}
-.tickerTrack{display:flex;white-space:nowrap;animation:scroll 180s linear infinite}
-@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.tickItem{display:inline-flex;align-items:center;gap:16px;padding-right:120px;font:900 60px Arial}
-.tScore{font-size:70px}
-.leagueHeader{font:900 50px Arial;margin:0 40px}
+  .bottomPanel{
+    margin-top:auto;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:12px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    font:900 16px Arial;
+    color:var(--muted);
+  }
+
+  /* ===== TICKER ===== */
+  .tickerBar{
+    height:200px;
+    background:#0d131a;
+    border-top:2px solid rgba(255,255,255,.12);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+  }
+  .tickerTrack{display:flex;white-space:nowrap;will-change:transform;animation:scroll 120s linear infinite}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  .tickChunk{display:flex;align-items:center}
+  .leagueHeader{font:900 52px Arial;margin:0 36px;color:rgba(255,255,255,.85)}
+  .tickItem{display:inline-flex;align-items:center;gap:16px;padding-right:110px;font:900 58px Arial}
+  .tLogo{width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,.08);object-fit:contain;padding:6px}
+  .tAbbr{font:900 46px Arial;letter-spacing:.5px}
+  .tScore{font:900 72px Arial}
+  .tMid{font:900 56px Arial;color:rgba(255,255,255,.55)}
+  .tMeta{font:900 34px Arial;color:rgba(255,255,255,.75);margin-left:10px}
+  .tLive{display:inline-flex;align-items:center;gap:10px;margin-left:10px;padding:10px 14px;border-radius:999px;background:rgba(255,59,59,.18);border:1px solid rgba(255,59,59,.35);font:900 32px Arial}
+  .tFinal{display:inline-flex;align-items:center;margin-left:10px;padding:10px 14px;border-radius:999px;background:rgba(255,210,77,.16);border:1px solid rgba(255,210,77,.35);color:var(--gold);font:900 32px Arial}
 </style>
 </head>
 
@@ -49,134 +93,313 @@ body{margin:0;background:#0b0f14;font-family:Arial,Helvetica,sans-serif;color:#f
 
   <div class="tickerBar">
     <div class="tickerTrack">
-      <div id="ticker"></div>
-      <div id="tickerClone"></div>
+      <div class="tickChunk" id="ticker"></div>
+      <div class="tickChunk" id="tickerClone"></div>
     </div>
   </div>
 </div>
 
 <script>
-
-/* ==============================
-   CONFIG
-============================== */
-
+/* ========= CONFIG ========= */
 const WORKER = "https://grumpys-scores-api.shootscore3.workers.dev";
-const PROXY = (u) => WORKER + "/proxy?url=" + encodeURIComponent(u);
+const PROXY  = (u) => WORKER + "/proxy?url=" + encodeURIComponent(u);
 
-/* ==============================
-   ESPN ENDPOINTS (THROUGH PROXY)
-============================== */
+// ESPN base endpoints (scoreboard + teams + schedules)
+const LEAGUES = [
+  { key:"nhl", label:"NHL", sportPath:"hockey/nhl", teamName:"Minnesota Wild", mnAbbr:"MIN", cardId:"card-nhl" },
+  { key:"nba", label:"NBA", sportPath:"basketball/nba", teamName:"Minnesota Timberwolves", mnAbbr:"MIN", cardId:"card-nba" },
+  { key:"mlb", label:"MLB", sportPath:"baseball/mlb", teamName:"Minnesota Twins", mnAbbr:"MIN", cardId:"card-mlb" },
+  { key:"nfl", label:"NFL", sportPath:"football/nfl", teamName:"Minnesota Vikings", mnAbbr:"MIN", cardId:"card-nfl" },
+];
 
-const ESPN = {
-  nhlTeams: PROXY("https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams"),
-  nbaTeams: PROXY("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams"),
-  mlbTeams: PROXY("https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams"),
-  nflTeams: PROXY("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams")
-};
+const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
-/* ==============================
-   HELPERS
-============================== */
-
-const esc = (s)=>String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-
-function toCentral(iso){
-  return new Date(iso).toLocaleString("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit",hour12:true})+" CT";
+function toCentral12(iso){
+  if(!iso) return "";
+  try{
+    return new Date(iso).toLocaleString("en-US",{
+      timeZone:"America/Chicago",
+      hour:"numeric",
+      minute:"2-digit",
+      hour12:true
+    }) + " CT";
+  }catch(e){ return ""; }
 }
 
-/* ==============================
-   LOAD TEAM DATA (logos, record)
-============================== */
+async function getJson(url){
+  const r = await fetch(url, { cache:"no-store" });
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await r.json();
+}
 
-async function loadTeams(url){
-  const r = await fetch(url);
-  const j = await r.json();
-  const teams = j.sports[0].leagues[0].teams;
-  const map={};
+/* ========= TEAM LOOKUP (logos, ids) ========= */
+async function loadTeamsMap(sportPath){
+  const url = PROXY(`https://site.web.api.espn.com/apis/site/v2/sports/${sportPath}/teams`);
+  const j = await getJson(url);
+  const teams = j?.sports?.[0]?.leagues?.[0]?.teams || [];
+  const map = {};
   teams.forEach(t=>{
-    const team=t.team;
-    map[team.abbreviation.toUpperCase()] = {
-      id:team.id,
-      logo:team.logos?.[0]?.href,
-      record:team.record?.items?.[0]?.summary || ""
+    const team = t.team;
+    if(!team) return;
+    map[team.id] = {
+      id: team.id,
+      name: team.displayName,
+      abbr: (team.abbreviation||"").toUpperCase(),
+      logo: team.logos?.[0]?.href || ""
     };
   });
   return map;
 }
 
-/* ==============================
-   LOAD LEADERS
-============================== */
-
-async function loadLeaders(sport,id){
-  const url = PROXY(`https://site.web.api.espn.com/apis/site/v2/sports/${sport}/teams/${id}/leaders`);
-  const r = await fetch(url);
-  const j = await r.json();
-  const cats=j.categories||[];
-  return cats.slice(0,3).map(c=>{
-    const leader=c.leaders?.[0];
-    if(!leader) return null;
-    const athlete=leader.athlete||{};
-    return{
-      label:c.displayName,
-      name:athlete.displayName,
-      value:leader.displayValue,
-      headshot:athlete.headshot?.href
-    };
-  }).filter(Boolean);
+function findMinnesotaTeamId(teamsMap, leagueKey){
+  // Wild/Timberwolves/Twins are "MIN" in their league; Vikings are "MIN" too.
+  // We find by abbreviation first; if multiple match, pick the one whose name includes Minnesota.
+  const all = Object.values(teamsMap);
+  const matches = all.filter(t => t.abbr === "MIN" && /Minnesota/i.test(t.name));
+  if(matches.length) return matches[0].id;
+  // fallback: any Minnesota
+  const mn = all.find(t => /Minnesota/i.test(t.name));
+  return mn ? mn.id : null;
 }
 
-/* ==============================
-   BUILD CARD
-============================== */
+/* ========= SCOREBOARD (today) ========= */
+async function loadScoreboard(sportPath){
+  const url = PROXY(`https://site.web.api.espn.com/apis/site/v2/sports/${sportPath}/scoreboard`);
+  return await getJson(url);
+}
 
-async function buildCard(el,title,leagueLabel,sportKey,teamsMap){
-  const team=teamsMap["MIN"];
-  if(!team){ el.innerHTML="Error loading team"; return; }
+function parseEventBasic(e){
+  const comp = e?.competitions?.[0];
+  const comps = comp?.competitors || [];
+  const a = comps.find(c=>c.homeAway==="away");
+  const h = comps.find(c=>c.homeAway==="home");
+  const status = e?.status?.type || {};
+  return {
+    id: e?.id,
+    date: e?.date,
+    status: {
+      state: status.state, // "pre" | "in" | "post"
+      detail: status.shortDetail || status.detail || "",
+    },
+    away: {
+      abbr: (a?.team?.abbreviation||"").toUpperCase(),
+      name: a?.team?.displayName||"",
+      logo: a?.team?.logo || a?.team?.logos?.[0]?.href || "",
+      score: a?.score ?? ""
+    },
+    home: {
+      abbr: (h?.team?.abbreviation||"").toUpperCase(),
+      name: h?.team?.displayName||"",
+      logo: h?.team?.logo || h?.team?.logos?.[0]?.href || "",
+      score: h?.score ?? ""
+    }
+  };
+}
 
-  const leaders=await loadLeaders(sportKey,team.id);
+function findMinnesotaGame(scoreboardJson, mnTeamId){
+  const events = scoreboardJson?.events || [];
+  for(const e of events){
+    const comp = e?.competitions?.[0];
+    const comps = comp?.competitors || [];
+    if(comps.some(c => String(c?.team?.id) === String(mnTeamId))) {
+      return parseEventBasic(e);
+    }
+  }
+  return null;
+}
 
-  let leadersHTML=leaders.map(l=>`
-    <div class="leaderRow">
-      <div class="leaderLeft">
-        ${l.headshot?`<img class="headshot" src="${l.headshot}">`:``}
-        <div>${esc(l.label)} - ${esc(l.name)}</div>
+/* ========= SCHEDULE (next game) ========= */
+async function loadNextGame(sportPath, teamId){
+  // ESPN schedule endpoint
+  const url = PROXY(`https://site.web.api.espn.com/apis/site/v2/sports/${sportPath}/teams/${teamId}/schedule`);
+  const j = await getJson(url);
+  const events = j?.events || [];
+  // Find first event that is not "post"
+  for(const e of events){
+    const state = e?.status?.type?.state;
+    if(state !== "post") {
+      const basic = parseEventBasic(e);
+      return basic;
+    }
+  }
+  return null;
+}
+
+/* ========= RECORD ========= */
+async function loadRecord(sportPath, teamId){
+  const url = PROXY(`https://site.web.api.espn.com/apis/site/v2/sports/${sportPath}/teams/${teamId}`);
+  const j = await getJson(url);
+  const rec = j?.team?.record?.items?.[0]?.summary
+           || j?.team?.recordSummary
+           || "";
+  return rec || "";
+}
+
+/* ========= RENDER CARD ========= */
+function renderCard(el, leagueLabel, teamName, nowGame, nextGame, record){
+  const hasLive = nowGame && nowGame.status.state === "in";
+  const hasFinal = nowGame && nowGame.status.state === "post";
+
+  let topHTML = "";
+  if(nowGame){
+    topHTML = `
+      <div class="matchup">
+        <div class="teamSide">
+          ${nowGame.away.logo?`<img class="logo" src="${nowGame.away.logo}">`:``}
+          <div class="abbr">${esc(nowGame.away.abbr||"")}</div>
+        </div>
+
+        <div class="scoreBox">
+          <div class="scoreNum">${esc(nowGame.away.score||"0")}</div>
+          <div class="dash">–</div>
+          <div class="scoreNum">${esc(nowGame.home.score||"0")}</div>
+        </div>
+
+        <div class="teamSide right">
+          <div class="abbr">${esc(nowGame.home.abbr||"")}</div>
+          ${nowGame.home.logo?`<img class="logo" src="${nowGame.home.logo}">`:``}
+        </div>
       </div>
-      <div>${esc(l.value)}</div>
-    </div>
-  `).join("");
 
-  el.innerHTML=`
+      <div class="statusRow">
+        ${hasLive ? `<div class="pill tagLive"><span class="dot"></span>LIVE</div>` : ``}
+        ${hasFinal ? `<div class="pill tagFinal">FINAL</div>` : ``}
+        <div class="pill">${esc(nowGame.status.detail || toCentral12(nowGame.date))}</div>
+      </div>
+    `;
+  } else {
+    const nextLine = nextGame
+      ? `Next: ${esc(nextGame.away.abbr)} @ ${esc(nextGame.home.abbr)} • ${esc(toCentral12(nextGame.date))}`
+      : `Next: —`;
+    topHTML = `
+      <div class="topLine">No game today</div>
+      <div class="subLine">${nextLine}</div>
+    `;
+  }
+
+  el.innerHTML = `
     <div class="mnHeader">
-      <div class="mnTitle">${title}</div>
-      <div class="mnLeague">${leagueLabel}</div>
+      <div class="mnTitle">${esc(teamName)}</div>
+      <div class="mnLeague">${esc(leagueLabel)}</div>
     </div>
     <div class="mnBody">
-      <div>No game today</div>
-      <div class="leaders">
-        ${leadersHTML}
-        <div class="record">Record: ${team.record||"—"}</div>
+      ${topHTML}
+      <div class="bottomPanel">
+        <div>Record:</div>
+        <div>${esc(record || "—")}</div>
       </div>
     </div>
   `;
 }
 
-/* ==============================
-   INIT
-============================== */
+/* ========= TICKER ========= */
+function buildTickerLeague(label, events){
+  // Build chunk: "NBA | LOGO SEA 0 • 4 DAL LIVE 3:18 2nd | ..."
+  const parts = [];
+  parts.push(`<div class="leagueHeader">${esc(label)}</div>`);
+  for(const e of events){
+    const st = e.status.state;
+    const isLive = st === "in";
+    const isFinal = st === "post";
 
-(async()=>{
-  const nhl=await loadTeams(ESPN.nhlTeams);
-  const nba=await loadTeams(ESPN.nbaTeams);
-  const mlb=await loadTeams(ESPN.mlbTeams);
-  const nfl=await loadTeams(ESPN.nflTeams);
+    const meta = isLive ? e.status.detail : (isFinal ? "FINAL" : toCentral12(e.date));
+    const badge = isLive ? `<span class="tLive"><span class="dot"></span>LIVE</span>`
+                : isFinal ? `<span class="tFinal">FINAL</span>`
+                : `<span class="tMeta">${esc(meta)}</span>`;
 
-  await buildCard(document.getElementById("card-nhl"),"Minnesota Wild","NHL","hockey/nhl",nhl);
-  await buildCard(document.getElementById("card-nba"),"Minnesota Timberwolves","NBA","basketball/nba",nba);
-  await buildCard(document.getElementById("card-mlb"),"Minnesota Twins","MLB","baseball/mlb",mlb);
-  await buildCard(document.getElementById("card-nfl"),"Minnesota Vikings","NFL","football/nfl",nfl);
-})();
+    parts.push(`
+      <div class="tickItem">
+        ${e.away.logo?`<img class="tLogo" src="${e.away.logo}">`:``}
+        <span class="tAbbr">${esc(e.away.abbr)}</span>
+        <span class="tScore">${esc(e.away.score||"0")}</span>
+        <span class="tMid">•</span>
+        <span class="tScore">${esc(e.home.score||"0")}</span>
+        <span class="tAbbr">${esc(e.home.abbr)}</span>
+        ${e.home.logo?`<img class="tLogo" src="${e.home.logo}">`:``}
+        ${badge}
+      </div>
+    `);
+  }
+  return parts.join("");
+}
+
+function pickTopGames(scoreboardJson, limit=6){
+  const events = (scoreboardJson?.events || []).map(parseEventBasic);
+  // Prefer live, then upcoming, then finals
+  events.sort((a,b)=>{
+    const rank = (x)=> x.status.state==="in" ? 0 : x.status.state==="pre" ? 1 : 2;
+    return rank(a)-rank(b);
+  });
+  return events.slice(0, limit);
+}
+
+async function refreshAll(){
+  try{
+    // preload teams maps
+    const teamsMaps = {};
+    for(const L of LEAGUES){
+      teamsMaps[L.key] = await loadTeamsMap(L.sportPath);
+    }
+
+    // cards + ticker data
+    const tickerHTML = [];
+    for(const L of LEAGUES){
+      const cardEl = document.getElementById(L.cardId);
+      cardEl.innerHTML = `
+        <div class="mnHeader">
+          <div class="mnTitle">${esc(L.teamName)}</div>
+          <div class="mnLeague">${esc(L.label)}</div>
+        </div>
+        <div class="mnBody"><div class="topLine">Loading…</div></div>
+      `;
+
+      const teamsMap = teamsMaps[L.key];
+      const mnId = findMinnesotaTeamId(teamsMap, L.key);
+
+      let scoreboard = null;
+      let nowGame = null;
+      let nextGame = null;
+      let record = "";
+
+      try{
+        scoreboard = await loadScoreboard(L.sportPath);
+        if(mnId) nowGame = findMinnesotaGame(scoreboard, mnId);
+      }catch(e){ /* ignore */ }
+
+      try{
+        if(mnId) nextGame = await loadNextGame(L.sportPath, mnId);
+      }catch(e){ /* ignore */ }
+
+      try{
+        if(mnId) record = await loadRecord(L.sportPath, mnId);
+      }catch(e){ /* ignore */ }
+
+      renderCard(cardEl, L.label, L.teamName, nowGame, nextGame, record);
+
+      // ticker
+      if(scoreboard){
+        const top = pickTopGames(scoreboard, 6);
+        tickerHTML.push(buildTickerLeague(L.label, top));
+      }
+    }
+
+    // write ticker + clone for smooth loop
+    const t = document.getElementById("ticker");
+    const tc = document.getElementById("tickerClone");
+    t.innerHTML = tickerHTML.join(`<div class="leagueHeader">|</div>`);
+    tc.innerHTML = t.innerHTML;
+
+  }catch(err){
+    // If something catastrophic happens, at least show it in console
+    console.error("refreshAll failed:", err);
+  }
+}
+
+// initial + refresh every 30s (keeps live scores moving)
+refreshAll();
+setInterval(refreshAll, 30000);
+
 </script>
 </body>
 </html>
