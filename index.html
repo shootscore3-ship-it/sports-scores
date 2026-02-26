@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports Center - Fixed Edition</title>
+    <title>MN Sports - Broadcast Fixed</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #050505; --card-bg: #111111; --text: #ffffff;
-            --live: #ff3b3b; --final-gold: #D4AF37; --theme-color: #222;
+            --live: #ff3b3b; --final-gold: #D4AF37; --theme-color: #333;
         }
 
         body {
@@ -19,44 +19,44 @@
 
         .dashboard {
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;
-            padding: 15px; flex: 1; box-sizing: border-box;
-            align-items: stretch; /* Prevents squishing to the top */
+            padding: 20px; flex: 1; box-sizing: border-box;
+            align-items: stretch;
         }
 
         .card {
-            background: var(--card-bg); border-radius: 20px; padding: 20px;
-            display: flex; flex-direction: column; 
-            justify-content: space-between; /* Spreads content from top to bottom */
+            background: var(--card-bg); border-radius: 24px; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
             align-items: center; border: 2px solid var(--theme-color);
             position: relative; transition: all 0.5s ease;
+            min-height: 400px; /* Forces card to stay large */
         }
 
         .rank-badge {
             position: absolute; top: 15px; right: 15px;
-            background: rgba(212, 175, 55, 0.15); color: var(--final-gold);
-            padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900;
-            border: 1px solid rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.1); color: var(--final-gold);
+            padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 900;
+            border: 1px solid rgba(212, 175, 55, 0.3);
         }
 
-        .team-logo { width: 95px; height: 95px; object-fit: contain; margin-bottom: 5px; }
+        .team-logo-main { width: 110px; height: 110px; object-fit: contain; margin-top: 10px; }
         
-        .player-row {
+        .player-box {
             display: flex; align-items: center; background: rgba(255,255,255,0.05);
-            border-radius: 12px; padding: 10px; width: 100%; box-sizing: border-box;
-            border-left: 4px solid var(--theme-color); margin: 10px 0;
+            border-radius: 15px; padding: 12px; width: 100%; box-sizing: border-box;
+            border-left: 5px solid var(--theme-color); margin: 15px 0;
         }
-        .headshot { width: 55px; height: 55px; border-radius: 50%; background: #222; margin-right: 12px; border: 1px solid #444; }
-        .stat-name { font-size: 13px; font-weight: 900; color: var(--final-gold); }
-        .stat-vals { font-size: 11px; color: #bbb; }
+        .headshot { width: 60px; height: 60px; border-radius: 50%; background: #222; margin-right: 12px; border: 1px solid #444; }
+        .p-name { font-size: 14px; font-weight: 900; color: var(--final-gold); display: block; }
+        .p-stat { font-size: 12px; color: #aaa; }
 
-        .vs-container { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; }
-        .score-text { font-size: 44px; font-weight: 900; }
+        .score-row { display: flex; align-items: center; justify-content: center; gap: 15px; width: 100%; }
+        .score-big { font-size: 48px; font-weight: 900; }
         .opp-logo { width: 45px; height: 45px; object-fit: contain; }
 
-        .ticker-wrap { background: #000; height: 215px; border-top: 5px solid var(--theme-color); display: flex; align-items: center; overflow: hidden; }
-        .ticker-move { display: flex; white-space: nowrap; animation: ticker-scroll 110s linear infinite; }
-        .ticker-item { display: flex; align-items: center; background: #151515; margin: 0 35px; padding: 0 45px; border-radius: 20px; font-size: 72px; font-weight: 900; height: 165px; }
-        .ticker-logo { width: 110px; height: 110px; object-fit: contain; margin: 0 15px; }
+        .ticker-wrap { background: #000; height: 210px; border-top: 6px solid var(--theme-color); display: flex; align-items: center; overflow: hidden; }
+        .ticker-move { display: flex; white-space: nowrap; animation: ticker-scroll 100s linear infinite; }
+        .ticker-item { display: flex; align-items: center; background: #151515; margin: 0 30px; padding: 0 40px; border-radius: 20px; font-size: 70px; font-weight: 900; height: 160px; }
+        .ticker-logo { width: 105px; height: 105px; object-fit: contain; margin: 0 15px; }
 
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
@@ -68,104 +68,88 @@
     <script>
         const worker = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
         const TEAMS = [
-            { id: "30", sport: "hockey", league: "nhl", name: "Wild", color: "#154734", athleteId: "3043233", pName: "K. Kaprizov", pStats: "32G, 38A" },
-            { id: "16", sport: "basketball", league: "nba", name: "Wolves", color: "#0C2340", athleteId: "4431611", pName: "A. Edwards", pStats: "29.6 PPG, 5.3 RPG" },
-            { id: "9", sport: "baseball", league: "mlb", name: "Twins", color: "#002B5C", athleteId: "4240362", pName: "J. Miranda", pStats: "6 RBI, .310 AVG" },
-            { id: "16", sport: "football", league: "nfl", name: "Vikings", color: "#4F2683", athleteId: "4426336", pName: "J.J. McCarthy", pStats: "1632 Yds, 12 TD" }
+            { id: "30", league: "nhl", sport: "hockey", name: "Wild", color: "#154734", ath: "3043233", pN: "K. Kaprizov", pS: "32G, 38A" },
+            { id: "16", league: "nba", sport: "basketball", name: "Wolves", color: "#0C2340", ath: "4431611", pN: "A. Edwards", pS: "29.5 PPG" },
+            { id: "9", league: "mlb", sport: "baseball", name: "Twins", color: "#002B5C", ath: "4240362", pN: "J. Miranda", pS: ".310 AVG" },
+            { id: "16", league: "nfl", sport: "football", name: "Vikings", color: "#4F2683", ath: "4426336", pN: "J.J. McCarthy", pS: "1,632 Yds, 11 TD" }
         ];
 
-        async function fetchJson(url) {
+        async function fetchJSON(url) {
             try { const r = await fetch(worker + encodeURIComponent(url)); return await r.json(); } catch(e) { return null; }
         }
 
         async function getRank(league, teamId) {
-            const leaguePath = league==='nba'?'basketball':(league==='nhl'?'hockey':(league==='mlb'?'baseball':'football'));
-            const data = await fetchJson(`https://site.api.espn.com/apis/v2/sports/${leaguePath}/${league}/standings`);
+            const path = league==='nba'?'basketball':(league==='nhl'?'hockey':(league==='mlb'?'baseball':'football'));
+            const data = await fetchJSON(`https://site.api.espn.com/apis/v2/sports/${path}/${league}/standings`);
             try {
-                for (const group of data.children || []) {
-                    let entry = group.standings?.entries?.find(e => e.team.id === teamId);
-                    if (!entry && group.children) { // Some leagues have nested divisions
-                        for (const child of group.children) {
-                            entry = child.standings?.entries?.find(e => e.team.id === teamId);
-                            if (entry) break;
-                        }
-                    }
-                    if (entry) return `#${entry.stats.find(s=>s.name==='rank')?.displayValue || '—'}`;
-                }
-            } catch(e) {} return "—";
+                // Dig into children arrays for divisions
+                const allEntries = data.children.flatMap(c => c.standings?.entries || c.children?.flatMap(cc => cc.standings?.entries) || []);
+                const team = allEntries.find(e => e.team.id === teamId);
+                return team ? `#${team.stats.find(s=>s.name==='rank')?.displayValue}` : "—";
+            } catch(e) { return "—"; }
         }
 
-        async function updateDashboard() {
+        async function updateUI() {
             const container = document.getElementById('cards-container');
-            const results = await Promise.all(TEAMS.map(async (team) => {
-                const sb = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-                const details = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
-                const rank = await getRank(team.league, team.id);
+            const cardsHTML = await Promise.all(TEAMS.map(async (t) => {
+                const sb = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${t.sport}/${t.league}/scoreboard`);
+                const rank = await getRank(t.league, t.id);
+                const game = sb?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === t.id));
                 
-                let game = sb?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
-                let oppLogo = "";
+                let scoreSection = `<div style="font-size:12px; color:#444; font-weight:900;">NO GAME SCHEDULED</div>`;
                 if (game) {
-                    const opp = game.competitions[0].competitors.find(c => c.team.id !== team.id);
-                    oppLogo = opp.team.logo;
-                    if (game.status.type.state === 'in') document.documentElement.style.setProperty('--theme-color', team.color);
+                    const me = game.competitions[0].competitors.find(c => c.team.id === t.id);
+                    const them = game.competitions[0].competitors.find(c => c.team.id !== t.id);
+                    scoreSection = `
+                        <div class="score-row">
+                            <span class="score-big">${me.score}</span>
+                            <img class="opp-logo" src="${them.team.logo}">
+                            <span class="score-big">${them.score}</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:#888;">${game.status.type.shortDetail}</div>
+                    `;
                 }
-                return { ...team, game, rank, record: details?.team?.record?.items?.[0]?.summary || "0-0", oppLogo, logo: details?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png` };
-            }));
 
-            container.innerHTML = '';
-            results.forEach(res => {
-                const isLive = res.game?.status.type.state === 'in';
-                const card = document.createElement('div');
-                card.className = `card ${isLive ? 'active-game' : ''}`;
-                card.style.setProperty('--theme-color', res.color);
-                
-                card.innerHTML = `
-                    <div class="rank-badge">${res.rank}</div>
-                    <div style="width:100%">
-                        <img class="team-logo" src="${res.logo}">
-                        <div style="font-size:24px; font-weight:900;">${res.name}</div>
-                        <div style="color:#666; font-size:14px;">${res.record}</div>
+                return `
+                <div class="card" style="--theme-color: ${t.color}">
+                    <div class="rank-badge">${rank}</div>
+                    <div style="text-align:center;">
+                        <img class="team-logo-main" src="https://a.espncdn.com/i/teamlogos/${t.league}/500/${t.id}.png">
+                        <div style="font-size:28px; font-weight:900; margin-top:5px;">${t.name}</div>
                     </div>
-                    
-                    <div class="player-row">
-                        <img class="headshot" src="https://a.espncdn.com/i/headshots/${res.league}/players/full/${res.athleteId}.png" onerror="this.src='https://a.espncdn.com/i/teamlogos/${res.league}/500/${res.id}.png'">
-                        <div class="stat-content">
-                            <div class="stat-name">${res.pName}</div>
-                            <div class="stat-vals">${res.pStats}</div>
+
+                    <div class="player-box">
+                        <img class="headshot" src="https://a.espncdn.com/i/headshots/${t.league}/players/full/${t.ath}.png" onerror="this.src='https://a.espncdn.com/i/teamlogos/${t.league}/500/${t.id}.png'">
+                        <div>
+                            <span class="p-name">${t.pN}</span>
+                            <span class="p-stat">${t.pS}</span>
                         </div>
                     </div>
 
-                    <div style="width:100%">
-                        ${res.game ? `
-                            <div class="vs-container">
-                                <span class="score-text">${res.game.competitions[0].competitors.find(c => c.team.id === res.id).score}</span>
-                                <img class="opp-logo" src="${res.oppLogo}">
-                                <span class="score-text">${res.game.competitions[0].competitors.find(c => c.team.id !== res.id).score}</span>
-                            </div>
-                            <div style="font-weight:700; font-size:12px;">${res.game.status.type.shortDetail}</div>
-                        ` : `<div style="font-size:12px; color:#444; font-weight:900; letter-spacing:1px;">NEXT GAME SCHEDULED</div>`}
+                    <div style="width:100%; text-align:center;">
+                        ${scoreSection}
                     </div>
-                `;
-                container.appendChild(card);
-            });
+                </div>`;
+            }));
+            container.innerHTML = cardsHTML.join('');
         }
 
         async function updateTicker() {
-            const leagues = [{l:'nhl', s:'hockey'}, {l:'nba', s:'basketball'}, {l:'mlb', s:'baseball'}];
             const ticker = document.getElementById('ticker-content');
-            let allItems = [];
-            for (const league of leagues) {
-                const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`);
-                data?.events?.forEach(game => {
-                    const away = game.competitions[0].competitors[1], home = game.competitions[0].competitors[0];
-                    allItems.push(`<div class="ticker-item"><img class="ticker-logo" src="${away.team.logo}"> ${away.team.abbreviation} ${away.score || ''} @ ${home.team.abbreviation} ${home.score || ''} <img class="ticker-logo" src="${home.team.logo}"><span style="margin-left:25px; color:#555;">${game.status.type.shortDetail}</span></div>`);
+            let items = [];
+            const leagues = [{l:'nhl', s:'hockey'}, {l:'nba', s:'basketball'}, {l:'mlb', s:'baseball'}];
+            for (const leg of leagues) {
+                const data = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${leg.s}/${leg.l}/scoreboard`);
+                data?.events?.forEach(e => {
+                    const a = e.competitions[0].competitors[1], h = e.competitions[0].competitors[0];
+                    items.push(`<div class="ticker-item"><img class="ticker-logo" src="${a.team.logo}"> ${a.team.abbreviation} ${a.score} @ ${h.team.abbreviation} ${h.score} <img class="ticker-logo" src="${h.team.logo}"><span style="color:#555; margin-left:20px;">${e.status.type.shortDetail}</span></div>`);
                 });
             }
-            ticker.innerHTML = [...allItems, ...allItems].join('');
+            ticker.innerHTML = [...items, ...items].join('');
         }
 
-        updateDashboard(); updateTicker();
-        setInterval(updateDashboard, 60000); setInterval(updateTicker, 300000);
+        updateUI(); updateTicker();
+        setInterval(updateUI, 60000); setInterval(updateTicker, 300000);
     </script>
 </body>
 </html>
