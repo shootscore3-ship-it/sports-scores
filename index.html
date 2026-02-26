@@ -28,7 +28,7 @@
     }
     iframe { width:100%; height:100%; border:0; }
 
-    /* Bottom: ticker */
+    /* Bottom ticker */
     .tickerBar{
       height:95px;
       background:#07090c;
@@ -41,8 +41,7 @@
       display:flex;
       white-space:nowrap;
       will-change:transform;
-      /* SLOWER = bigger number */
-      animation: tickerScroll 170s linear infinite;
+      animation: tickerScroll 170s linear infinite; /* speed */
     }
     @keyframes tickerScroll{
       from{ transform:translateX(0); }
@@ -67,7 +66,7 @@
       display:inline-flex;
       align-items:center;
       gap:12px;
-      padding-right:64px;
+      padding-right:62px;
       font: 800 32px/1 Arial, sans-serif;
       color:#fff;
     }
@@ -93,16 +92,35 @@
     .meta{
       display:inline-flex;
       align-items:center;
-      gap:10px;
-      margin-left:8px;
-      font: 900 24px/1 Arial, sans-serif;
-      opacity:.95;
+      gap:12px;
+      margin-left:22px;
+      font: 900 22px/1 Arial, sans-serif;
+      opacity:.98;
     }
+
+    .timeTag{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      color:#fff;
+      letter-spacing:.4px;
+    }
+
+    .statusText{
+      opacity:.80;
+      font-weight:900;
+      font-size:22px;
+      letter-spacing:.2px;
+    }
+
     .liveTag{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:6px 10px;
+      padding:6px 12px;
       border-radius:999px;
       background:rgba(255,0,0,.18);
       border:1px solid rgba(255,0,0,.35);
@@ -115,29 +133,16 @@
       background:#ff2b2b;
       box-shadow:0 0 10px rgba(255,43,43,.9);
     }
+
     .finalTag{
       display:inline-flex;
       align-items:center;
-      padding:6px 10px;
+      padding:6px 12px;
       border-radius:999px;
       background:rgba(255,205,0,.18);
       border:1px solid rgba(255,205,0,.35);
       color:#ffd24d; /* gold */
-    }
-    .timeTag{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.14);
-      color:#fff;
-      opacity:.92;
-    }
-    .statusText{
-      opacity:.75;
-      font-weight:900;
-      font-size:22px;
+      letter-spacing:.4px;
     }
 
     .divider{
@@ -181,16 +186,13 @@
   </div>
 
   <script>
-    // Your Cloudflare Worker scores endpoint
     const WORKER_URL = "https://grumpys-scores-api.shootscore3.workers.dev/scores";
 
-    // ESPN team list endpoints for logos (no uploads needed)
+    // ESPN team endpoints for logo URLs
     const ESPN_TEAMS = {
       nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
       mlb: "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
-      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams",
-      // NHL later if we add it:
-      // nhl: "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
+      nfl: "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams"
     };
 
     const logoMap = { nba:{}, mlb:{}, nfl:{} };
@@ -205,24 +207,29 @@
       const a = document.getElementById("lane1");
       const b = document.getElementById("lane2");
       if (a) a.innerHTML = html;
-      if (b) b.innerHTML = html; // duplicate for seamless scroll
+      if (b) b.innerHTML = html;
     }
 
     function teamAbbr(t){
       return (t?.abbreviation || t?.name || t?.full_name || "").toString().trim().toUpperCase();
     }
 
-    // Convert an ISO date string to Central Time in 24h HH:MM format
-    function toCentral24h(iso){
+    // Detect ISO strings like "2026-02-27T00:30:00Z"
+    function looksLikeIsoDate(s){
+      if (!s) return false;
+      return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(s).trim());
+    }
+
+    // Always produce 12-hour Central Time
+    function toCentral12h(iso){
       try{
         const d = new Date(iso);
         const ct = d.toLocaleString("en-US", {
           timeZone: "America/Chicago",
-          hour: "2-digit",
+          hour: "numeric",
           minute: "2-digit",
-          hour12: false
+          hour12: true
         });
-        // toLocaleString may return "19:30" or "07:30" depending; we keep as-is
         return `${ct} CT`;
       }catch(e){
         return "";
@@ -266,12 +273,11 @@
       `;
     }
 
-    // Try to infer if a game is live or final from status text
+    // Infer live/final from status strings across leagues
     function classifyStatus(raw){
       const s = (raw || "").toString().trim().toLowerCase();
 
-      // Very common patterns
-      const isFinal = s.includes("final") || s === "f" || s === "final/ot" || s === "final/so";
+      const isFinal = s.includes("final") || s === "f" || s.includes("final/ot") || s.includes("final/so");
       const isLive =
         s.includes("q1") || s.includes("q2") || s.includes("q3") || s.includes("q4") ||
         s.includes("1st") || s.includes("2nd") || s.includes("3rd") ||
@@ -290,20 +296,28 @@
 
       const rawStatus = (g.status || g.game_status || "").toString().trim();
       const { isFinal, isLive } = classifyStatus(rawStatus);
-
-      // Upcoming time (CT 24h) if not live and no score yet
-      let metaHTML = "";
       const hasScore = (homeScore !== "" || awayScore !== "");
 
-      if (!hasScore && g.date && !isFinal && !isLive){
-        const ct = toCentral24h(g.date);
-        metaHTML = ct ? `<span class="meta"><span class="timeTag">${esc(ct)}</span></span>` : "";
-      } else if (isFinal){
+      // If status is an ISO string, treat it as a start time
+      const statusIsIso = looksLikeIsoDate(rawStatus);
+      const statusTimeCT = statusIsIso ? toCentral12h(rawStatus) : "";
+
+      // Upcoming start time: prefer g.date, otherwise ISO-in-status
+      const startTimeCT = (g.date ? toCentral12h(g.date) : "") || statusTimeCT;
+
+      let metaHTML = "";
+
+      if (!hasScore && !isFinal && !isLive) {
+        if (startTimeCT) {
+          metaHTML = `<span class="meta"><span class="timeTag">${esc(startTimeCT)}</span></span>`;
+        } else if (rawStatus && !statusIsIso) {
+          metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
+        }
+      } else if (isFinal) {
         metaHTML = `<span class="meta"><span class="finalTag">FINAL</span></span>`;
-      } else if (isLive){
-        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span> <span class="statusText">${esc(rawStatus)}</span></span>`;
-      } else if (rawStatus){
-        // fallback status
+      } else if (isLive) {
+        metaHTML = `<span class="meta"><span class="liveTag"><span class="liveDot"></span>LIVE</span><span class="statusText">${esc(rawStatus)}</span></span>`;
+      } else if (rawStatus && !statusIsIso) {
         metaHTML = `<span class="meta"><span class="statusText">${esc(rawStatus)}</span></span>`;
       }
 
@@ -321,7 +335,6 @@
 
     function leagueSectionHTML(leagueKey, leagueLabel, games){
       if (!games || !games.length) return "";
-
       const header = `<span class="leagueHeader">${esc(leagueLabel)}</span>`;
       const items = games.map(g => formatGameHTML(leagueKey, leagueLabel, g)).join("");
       return header + items + `<span class="divider"></span>`;
@@ -333,7 +346,6 @@
         if(!r.ok) throw new Error("Worker HTTP " + r.status);
         const j = await r.json();
 
-        // NHL is not included here because your Worker shows NHL 401 on free plan.
         const nbaGames = (j.nba?.data || []);
         const mlbGames = (j.mlb?.data || []);
         const nflGames = (j.nfl?.data || []);
@@ -352,11 +364,9 @@
       }
     }
 
-    // Boot
     (async () => {
       setTickerHTML(`<span class="tickItem">Loading scores...</span>`);
 
-      // Load logos first (still ok if blocked; ticker works without)
       await Promise.all([
         loadEspnLogos("nba"),
         loadEspnLogos("mlb"),
