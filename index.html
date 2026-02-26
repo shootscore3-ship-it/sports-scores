@@ -6,7 +6,7 @@
   <title>Live Scores</title>
 
   <style>
-    body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; }
+    body { margin:0; background:#0b0d10; font-family: Arial, Helvetica, sans-serif; color:#fff; }
     .wrap { height:100vh; display:flex; flex-direction:column; }
 
     .mn {
@@ -25,48 +25,134 @@
       box-shadow:0 0 20px rgba(0,0,0,0.5);
     }
 
-    .tickerWrap {
-      height:110px;
+    iframe { width:100%; height:100%; border:0; }
+
+    .tickerBar{
+      height:95px;
       background:#07090c;
-      border-top:2px solid rgba(255,255,255,.1);
+      border-top:2px solid rgba(255,255,255,.12);
       overflow:hidden;
+      display:flex;
+      align-items:center;
     }
 
-    iframe { width:100%; height:100%; border:0; }
+    .tickerTrack{
+      display:flex;
+      white-space:nowrap;
+      animation: tickerScroll 60s linear infinite;
+    }
+
+    .tickerTrack span{
+      display:inline-block;
+      padding-right:80px;
+      font: 800 34px/1 Arial, sans-serif;
+      color:#fff;
+    }
+
+    @keyframes tickerScroll{
+      from{ transform:translateX(0); }
+      to{ transform:translateX(-50%); }
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
 
-    <!-- 4 static boards -->
+    <!-- Minnesota Static Boards -->
     <div class="mn">
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe></div>
-      <div class="card"><iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe></div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68173"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68174"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68175"></iframe>
+      </div>
+      <div class="card">
+        <iframe src="https://scorestream.com/widgets/scoreboards/vert?userWidgetId=68177"></iframe>
+      </div>
     </div>
 
-    <!-- "Ticker" (auto-advancing by reload) -->
-    <div class="tickerWrap">
-      <iframe id="tickerFrame" src=""></iframe>
+    <!-- ESPN Style Ticker -->
+    <div class="tickerBar">
+      <div class="tickerTrack">
+        <span id="tickerText">Loading scores...</span>
+        <span id="tickerText2">Loading scores...</span>
+      </div>
     </div>
 
   </div>
 
-  <script>
-    // ScoreStream horizontal widget (manual arrows). We "auto-advance" by reloading it.
-    const base = "https://scorestream.com/widgets/scoreboards/horz?userWidgetId=68178";
-    const frame = document.getElementById("tickerFrame");
+<script>
+const API_KEY = f30788d2-8dac-4d9d-bcd0-cb33cf02d145; // <<< Replace only this
 
-    function loadTicker() {
-      // cache-bust forces reload so it rotates/updates
-      frame.src = base + "&t=" + Date.now();
-    }
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth()+1).padStart(2,"0");
+const dd = String(today.getDate()).padStart(2,"0");
+const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    loadTicker();
-    // Adjust speed here: 8000–12000 is usually perfect on bar TVs
-    setInterval(loadTicker, 10000);
-  </script>
+const headers = { "Authorization": API_KEY };
+
+const urls = {
+  nba: `https://api.balldontlie.io/v1/games?dates[]=${dateStr}&per_page=100`,
+  nfl: `https://api.balldontlie.io/nfl/v1/games?dates[]=${dateStr}&per_page=100`,
+  mlb: `https://api.balldontlie.io/mlb/v1/games?dates[]=${dateStr}&per_page=100`,
+  nhl: `https://api.balldontlie.io/nhl/v1/games?dates[]=${dateStr}&per_page=100`,
+};
+
+function teamName(t){
+  return t?.abbreviation || t?.name || t?.full_name || "";
+}
+
+function formatGame(league, g){
+  const home = teamName(g.home_team);
+  const away = teamName(g.visitor_team || g.away_team);
+
+  const homeScore = g.home_team_score ?? g.home_score ?? "";
+  const awayScore = g.visitor_team_score ?? g.away_score ?? "";
+
+  const status = g.status || g.game_status || "";
+
+  if(homeScore !== "" || awayScore !== ""){
+    return `${league}: ${away} ${awayScore}–${homeScore} ${home} (${status})`;
+  } else {
+    return `${league}: ${away} @ ${home} (${status})`;
+  }
+}
+
+async function fetchLeague(league){
+  const r = await fetch(urls[league], { headers });
+  if(!r.ok) throw new Error("Fetch failed");
+  const j = await r.json();
+  return (j.data || []).map(g => formatGame(league.toUpperCase(), g));
+}
+
+async function refreshTicker(){
+  try{
+    const results = await Promise.all([
+      fetchLeague("nhl"),
+      fetchLeague("nba"),
+      fetchLeague("mlb"),
+      fetchLeague("nfl")
+    ]);
+
+    const flat = results.flat().filter(Boolean);
+    const text = flat.length ? flat.join("  •  ") : "No games today";
+
+    document.getElementById("tickerText").textContent = text;
+    document.getElementById("tickerText2").textContent = text;
+  }catch(e){
+    document.getElementById("tickerText").textContent = "Ticker error. Possible CORS restriction.";
+    document.getElementById("tickerText2").textContent = "Ticker error. Possible CORS restriction.";
+  }
+}
+
+refreshTicker();
+setInterval(refreshTicker, 60000);
+</script>
+
 </body>
 </html>
