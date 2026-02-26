@@ -2,641 +2,908 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grumpy’s Live Scores</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Grumpy's Live Scores</title>
+
   <style>
     :root{
-      --bg:#0b0f14;
-      --card:#121923;
-      --card2:#0f151d;
-      --stroke:rgba(255,255,255,.08);
-      --text:rgba(255,255,255,.92);
+      --bg:#07090d;
+      --panel:#0f131b;
+      --panel2:#101723;
+      --stroke:rgba(255,255,255,.10);
+      --stroke2:rgba(255,255,255,.06);
+      --txt:rgba(255,255,255,.92);
       --muted:rgba(255,255,255,.65);
       --muted2:rgba(255,255,255,.45);
-      --gold:#caa44a;
-      --live:#ff3b30;
+
+      --gold:#caa84a;
+      --gold2:#6b5620;
+      --red:#e44b4b;
+      --red2:#5a1e1e;
+
+      --pill:#1c2330;
+      --pillStroke:rgba(255,255,255,.10);
+
+      /* Ticker speed control */
+      --ticker-seconds: 80s;   /* bigger = slower */
+      --ticker-height: 150px;  /* ticker size */
+      --card-title: 34px;
+      --card-sub: 20px;
+      --score-num: 66px;
+      --logo: 64px;
     }
+
     *{box-sizing:border-box}
     body{
       margin:0;
-      background:radial-gradient(1200px 700px at 50% 0%, #111b27 0%, var(--bg) 55%, #070a0e 100%);
-      color:var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% 10%, #101522, var(--bg));
+      color:var(--txt);
       overflow:hidden;
     }
 
     .wrap{
-      width:100vw;
       height:100vh;
       display:flex;
       flex-direction:column;
     }
 
-    .grid{
-      flex: 1 1 auto;
+    .top{
+      flex:1;
       display:grid;
       grid-template-columns: repeat(4, 1fr);
       gap:18px;
-      padding:18px 18px 8px;
+      padding:18px 18px 10px 18px;
       min-height:0;
     }
 
     .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 18%, rgba(0,0,0,.0) 100%),
-                 linear-gradient(180deg, var(--card) 0%, var(--card2) 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
       border:1px solid var(--stroke);
-      border-radius:22px;
+      border-radius:26px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
       overflow:hidden;
-      box-shadow: 0 20px 40px rgba(0,0,0,.35);
       display:flex;
       flex-direction:column;
       min-height:0;
     }
 
-    .head{
-      padding:16px 18px 12px;
+    .cardHeader{
+      padding:18px 18px 12px 18px;
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       justify-content:space-between;
-      border-bottom:1px solid var(--stroke);
+      border-bottom:1px solid var(--stroke2);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
     }
-    .title{
-      font-size:28px;
-      font-weight:800;
-      letter-spacing:-.02em;
+
+    .teamName{
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size:var(--card-title);
       line-height:1.05;
     }
-    .pill{
-      font-size:14px;
-      font-weight:700;
-      padding:6px 10px;
+
+    .leaguePill{
+      padding:8px 14px;
       border-radius:999px;
-      background:rgba(255,255,255,.08);
-      border:1px solid var(--stroke);
-      color:var(--muted);
-      white-space:nowrap;
+      border:1px solid var(--pillStroke);
+      background: rgba(0,0,0,.25);
+      font-weight:800;
+      color:rgba(255,255,255,.78);
+      font-size:14px;
+      margin-left:10px;
+      flex:0 0 auto;
     }
 
-    .body{
-      flex:1 1 auto;
+    .cardBody{
       padding:18px;
+      flex:1;
       display:flex;
       flex-direction:column;
-      justify-content:flex-start;
-      gap:14px;
       min-height:0;
+      gap:16px;
     }
 
     .statusLine{
-      font-size:26px;
-      font-weight:800;
-      color:var(--text);
+      font-size:var(--card-sub);
+      color:rgba(255,255,255,.85);
+      font-weight:700;
     }
     .subLine{
       font-size:18px;
-      font-weight:650;
       color:var(--muted);
+      font-weight:650;
     }
 
     .scoreRow{
+      margin-top:6px;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:14px;
-      margin-top:2px;
+      gap:18px;
       flex-wrap:nowrap;
     }
-    .teamChip{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:16px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.05);
-      min-width:0;
-    }
-    .logo{
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--stroke);
-      padding:6px;
-      object-fit:contain;
-      flex:0 0 auto;
-      filter: drop-shadow(0 6px 12px rgba(0,0,0,.35));
-    }
     .abbr{
-      font-size:20px;
       font-weight:900;
-      letter-spacing:.02em;
-      color:var(--text);
-      min-width:0;
+      font-size:28px;
+      color:rgba(255,255,255,.9);
+      max-width:90px;
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
     }
+
+    .logo{
+      width:var(--logo);
+      height:var(--logo);
+      border-radius:14px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      flex:0 0 auto;
+    }
+    .logo img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+    }
+
     .scoreBox{
-      font-size:40px;
-      font-weight:950;
-      letter-spacing:-.02em;
+      min-width:190px;
       padding:10px 18px;
       border-radius:18px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.06);
-      white-space:nowrap;
+      background: rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.10);
+      text-align:center;
+      display:flex;
+      align-items:baseline;
+      justify-content:center;
+      gap:18px;
+    }
+    .scoreNum{
+      font-size:var(--score-num);
+      font-weight:950;
+      letter-spacing:.5px;
+      line-height:1;
+    }
+    .dash{
+      font-size:48px;
+      font-weight:900;
+      opacity:.8;
+      line-height:1;
+      transform: translateY(-4px);
+    }
+
+    .pillRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-top:2px;
+      flex-wrap:wrap;
     }
     .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 14px;
+      padding:10px 16px;
       border-radius:999px;
       font-weight:900;
-      font-size:18px;
-      border:1px solid var(--stroke);
-      width:max-content;
+      letter-spacing:.5px;
+      font-size:16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      color:rgba(255,255,255,.85);
     }
     .badge.live{
-      background:rgba(255,59,48,.14);
-      border-color:rgba(255,59,48,.35);
-      color:#ffd5d1;
-    }
-    .dot{
-      width:10px;
-      height:10px;
-      border-radius:999px;
-      background:var(--live);
-      box-shadow:0 0 0 6px rgba(255,59,48,.18);
+      background: linear-gradient(180deg, rgba(228,75,75,.30), rgba(90,30,30,.55));
+      border-color: rgba(228,75,75,.35);
+      color:#fff;
     }
     .badge.final{
-      background:rgba(202,164,74,.18);
-      border-color:rgba(202,164,74,.45);
-      color:#ffe8b3;
+      background: linear-gradient(180deg, rgba(202,168,74,.26), rgba(107,86,32,.58));
+      border-color: rgba(202,168,74,.45);
+      color:#ffe9a8;
     }
 
     .snapshot{
       margin-top:auto;
-      padding:14px 14px;
       border-radius:18px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.04);
-      display:flex;
-      flex-direction:column;
-      gap:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      padding:14px 14px 12px;
     }
-    .snapTop{
+    .snapshotTop{
       display:flex;
-      align-items:center;
       justify-content:space-between;
-      gap:10px;
-    }
-    .snapTitle{
-      font-size:14px;
-      letter-spacing:.12em;
-      text-transform:uppercase;
+      align-items:center;
       font-weight:900;
-      color:var(--muted);
-    }
-    .snapMini{
-      font-size:12px;
-      color:var(--muted2);
-      font-weight:700;
+      letter-spacing:.4px;
+      color:rgba(255,255,255,.85);
+      font-size:16px;
+      margin-bottom:10px;
     }
     .snapGrid{
       display:grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap:10px;
     }
     .snapItem{
-      padding:10px 12px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
       border-radius:14px;
-      border:1px solid var(--stroke);
-      background:rgba(0,0,0,.12);
+      padding:10px 12px;
     }
     .snapLabel{
-      font-size:12px;
-      color:var(--muted2);
+      color:rgba(255,255,255,.55);
       font-weight:800;
-      text-transform:uppercase;
-      letter-spacing:.08em;
+      font-size:14px;
+      margin-bottom:6px;
     }
     .snapVal{
-      font-size:20px;
+      color:rgba(255,255,255,.92);
       font-weight:950;
-      margin-top:4px;
+      font-size:18px;
+      line-height:1.15;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
-    /* Ticker */
-    .ticker{
-      height:140px;
-      flex:0 0 auto;
-      border-top:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.35);
-      backdrop-filter: blur(10px);
+    /* ---- TICKER ---- */
+    .tickerShell{
+      height:var(--ticker-height);
+      border-top:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.75));
+      overflow:hidden;
+      position:relative;
       display:flex;
       align-items:center;
-      overflow:hidden;
-      padding:0 18px;
     }
+
     .tickerTrack{
       display:flex;
       align-items:center;
-      gap:34px;
+      gap:22px;
       white-space:nowrap;
-      will-change: transform;
-      animation: scroll 45s linear infinite;
+      will-change:transform;
+      animation: scroll var(--ticker-seconds) linear infinite;
+      padding-left: 100vw; /* start off screen */
     }
+
+    @keyframes scroll{
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
     .tickItem{
       display:flex;
       align-items:center;
       gap:16px;
-      font-weight:950;
-      font-size:48px;
-      letter-spacing:-.02em;
+      padding:14px 18px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      box-shadow: 0 10px 26px rgba(0,0,0,.35);
+      min-height: 96px;
     }
-    .tickTeam{
+
+    .tickLeague{
+      font-weight:950;
+      letter-spacing:.6px;
+      color:rgba(255,255,255,.65);
+      font-size:18px;
+      margin-right:4px;
+    }
+
+    .tickLogo{
+      width:62px; height:62px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+    }
+    .tickLogo img{ width:100%; height:100%; object-fit:contain; }
+
+    .tickAbbr{
+      font-weight:950;
+      font-size:32px;
+      letter-spacing:.3px;
+    }
+
+    .tickScore{
+      font-weight:950;
+      font-size:54px;
+      letter-spacing:.5px;
+      line-height:1;
+    }
+
+    .tickMeta{
       display:flex;
       align-items:center;
       gap:12px;
-      font-size:40px;
       font-weight:900;
-      color:var(--text);
+      font-size:28px;
+      color:rgba(255,255,255,.85);
+      margin-left:6px;
     }
-    .tickLogo{
-      width:56px;
-      height:56px;
-      border-radius:16px;
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--stroke);
-      padding:8px;
-      object-fit:contain;
-    }
-    .tickScore{
-      font-size:56px;
-      font-weight:950;
-      min-width:38px;
-      text-align:center;
-    }
-    .tickMeta{
-      font-size:34px;
-      font-weight:900;
-      color:var(--muted);
-    }
-    .sep{
-      width:2px;
-      height:70px;
-      background:rgba(255,255,255,.10);
+
+    .tickPill{
+      padding:12px 18px;
       border-radius:999px;
-      margin:0 6px;
+      font-weight:950;
+      letter-spacing:.6px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color:rgba(255,255,255,.9);
     }
-    @keyframes scroll{
-      from{ transform: translateX(0); }
-      to  { transform: translateX(-50%); }
+    .tickPill.live{
+      background: linear-gradient(180deg, rgba(228,75,75,.30), rgba(90,30,30,.55));
+      border-color: rgba(228,75,75,.35);
+      color:#fff;
+    }
+    .tickPill.final{
+      background: linear-gradient(180deg, rgba(202,168,74,.26), rgba(107,86,32,.58));
+      border-color: rgba(202,168,74,.45);
+      color:#ffe9a8;
+    }
+
+    /* Bigger for 1080p screens: if you want even bigger, tell me and I’ll bump vars */
+    @media (min-width: 1400px){
+      :root{
+        --ticker-height: 165px;
+        --card-title: 36px;
+        --card-sub: 22px;
+        --score-num: 72px;
+        --logo: 70px;
+      }
     }
   </style>
 </head>
 
 <body>
 <div class="wrap">
-  <div class="grid">
-    <div class="card" id="card-nhl">
-      <div class="head"><div class="title">Minnesota Wild</div><div class="pill">NHL</div></div>
-      <div class="body" id="body-nhl"></div>
-    </div>
-
-    <div class="card" id="card-nba">
-      <div class="head"><div class="title">Minnesota Timberwolves</div><div class="pill">NBA</div></div>
-      <div class="body" id="body-nba"></div>
-    </div>
-
-    <div class="card" id="card-mlb">
-      <div class="head"><div class="title">Minnesota Twins</div><div class="pill">MLB</div></div>
-      <div class="body" id="body-mlb"></div>
-    </div>
-
-    <div class="card" id="card-nfl">
-      <div class="head"><div class="title">Minnesota Vikings</div><div class="pill">NFL</div></div>
-      <div class="body" id="body-nfl"></div>
-    </div>
+  <div class="top">
+    <div class="card" id="card-nhl"></div>
+    <div class="card" id="card-nba"></div>
+    <div class="card" id="card-mlb"></div>
+    <div class="card" id="card-nfl"></div>
   </div>
 
-  <div class="ticker">
+  <div class="tickerShell">
     <div class="tickerTrack" id="tickerTrack"></div>
   </div>
 </div>
 
 <script>
-  // CHANGE THIS if your worker URL is different
-  const API_BASE = "https://grumpys-scores-api.shootscore3.workers.dev";
+/**
+ * IMPORTANT:
+ * We do NOT change Cloudflare.
+ * We only assume your worker has /proxy?url=... which returns ESPN JSON with CORS.
+ */
+const WORKER_PROXY_BASE = "https://grumpys-scores-api.shootscore3.workers.dev/proxy?url=";
 
-  // ESPN team IDs (these are commonly used, but if one is wrong I’ll show you how to confirm in 10 seconds)
-  const MN = {
-    nhl: { teamId: 30 }, // Wild
-    nba: { teamId: 16 }, // Timberwolves
-    mlb: { teamId: 9  }, // Twins
-    nfl: { teamId: 16 }  // Vikings
-  };
+// Minnesota teams (ESPN team ids can change; we keep these configurable)
+const MN = {
+  nhl: { title: "Minnesota Wild", league: "NHL", sport: "hockey", leagueKey: "nhl", teamId: 30 },
+  nba: { title: "Minnesota Timberwolves", league: "NBA", sport: "basketball", leagueKey: "nba", teamId: 16 },
+  mlb: { title: "Minnesota Twins", league: "MLB", sport: "baseball", leagueKey: "mlb", teamId: 9 },
+  nfl: { title: "Minnesota Vikings", league: "NFL", sport: "football", leagueKey: "nfl", teamId: 16 },
+};
 
-  const toCT = (iso) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat("en-US", {
+// What leagues appear in the ticker
+const TICKER_LEAGUES = [
+  { sport: "hockey", leagueKey: "nhl", label: "NHL" },
+  { sport: "basketball", leagueKey: "nba", label: "NBA" },
+  { sport: "baseball", leagueKey: "mlb", label: "MLB" },
+  { sport: "football", leagueKey: "nfl", label: "NFL" },
+];
+
+const REFRESH_MS = 30000;
+
+function proxify(url){ return WORKER_PROXY_BASE + encodeURIComponent(url); }
+
+async function fetchJson(url){
+  const res = await fetch(proxify(url), { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const ct = (res.headers.get("content-type") || "");
+  if (!ct.includes("json")) {
+    // Some proxies still return json w/out header; try anyway
+  }
+  return await res.json();
+}
+
+// Central Time, 12-hour clock
+function formatCT(isoString){
+  try{
+    const dt = new Date(isoString);
+    return dt.toLocaleTimeString("en-US", {
       timeZone: "America/Chicago",
       hour: "numeric",
       minute: "2-digit",
       hour12: true
-    }).format(d).replace(" ", " ");
-  };
+    }).replace(":00 ", " ").replace(" AM"," AM").replace(" PM"," PM");
+  }catch{
+    return "";
+  }
+}
 
-  const safe = (v, fallback="—") => (v === undefined || v === null || v === "" ? fallback : v);
+// ESPN-ish logo chooser
+function pickTeamLogo(team){
+  if (!team) return null;
+  // ESPN usually provides logos: [{href, rel, width, height}]
+  if (team.logo) return team.logo;
+  if (Array.isArray(team.logos) && team.logos.length) return team.logos[0]?.href || null;
+  if (team.team && Array.isArray(team.team.logos) && team.team.logos.length) return team.team.logos[0]?.href || null;
+  return null;
+}
 
-  const fetchJson = async (path) => {
-    const r = await fetch(API_BASE + path, { cache: "no-store" });
-    const text = await r.text();
-    try { return JSON.parse(text); }
-    catch(e){ throw new Error("Bad JSON from " + path + ": " + text.slice(0,200)); }
-  };
+function safeText(v, fallback="—"){
+  if (v === null || v === undefined) return fallback;
+  const s = String(v).trim();
+  return s ? s : fallback;
+}
 
-  // Try to extract logo + abbreviation from ESPN competitor object
-  const compLogo = (comp) => comp?.team?.logo || comp?.team?.logos?.[0]?.href || "";
-  const compAbbr = (comp) => comp?.team?.abbreviation || comp?.team?.shortDisplayName || comp?.team?.displayName || "—";
+function getAbbr(team){
+  return team?.abbreviation || team?.team?.abbreviation || team?.shortDisplayName || team?.team?.shortDisplayName || team?.name || team?.team?.name || "—";
+}
 
-  function renderCardLoading(el){
-    el.innerHTML = `
-      <div class="statusLine">Loading…</div>
-      <div class="subLine">Fetching ESPN data</div>
-      <div class="snapshot">
-        <div class="snapTop">
-          <div class="snapTitle">TEAM SNAPSHOT</div>
-          <div class="snapMini">(ESPN)</div>
+function isLiveStatus(competition){
+  const st = competition?.status?.type;
+  if (!st) return false;
+  // ESPN: type.state: "in" / "post" / "pre"
+  return st.state === "in";
+}
+function isFinalStatus(competition){
+  const st = competition?.status?.type;
+  if (!st) return false;
+  return st.state === "post" || st.completed === true;
+}
+
+function getClockOrLabel(competition){
+  const st = competition?.status?.type;
+  if (!st) return "";
+  if (st.state === "pre"){
+    const d = competition?.date;
+    return d ? (formatCT(d) + " CT") : "Scheduled";
+  }
+  if (st.state === "in"){
+    // status.displayClock + period
+    const clock = competition?.status?.displayClock;
+    const period = competition?.status?.period;
+    const detail = competition?.status?.type?.shortDetail || competition?.status?.type?.detail;
+    if (detail) return detail;
+    if (clock && period) return `${clock} • ${ordinal(period)}`;
+    if (clock) return clock;
+    return "LIVE";
+  }
+  if (st.state === "post"){
+    return "FINAL";
+  }
+  return st.shortDetail || st.detail || "";
+}
+function ordinal(n){
+  if (!n) return "";
+  const s = ["th","st","nd","rd"], v = n%100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+function buildCardSkeleton({title, league}){
+  return `
+    <div class="cardHeader">
+      <div class="teamName">${title}</div>
+      <div class="leaguePill">${league}</div>
+    </div>
+    <div class="cardBody">
+      <div>
+        <div class="statusLine" data-slot="status">Loading…</div>
+        <div class="subLine" data-slot="next"></div>
+      </div>
+
+      <div data-slot="scoreWrap"></div>
+
+      <div class="snapshot" data-slot="snapshot">
+        <div class="snapshotTop">
+          <div>TEAM SNAPSHOT</div>
+          <div style="font-weight:800;color:rgba(255,255,255,.55);font-size:13px">(ESPN)</div>
         </div>
         <div class="snapGrid">
-          <div class="snapItem"><div class="snapLabel">Record</div><div class="snapVal">—</div></div>
-          <div class="snapItem"><div class="snapLabel">Rank</div><div class="snapVal">—</div></div>
+          <div class="snapItem">
+            <div class="snapLabel">Record</div>
+            <div class="snapVal" data-slot="record">—</div>
+          </div>
+          <div class="snapItem">
+            <div class="snapLabel">Rank</div>
+            <div class="snapVal" data-slot="rank">—</div>
+          </div>
         </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
 
-  function renderNoGame(el, nextText){
-    el.innerHTML = `
-      <div class="statusLine">No game today</div>
-      <div class="subLine">${nextText ? "Next: " + nextText : "No schedule available"}</div>
-      <div class="snapshot" id="">
-        <div class="snapTop">
-          <div class="snapTitle">TEAM SNAPSHOT</div>
-          <div class="snapMini">(ESPN)</div>
-        </div>
-        <div class="snapGrid" id="snapGridTmp">
-          <div class="snapItem"><div class="snapLabel">Record</div><div class="snapVal">—</div></div>
-          <div class="snapItem"><div class="snapLabel">Rank</div><div class="snapVal">—</div></div>
-        </div>
-      </div>
-    `;
-  }
+function setCardText(cardEl, slot, text){
+  const el = cardEl.querySelector(`[data-slot="${slot}"]`);
+  if (el) el.textContent = text;
+}
 
-  function renderGame(el, g){
-    const comps = g?.competitions?.[0]?.competitors || [];
-    const home = comps.find(c => c?.homeAway === "home") || comps[0] || {};
-    const away = comps.find(c => c?.homeAway === "away") || comps[1] || {};
+function setCardHTML(cardEl, slot, html){
+  const el = cardEl.querySelector(`[data-slot="${slot}"]`);
+  if (el) el.innerHTML = html;
+}
 
-    const aLogo = compLogo(away);
-    const hLogo = compLogo(home);
-    const aAbbr = compAbbr(away);
-    const hAbbr = compAbbr(home);
+/**
+ * Find a relevant event for a team:
+ * Prefer live game, else today's game, else most recent completed, else next scheduled.
+ */
+function chooseTeamEvent(events, teamId){
+  if (!Array.isArray(events)) return null;
 
-    const aScore = safe(away?.score, "0");
-    const hScore = safe(home?.score, "0");
+  const hasTeam = (ev) => ev?.competitions?.some(c =>
+    c?.competitors?.some(x => Number(x?.team?.id) === Number(teamId))
+  );
 
-    const statusType = g?.status?.type?.name || "";
-    const statusState = (g?.status?.type?.state || "").toLowerCase();
-    const detail = g?.status?.type?.shortDetail || g?.status?.type?.detail || "";
-    const startISO = g?.date;
-    const startCT = toCT(startISO);
-    const isFinal = statusType === "STATUS_FINAL" || statusType === "STATUS_FINAL_OVERTIME" || statusState === "post";
-    const isLive = statusType === "STATUS_IN_PROGRESS" || statusState === "in";
+  const teamEvents = events.filter(hasTeam);
+  if (!teamEvents.length) return null;
 
-    el.innerHTML = `
+  // Flatten competitions for checks
+  const eventWithComp = (ev) => ({ ev, comp: ev.competitions?.[0] });
+
+  const candidates = teamEvents.map(eventWithComp).filter(x => x.comp);
+
+  const live = candidates.find(x => isLiveStatus(x.comp));
+  if (live) return live.ev;
+
+  // any scheduled today (CT)
+  const todayCT = new Date().toLocaleDateString("en-US", { timeZone:"America/Chicago" });
+  const sameDay = (iso) => {
+    if (!iso) return false;
+    const d = new Date(iso).toLocaleDateString("en-US", { timeZone:"America/Chicago" });
+    return d === todayCT;
+  };
+  const todayGame = candidates.find(x => x.comp?.date && sameDay(x.comp.date) && x.comp?.status?.type?.state === "pre");
+  if (todayGame) return todayGame.ev;
+
+  const recentFinal = candidates.find(x => isFinalStatus(x.comp));
+  if (recentFinal) return recentFinal.ev;
+
+  // fallback: first
+  return teamEvents[0];
+}
+
+function buildScoreMarkup(event, teamId){
+  const comp = event?.competitions?.[0];
+  if (!comp) return "";
+
+  const competitors = comp.competitors || [];
+  const home = competitors.find(c => c.homeAway === "home");
+  const away = competitors.find(c => c.homeAway === "away");
+
+  // Ensure MN team is always on right if possible (like your mockups)
+  let left = away, right = home;
+  if (Number(home?.team?.id) === Number(teamId)) { left = away; right = home; }
+  if (Number(away?.team?.id) === Number(teamId)) { left = home; right = away; }
+
+  const leftAbbr = getAbbr(left?.team);
+  const rightAbbr = getAbbr(right?.team);
+
+  const leftLogo = pickTeamLogo(left?.team);
+  const rightLogo = pickTeamLogo(right?.team);
+
+  const leftScore = safeText(left?.score, "0");
+  const rightScore = safeText(right?.score, "0");
+
+  const live = isLiveStatus(comp);
+  const fin = isFinalStatus(comp);
+
+  const meta = getClockOrLabel(comp);
+
+  const pills = [];
+  if (live) pills.push(`<span class="badge live">● LIVE</span>`);
+  if (fin) pills.push(`<span class="badge final">FINAL</span>`);
+  if (!live && !fin && meta) pills.push(`<span class="badge">${meta}</span>`);
+
+  return `
+    <div>
       <div class="scoreRow">
-        <div class="teamChip">
-          ${aLogo ? `<img class="logo" src="${aLogo}" alt="">` : ""}
-          <div class="abbr">${aAbbr}</div>
+        <div class="logo">${leftLogo ? `<img src="${leftLogo}" alt="">` : ""}</div>
+        <div class="abbr">${leftAbbr}</div>
+
+        <div class="scoreBox">
+          <div class="scoreNum">${leftScore}</div>
+          <div class="dash">–</div>
+          <div class="scoreNum">${rightScore}</div>
         </div>
 
-        <div class="scoreBox">${aScore} – ${hScore}</div>
-
-        <div class="teamChip">
-          <div class="abbr">${hAbbr}</div>
-          ${hLogo ? `<img class="logo" src="${hLogo}" alt="">` : ""}
-        </div>
+        <div class="abbr">${rightAbbr}</div>
+        <div class="logo">${rightLogo ? `<img src="${rightLogo}" alt="">` : ""}</div>
       </div>
+      <div class="pillRow">${pills.join("")}</div>
+    </div>
+  `;
+}
 
-      ${isLive ? `<div class="badge live"><span class="dot"></span> LIVE <span style="opacity:.75;font-weight:900"> ${detail}</span></div>` : ""}
-      ${isFinal ? `<div class="badge final">FINAL</div>` : (!isLive && startCT ? `<div class="subLine">Start: ${startCT} CT</div>` : ``)}
+/**
+ * Get next scheduled game for a team from the same scoreboard events array.
+ */
+function findNextGame(events, teamId){
+  if (!Array.isArray(events)) return null;
+  const now = Date.now();
 
-      <div class="snapshot">
-        <div class="snapTop">
-          <div class="snapTitle">TEAM SNAPSHOT</div>
-          <div class="snapMini">(ESPN)</div>
-        </div>
-        <div class="snapGrid" id="snapGridTmp">
-          <div class="snapItem"><div class="snapLabel">Record</div><div class="snapVal">—</div></div>
-          <div class="snapItem"><div class="snapLabel">Rank</div><div class="snapVal">—</div></div>
-        </div>
-      </div>
-    `;
-  }
+  const matches = [];
+  for (const ev of events){
+    const comp = ev?.competitions?.[0];
+    if (!comp?.date) continue;
 
-  function setSnapshot(bodyEl, snapshot){
-    const grid = bodyEl.querySelector("#snapGridTmp");
-    if (!grid) return;
+    const hasTeam = comp?.competitors?.some(x => Number(x?.team?.id) === Number(teamId));
+    if (!hasTeam) continue;
 
-    // We keep it simple/robust: record + rank if available.
-    // ESPN team payload structures vary by league, so we safely dig.
-    const record =
-      snapshot?.team?.recordSummary ||
-      snapshot?.recordSummary ||
-      snapshot?.record?.items?.[0]?.summary ||
-      snapshot?.record?.[0]?.summary ||
-      snapshot?.record ||
-      "—";
-
-    // Rank-ish:
-    const rank =
-      snapshot?.standingSummary ||
-      snapshot?.rankDisplay ||
-      snapshot?.standing?.summary ||
-      snapshot?.team?.standingSummary ||
-      "—";
-
-    grid.innerHTML = `
-      <div class="snapItem"><div class="snapLabel">Record</div><div class="snapVal">${safe(record)}</div></div>
-      <div class="snapItem"><div class="snapLabel">Rank</div><div class="snapVal">${safe(rank)}</div></div>
-    `;
-  }
-
-  // Find a team’s game today from scoreboard
-  function findTeamGame(scoreboardJson, teamId){
-    const events = scoreboardJson?.events || [];
-    for (const ev of events){
-      const comps = ev?.competitions?.[0]?.competitors || [];
-      for (const c of comps){
-        if (String(c?.team?.id) === String(teamId)) return ev;
-      }
+    const t = new Date(comp.date).getTime();
+    const state = comp?.status?.type?.state;
+    if (state === "pre" && t > now - 60*60*1000) {
+      matches.push({ ev, t });
     }
-    return null;
   }
 
-  // Pick next scheduled game from scoreboard (best-effort; ESPN scoreboard usually only today)
-  function nextFromScoreboard(scoreboardJson, teamId){
-    const events = scoreboardJson?.events || [];
-    const future = [];
-    for (const ev of events){
-      const comps = ev?.competitions?.[0]?.competitors || [];
-      const hit = comps.some(c => String(c?.team?.id) === String(teamId));
-      if (!hit) continue;
+  matches.sort((a,b)=>a.t-b.t);
+  return matches[0]?.ev || null;
+}
 
-      const state = (ev?.status?.type?.state || "").toLowerCase();
-      if (state === "pre") future.push(ev);
-    }
-    future.sort((a,b)=> new Date(a.date) - new Date(b.date));
-    const ev = future[0];
-    if (!ev) return "";
-    const comps = ev?.competitions?.[0]?.competitors || [];
-    const home = comps.find(c=>c.homeAway==="home") || comps[0] || {};
-    const away = comps.find(c=>c.homeAway==="away") || comps[1] || {};
-    const opp = String(home?.team?.id) === String(teamId) ? compAbbr(away) : compAbbr(home);
-    const at = String(home?.team?.id) === String(teamId) ? "vs" : "@";
-    return `MIN ${at} ${opp} • ${toCT(ev.date)} CT`;
-  }
+function formatNextLine(nextEvent, teamId){
+  const comp = nextEvent?.competitions?.[0];
+  if (!comp) return "";
 
-  function buildTickerItems(allScoreboards){
-    const items = [];
-    const leagues = ["nhl","nba","mlb","nfl"];
+  const competitors = comp.competitors || [];
+  const home = competitors.find(c => c.homeAway === "home");
+  const away = competitors.find(c => c.homeAway === "away");
 
-    for (const lg of leagues){
-      const sb = allScoreboards[lg];
-      const events = sb?.events || [];
-      for (const ev of events){
-        const comps = ev?.competitions?.[0]?.competitors || [];
-        const home = comps.find(c=>c.homeAway==="home") || comps[0] || {};
-        const away = comps.find(c=>c.homeAway==="away") || comps[1] || {};
-        const aLogo = compLogo(away);
-        const hLogo = compLogo(home);
-        const aAbbr = compAbbr(away);
-        const hAbbr = compAbbr(home);
-        const aScore = safe(away?.score, "0");
-        const hScore = safe(home?.score, "0");
+  const mnIsHome = Number(home?.team?.id) === Number(teamId);
+  const opp = mnIsHome ? away?.team : home?.team;
 
-        const statusType = ev?.status?.type?.name || "";
-        const statusState = (ev?.status?.type?.state || "").toLowerCase();
-        const detail = ev?.status?.type?.shortDetail || "";
-        const startCT = toCT(ev?.date);
+  const oppAbbr = getAbbr(opp);
+  const at = mnIsHome ? "vs" : "@";
+  const t = comp.date ? (formatCT(comp.date) + " CT") : "";
 
-        let meta = startCT ? `${startCT} CT` : "";
-        if (statusType === "STATUS_FINAL" || statusState === "post") meta = "FINAL";
-        if (statusType === "STATUS_IN_PROGRESS" || statusState === "in") meta = `LIVE • ${detail || ""}`.trim();
+  return `Next: MIN ${at} ${oppAbbr} • ${t}`.trim();
+}
 
-        items.push({ lg, aLogo, hLogo, aAbbr, hAbbr, aScore, hScore, meta });
-      }
-    }
+/**
+ * Standings snapshot:
+ * We try a few endpoints. Some leagues differ. If it fails, we keep placeholders.
+ */
+async function getStandingsSnapshot({sport, leagueKey, teamId}){
+  const urls = [
+    `https://site.web.api.espn.com/apis/v2/sports/${sport}/${leagueKey}/standings`,
+    `https://site.api.espn.com/apis/site/v2/sports/${sport}/${leagueKey}/standings`,
+  ];
 
-    // If there are zero events (like offseason), show a friendly message
-    if (!items.length) {
-      items.push({ lg:"", aLogo:"", hLogo:"", aAbbr:"No games", hAbbr:"today", aScore:"", hScore:"", meta:"" });
-    }
-
-    return items;
-  }
-
-  function renderTicker(items){
-    const track = document.getElementById("tickerTrack");
-
-    const html = items.map(it => `
-      <div class="tickItem">
-        <div class="tickTeam">
-          ${it.aLogo ? `<img class="tickLogo" src="${it.aLogo}" alt="">` : ""}
-          <span>${it.aAbbr}</span>
-        </div>
-        <div class="tickScore">${it.aScore}</div>
-        <div class="tickMeta">•</div>
-        <div class="tickScore">${it.hScore}</div>
-        <div class="tickTeam">
-          ${it.hLogo ? `<img class="tickLogo" src="${it.hLogo}" alt="">` : ""}
-          <span>${it.hAbbr}</span>
-        </div>
-        ${it.meta ? `<div class="tickMeta">${it.meta}</div>` : ""}
-        <div class="sep"></div>
-        ${it.lg ? `<div class="tickMeta">${it.lg.toUpperCase()}</div>` : ""}
-      </div>
-    `).join("");
-
-    // Duplicate for seamless loop
-    track.innerHTML = html + html;
-  }
-
-  async function refreshAll(){
-    const bodies = {
-      nhl: document.getElementById("body-nhl"),
-      nba: document.getElementById("body-nba"),
-      mlb: document.getElementById("body-mlb"),
-      nfl: document.getElementById("body-nfl"),
-    };
-
-    Object.values(bodies).forEach(renderCardLoading);
-
+  for (const u of urls){
     try{
-      const [sbNHL, sbNBA, sbMLB, sbNFL] = await Promise.all([
-        fetchJson("/scoreboard?league=nhl"),
-        fetchJson("/scoreboard?league=nba"),
-        fetchJson("/scoreboard?league=mlb"),
-        fetchJson("/scoreboard?league=nfl"),
-      ]);
+      const data = await fetchJson(u);
 
-      const allSB = { nhl: sbNHL, nba: sbNBA, mlb: sbMLB, nfl: sbNFL };
+      // ESPN standings shape varies; try to locate team by id.
+      const entries = [];
 
-      // Render each Minnesota card
-      for (const lg of ["nhl","nba","mlb","nfl"]){
-        const body = bodies[lg];
-        const teamId = MN[lg].teamId;
-
-        const game = findTeamGame(allSB[lg], teamId);
-        const nextText = nextFromScoreboard(allSB[lg], teamId);
-
-        if (game) renderGame(body, game);
-        else renderNoGame(body, nextText);
-
-        // Snapshot (record / rank) from /team
-        try{
-          const teamJson = await fetchJson(`/team?league=${lg}&teamId=${teamId}`);
-          // ESPN team endpoint has a "team" object and often a "standingSummary"/"recordSummary"
-          setSnapshot(body, teamJson);
-        } catch(e){
-          // leave snapshot dashes if it fails
-          console.warn("Snapshot failed", lg, e);
+      // common: data.children[].standings.entries
+      if (Array.isArray(data?.children)){
+        for (const ch of data.children){
+          const ents = ch?.standings?.entries;
+          if (Array.isArray(ents)) entries.push(...ents);
+          // deeper: children -> children
+          if (Array.isArray(ch?.children)){
+            for (const ch2 of ch.children){
+              const ents2 = ch2?.standings?.entries;
+              if (Array.isArray(ents2)) entries.push(...ents2);
+            }
+          }
         }
       }
 
-      // Ticker
-      const tickerItems = buildTickerItems(allSB);
-      renderTicker(tickerItems);
+      // sometimes: data.standings.entries
+      if (Array.isArray(data?.standings?.entries)) entries.push(...data.standings.entries);
 
-    } catch(err){
-      console.error(err);
-      Object.values(bodies).forEach(el => {
-        el.innerHTML = `
-          <div class="statusLine">Error loading</div>
-          <div class="subLine">${String(err.message || err)}</div>
-        `;
-      });
-      document.getElementById("tickerTrack").innerHTML = `<div class="tickItem"><div class="tickMeta">Ticker unavailable</div></div>`;
+      const entry = entries.find(e => Number(e?.team?.id) === Number(teamId));
+      if (!entry) continue;
+
+      // record:
+      let record = "—";
+      // Many standings have "summary" like "34-14-10"
+      if (entry?.summary) record = entry.summary;
+
+      // rank:
+      let rank = "—";
+      // Often have stats with "rank" / "playoffSeed" etc, but this varies wildly.
+      // We build a simple “X in Division/Conference” if possible.
+      const divName =
+        entry?.team?.group?.name ||
+        entry?.team?.group?.shortName ||
+        entry?.team?.group?.abbreviation ||
+        "";
+
+      // Some feeds provide "seed" or "rank"
+      const seedStat = (entry?.stats || []).find(s => s?.name === "playoffSeed" || s?.name === "seed");
+      if (seedStat?.value) {
+        rank = `${ordinal(Number(seedStat.value))}${divName ? ` in ${divName}` : ""}`;
+      } else {
+        // fallback: use "rank" stat if present
+        const rStat = (entry?.stats || []).find(s => s?.name === "rank");
+        if (rStat?.value) rank = `${ordinal(Number(rStat.value))}${divName ? ` in ${divName}` : ""}`;
+        else if (divName) rank = `— in ${divName}`;
+      }
+
+      return { record, rank };
+    }catch(e){
+      // try next url
     }
   }
 
-  refreshAll();
-  setInterval(refreshAll, 20000);
+  return { record:"—", rank:"—" };
+}
+
+/**
+ * Scoreboard endpoints:
+ * NHL/NBA/MLB/NFL all work well with site.api scoreboard.
+ */
+async function getScoreboard({sport, leagueKey}){
+  const urls = [
+    `https://site.api.espn.com/apis/site/v2/sports/${sport}/${leagueKey}/scoreboard`,
+    `https://site.web.api.espn.com/apis/v2/sports/${sport}/${leagueKey}/scoreboard`,
+  ];
+  for (const u of urls){
+    try{
+      const data = await fetchJson(u);
+      if (Array.isArray(data?.events)) return data;
+    }catch(e){}
+  }
+  return { events: [] };
+}
+
+function buildTickerItem({leagueLabel, comp}){
+  const competitors = comp?.competitors || [];
+  const home = competitors.find(c => c.homeAway === "home");
+  const away = competitors.find(c => c.homeAway === "away");
+
+  const homeAbbr = getAbbr(home?.team);
+  const awayAbbr = getAbbr(away?.team);
+
+  const homeLogo = pickTeamLogo(home?.team);
+  const awayLogo = pickTeamLogo(away?.team);
+
+  const homeScore = safeText(home?.score, "0");
+  const awayScore = safeText(away?.score, "0");
+
+  const live = isLiveStatus(comp);
+  const fin = isFinalStatus(comp);
+  const meta = getClockOrLabel(comp);
+
+  let pill = "";
+  if (live) pill = `<span class="tickPill live">● LIVE</span>`;
+  else if (fin) pill = `<span class="tickPill final">FINAL</span>`;
+  else pill = `<span class="tickPill">${meta || "Scheduled"}</span>`;
+
+  return `
+    <div class="tickItem">
+      <div class="tickLeague">${leagueLabel}</div>
+
+      <div class="tickLogo">${awayLogo ? `<img src="${awayLogo}" alt="">` : ""}</div>
+      <div class="tickAbbr">${awayAbbr}</div>
+      <div class="tickScore">${awayScore}</div>
+
+      <div class="tickMeta">•</div>
+
+      <div class="tickScore">${homeScore}</div>
+      <div class="tickAbbr">${homeAbbr}</div>
+      <div class="tickLogo">${homeLogo ? `<img src="${homeLogo}" alt="">` : ""}</div>
+
+      ${pill}
+    </div>
+  `;
+}
+
+async function renderMinnesotaCard(key){
+  const cfg = MN[key];
+  const card = document.getElementById(`card-${key}`);
+  card.innerHTML = buildCardSkeleton({ title: cfg.title, league: cfg.league });
+
+  // 1) scoreboard
+  let sb;
+  try{
+    sb = await getScoreboard(cfg);
+  }catch(e){
+    sb = { events: [] };
+  }
+
+  const events = sb?.events || [];
+  const chosen = chooseTeamEvent(events, cfg.teamId);
+
+  if (!chosen){
+    setCardText(card, "status", "No game today");
+    setCardText(card, "next", "No schedule available");
+    setCardHTML(card, "scoreWrap", "");
+  } else {
+    const comp = chosen?.competitions?.[0];
+    const live = comp && isLiveStatus(comp);
+    const fin = comp && isFinalStatus(comp);
+
+    if (live){
+      setCardText(card, "status", "Game in progress");
+    } else if (fin){
+      setCardText(card, "status", "Result");
+    } else {
+      setCardText(card, "status", "Upcoming");
+    }
+
+    // Next line: try true next scheduled (not the chosen if it's final)
+    const nextEv = findNextGame(events, cfg.teamId);
+    if (nextEv){
+      setCardText(card, "next", formatNextLine(nextEv, cfg.teamId));
+    } else {
+      setCardText(card, "next", "No schedule available");
+    }
+
+    setCardHTML(card, "scoreWrap", buildScoreMarkup(chosen, cfg.teamId));
+  }
+
+  // 2) standings snapshot (record + rank)
+  const snap = await getStandingsSnapshot(cfg);
+  setCardText(card, "record", snap.record);
+  setCardText(card, "rank", snap.rank);
+}
+
+async function renderTicker(){
+  const track = document.getElementById("tickerTrack");
+
+  // Build one long list
+  const chunks = [];
+  for (const lg of TICKER_LEAGUES){
+    const sb = await getScoreboard(lg);
+    const events = sb?.events || [];
+    for (const ev of events){
+      const comp = ev?.competitions?.[0];
+      if (!comp) continue;
+
+      // Only show: live, final, or scheduled today
+      const st = comp?.status?.type?.state;
+      if (!st) continue;
+
+      if (st === "in" || st === "post" || st === "pre"){
+        chunks.push(buildTickerItem({ leagueLabel: lg.label, comp }));
+      }
+    }
+  }
+
+  if (!chunks.length){
+    track.innerHTML = `<div class="tickItem"><div class="tickLeague">Ticker</div><div class="tickAbbr">No games</div></div>`;
+    return;
+  }
+
+  // Duplicate content so loop looks seamless
+  const html = chunks.join("") + chunks.join("");
+  track.innerHTML = html;
+
+  // If it feels too fast/slow, just change --ticker-seconds at top
+}
+
+async function refreshAll(){
+  // Minnesota cards
+  await Promise.all([
+    renderMinnesotaCard("nhl"),
+    renderMinnesotaCard("nba"),
+    renderMinnesotaCard("mlb"),
+    renderMinnesotaCard("nfl"),
+  ]);
+
+  // Ticker
+  await renderTicker();
+}
+
+(async function init(){
+  await refreshAll();
+  setInterval(refreshAll, REFRESH_MS);
+})();
 </script>
 </body>
 </html>
