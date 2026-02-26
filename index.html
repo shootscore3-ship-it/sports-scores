@@ -81,11 +81,18 @@
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
     }
+
+    /* ✅ NEW: MLB batting highlight */
+    .score-team.batting{
+      border:2px solid var(--live);
+      box-shadow:0 0 22px rgba(255,59,59,0.35);
+      background:rgba(255,59,59,0.06);
+    }
+
     .score-logo{ width:54px; height:54px; object-fit:contain; }
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ game pill stays as "clock/inning/period" */
     .game-pill{
       margin-top:12px;
       padding:8px 14px;
@@ -99,7 +106,6 @@
       text-transform:uppercase;
     }
 
-    /* ✅ Alerts row (we'll render it ABOVE the game-pill now) */
     .alert-row{
       margin-top:10px;
       display:flex;
@@ -355,6 +361,18 @@
       return [];
     }
 
+    /* ✅ NEW: determine which side is batting in MLB (top=away, bottom=home) */
+    function mlbBattingSide(game){
+      const comp = game?.competitions?.[0];
+      const sit = comp?.situation;
+      if (!sit) return null;
+
+      const half = String(sit.inningHalf || sit.inningState || "").toLowerCase();
+      if (half.includes("top")) return "away";
+      if (half.includes("bottom") || half.includes("bot")) return "home";
+      return null;
+    }
+
     async function getOpponentFromEvent(team, eventId, myTeamId){
       const event = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/summary?event=${eventId}`);
       const comp = event?.header?.competitions?.[0];
@@ -397,6 +415,17 @@
 
         const alerts = getAlertsForGame(team.league, game);
 
+        // ✅ MLB batting highlight flags
+        let myBatting = false;
+        let oppBatting = false;
+        if (team.league === "mlb" && state === "in") {
+          const battingSide = mlbBattingSide(game);
+          if (battingSide) {
+            myBatting = (me?.homeAway === battingSide);
+            oppBatting = (opp?.homeAway === battingSide);
+          }
+        }
+
         return {
           status: state,
           detail,
@@ -412,7 +441,9 @@
           atOrVs,
           myLogo: me?.team?.logo || logo,
           theirLogo: oppLogo,
-          alerts
+          alerts,
+          myBatting,
+          oppBatting
         };
       }
 
@@ -433,7 +464,9 @@
         nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
         nextOppLogo: oppInfo?.oppLogo || "",
         nextAtOrVs: oppInfo?.atOrVs || "vs",
-        alerts: []
+        alerts: [],
+        myBatting:false,
+        oppBatting:false
       };
     }
 
@@ -481,15 +514,18 @@
                </div>`
             : "";
 
-          /* ✅ Change: alerts now render BEFORE the game-pill */
+          // ✅ Apply .batting class only when flags are true (MLB live)
+          const myBattingClass = data.myBatting ? "batting" : "";
+          const oppBattingClass = data.oppBatting ? "batting" : "";
+
           return `
             <div class="score-row">
-              <div class="score-team">
+              <div class="score-team ${myBattingClass}">
                 <img class="score-logo" src="${data.myLogo}" alt="">
                 <div class="score-num">${data.myScore}</div>
               </div>
               <div class="score-dash">-</div>
-              <div class="score-team">
+              <div class="score-team ${oppBattingClass}">
                 <div class="score-num">${data.oppScore}</div>
                 <img class="score-logo" src="${data.theirLogo}" alt="">
               </div>
