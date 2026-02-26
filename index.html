@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN Sports - 1080p Ticker Edition</title>
+    <title>MN Sports Center - 1080p Ultra Ticker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -27,7 +27,7 @@
             flex-direction: column;
         }
 
-        /* 4-Card Grid */
+        /* Top 4-Card Grid */
         .dashboard {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -47,7 +47,6 @@
             border: 2px solid #222;
             text-align: center;
             justify-content: space-between;
-            position: relative;
         }
 
         .status-badge {
@@ -58,28 +57,28 @@
             text-transform: uppercase;
         }
         .status-live { background: var(--live); animation: pulse 2s infinite; }
-        .status-final { color: var(--final); border: 2px solid var(--final); }
+        .status-final { color: var(--final); border: 1px solid var(--final); }
         .status-none { color: #555; border: 1px solid #333; }
 
-        .team-logo { width: 200px; height: 200px; object-fit: contain; margin: 15px 0; }
-        .team-name { font-size: 36px; font-weight: 900; margin-bottom: 5px; }
+        .team-logo { width: 190px; height: 190px; object-fit: contain; margin: 10px 0; }
+        .team-name { font-size: 34px; font-weight: 900; margin-bottom: 5px; }
         .record { font-size: 24px; color: #999; font-weight: bold; }
 
         .score-container {
             font-size: 80px;
             font-weight: 900;
-            margin: 15px 0;
+            margin: 10px 0;
             letter-spacing: -2px;
         }
 
         .game-info { font-size: 26px; color: #ccc; line-height: 1.3; }
-        .next-label { font-size: 16px; color: #444; text-transform: uppercase; letter-spacing: 3px; margin-top: 20px; }
+        .next-label { font-size: 16px; color: #444; text-transform: uppercase; letter-spacing: 3px; margin-top: 15px; }
 
-        /* GIANT BOTTOM TICKER */
+        /* ULTRA-SIZED BOTTOM TICKER */
         .ticker-wrap {
             background: #000;
-            height: 140px; /* Increased height */
-            border-top: 4px solid var(--accent);
+            height: 180px; /* Massive height for TV visibility */
+            border-top: 6px solid #1a1a1a;
             display: flex;
             align-items: center;
             overflow: hidden;
@@ -89,19 +88,30 @@
         .ticker-move {
             display: flex;
             white-space: nowrap;
-            animation: ticker-scroll 80s linear infinite;
+            animation: ticker-scroll 95s linear infinite;
         }
 
         .ticker-item {
             display: flex;
             align-items: center;
-            padding: 0 60px;
-            font-size: 44px; /* Much bigger font */
-            font-weight: 700;
-            border-right: 2px solid #222;
+            padding: 0 80px;
+            font-size: 54px; /* Big, bold scores */
+            font-weight: 800;
+            border-right: 3px solid #1a1a1a;
         }
-        .ticker-item span { margin: 0 12px; }
-        .ticker-live-dot { color: var(--live); margin-right: 12px; font-size: 32px; }
+
+        .ticker-item span { margin: 0 15px; }
+        
+        /* Ticker Team Logos */
+        .ticker-team-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin: 0 10px;
+        }
+
+        .ticker-live-dot { color: var(--live); margin-right: 15px; font-size: 40px; }
+        .league-label { color: #555; font-size: 36px; margin-right: 25px; font-weight: 900; }
 
         @keyframes ticker-scroll {
             0% { transform: translateX(0); }
@@ -109,25 +119,21 @@
         }
 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-        #last-updated { position: absolute; bottom: 150px; right: 20px; font-size: 12px; color: #333; }
+        #last-updated { position: absolute; bottom: 190px; right: 20px; font-size: 12px; color: #333; }
     </style>
 </head>
 <body>
 
-    <div class="dashboard" id="cards-container">
-        </div>
-
+    <div class="dashboard" id="cards-container"></div>
     <div id="last-updated">Updating...</div>
 
     <div class="ticker-wrap">
         <div class="ticker-move" id="ticker-content">
-            <div class="ticker-item">LOADING LEAGUE SCORES...</div>
+            <div class="ticker-item">LOADING MN SPORTS NETWORK...</div>
         </div>
     </div>
 
     <script>
-        // Use the ROOT of your worker (removed /proxy)
         const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
 
         const TEAMS = [
@@ -139,14 +145,10 @@
 
         async function fetchJson(url) {
             try {
-                // Use site.api.espn.com (cleaner endpoint)
                 const cleanUrl = url.replace('site.web.api', 'site.api');
                 const response = await fetch(workerUrl + encodeURIComponent(cleanUrl));
-                if (!response.ok) return null;
                 return await response.json();
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
         function formatTime(dateStr) {
@@ -157,22 +159,13 @@
         }
 
         async function getTeamData(team) {
-            // Check Scoreboard
             const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-            let game = scoreboard?.events?.find(e => 
-                e.competitions[0].competitors.some(c => c.team.id === team.id)
-            );
-
-            // Fetch Team Record / Next Game
+            let game = scoreboard?.events?.find(e => e.competitions[0].competitors.some(c => c.team.id === team.id));
             const teamData = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
             
-            // Defensive Record Fetching
             let record = "0-0";
-            if (teamData?.team?.record?.items?.[0]?.summary) {
-                record = teamData.team.record.items[0].summary;
-            } else if (teamData?.team?.standingSummary) {
-                record = teamData.team.standingSummary;
-            }
+            if (teamData?.team?.record?.items?.[0]?.summary) record = teamData.team.record.items[0].summary;
+            else if (teamData?.team?.standingSummary) record = teamData.team.standingSummary;
 
             if (game) {
                 const comp = game.competitions[0];
@@ -208,8 +201,8 @@
                 const team = TEAMS[index];
                 const card = document.createElement('div');
                 card.className = 'card';
-
                 let statusHtml, contentHtml;
+
                 if (data.status === 'in') {
                     statusHtml = `<div class="status-badge status-live">LIVE</div>`;
                     contentHtml = `<div class="score-container">${data.myScore}-${data.oppScore}</div><div class="game-info">${data.detail}<br>vs ${data.opponent}</div>`;
@@ -217,22 +210,14 @@
                     statusHtml = `<div class="status-badge status-final">FINAL</div>`;
                     contentHtml = `<div class="score-container">${data.myScore}-${data.oppScore}</div><div class="game-info">vs ${data.opponent}</div>`;
                 } else {
-                    statusHtml = `<div class="status-badge status-none">No Game</div>`;
+                    statusHtml = `<div class="status-badge status-none">NO GAME</div>`;
                     contentHtml = `<div><div class="next-label">Next Game</div><div class="game-info" style="font-weight:900; color:white; margin-top:10px;">${data.nextOpponent}</div><div class="game-info">${data.nextTime}</div></div>`;
                 }
 
-                card.innerHTML = `
-                    ${statusHtml}
-                    <img class="team-logo" src="${data.logo}">
-                    <div>
-                        <div class="team-name">${team.name}</div>
-                        <div class="record">${data.record}</div>
-                    </div>
-                    ${contentHtml}
-                `;
+                card.innerHTML = `${statusHtml}<img class="team-logo" src="${data.logo}"><div><div class="team-name">${team.name}</div><div class="record">${data.record}</div></div>${contentHtml}`;
                 container.appendChild(card);
             });
-            document.getElementById('last-updated').innerText = "Last Updated: " + new Date().toLocaleTimeString();
+            document.getElementById('last-updated').innerText = "Sync: " + new Date().toLocaleTimeString();
         }
 
         async function updateTicker() {
@@ -247,20 +232,27 @@
                     const away = comp.competitors[1], home = comp.competitors[0];
                     const state = game.status.type.state;
                     let color = state === 'in' ? 'var(--live)' : (state === 'post' ? 'var(--final)' : '#444');
+                    
+                    // Scoreboard API provides logos
+                    const awayLogo = away.team.logo || '';
+                    const homeLogo = home.team.logo || '';
+
                     allItems.push(`
                         <div class="ticker-item">
                             ${state === 'in' ? '<span class="ticker-live-dot">●</span>' : ''}
-                            <span style="color:#666; font-size:30px;">${league.l.toUpperCase()}</span>
+                            <span class="league-label">${league.l.toUpperCase()}</span>
+                            <img class="ticker-team-logo" src="${awayLogo}">
                             <span>${away.team.abbreviation} ${away.score || ''}</span>
-                            <span>@</span>
+                            <span style="color:#333; margin:0 10px;">@</span>
+                            <img class="ticker-team-logo" src="${homeLogo}">
                             <span>${home.team.abbreviation} ${home.score || ''}</span>
-                            <span style="color: ${color}; margin-left:15px">${game.status.type.shortDetail}</span>
+                            <span style="color: ${color}; margin-left:30px; font-size:40px;">${game.status.type.shortDetail}</span>
                         </div>
                     `);
                 });
             }
             if (allItems.length > 0) ticker.innerHTML = [...allItems, ...allItems].join('');
-            else ticker.innerHTML = '<div class="ticker-item">NO ACTIVE GAMES FOUND</div>';
+            else ticker.innerHTML = '<div class="ticker-item">WINDING DOWN - NO ACTIVE GAMES</div>';
         }
 
         updateDashboard(); updateTicker();
