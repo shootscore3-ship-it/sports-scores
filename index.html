@@ -103,8 +103,19 @@
                 return { status: game.status.type.state, detail: game.status.type.shortDetail, myScore: me.score, oppScore: opp.score, logo: logo, record: record };
             } else {
                 const next = teamDetails?.team?.nextEvent?.[0];
-                // Timezone set to CST
-                return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: next?.date ? new Date(next.date).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone: 'America/Chicago'}) : "TBD" };
+                
+                // --- HARD CODED FORCED CST CLOCK ---
+                let formattedTime = "TBD";
+                if (next?.date) {
+                    const eventDate = new Date(next.date);
+                    formattedTime = new Intl.DateTimeFormat('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZone: 'America/Chicago'
+                    }).format(eventDate);
+                }
+
+                return { status: 'none', record: record, logo: logo, nextOpponent: next?.shortName || "TBD", nextTime: formattedTime };
             }
         }
 
