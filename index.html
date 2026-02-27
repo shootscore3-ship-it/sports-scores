@@ -10,7 +10,6 @@
     :root{
       --bg:#050505; --card-bg:#111111; --text:#ffffff;
       --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
-      --cols: 4;
     }
 
     body{
@@ -20,12 +19,8 @@
     }
 
     .dashboard{
-      display:grid;
-      grid-template-columns:repeat(var(--cols), 1fr);
-      gap:20px;
-      padding:20px;
-      flex:1;
-      box-sizing:border-box;
+      display:grid; grid-template-columns:repeat(4,1fr); gap:20px;
+      padding:20px; flex:1; box-sizing:border-box;
       max-height:calc(100vh - 215px);
     }
 
@@ -87,6 +82,7 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
+    /* MLB batting highlight (top cards) */
     .score-team.batting{
       border:2px solid var(--live);
       box-shadow:0 0 22px rgba(255,59,59,0.35);
@@ -130,6 +126,7 @@
       box-shadow:0 0 18px rgba(255,59,59,0.18);
     }
 
+    /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -153,6 +150,7 @@
     .ticker-team-logo{ width:115px; height:115px; object-fit:contain; }
     .league-badge{ background:#222; color:#888; font-size:24px; padding:5px 15px; border-radius:5px; margin-right:25px; }
 
+    /* ✅ NEW: ticker batting highlight around the batting team's abbreviation */
     .ticker-batting{
       display:inline-flex;
       align-items:center;
@@ -177,9 +175,6 @@
     const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
     const CT_TZ = "America/Chicago";
 
-    const HIDE_AFTER_DAYS = 3;       // NHL/NBA/MLB
-    const NFL_SHOW_WITHIN_DAYS = 7;  // NFL
-
     const TEAMS = [
       { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
       { id:"16", sport:"basketball", league:"nba", name:"Wolves" },
@@ -194,14 +189,6 @@
       }catch(e){ return null; }
     }
 
-    // ✅ Robust logo/name getters (prevents "undefined")
-    function teamLogo(t){
-      return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || "";
-    }
-    function teamName(t){
-      return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD";
-    }
-
     function normalizeDetailForPill(detail){
       if (!detail) return "";
       return String(detail).replace(/\s+/g, " ").trim();
@@ -213,10 +200,12 @@
       const now = Date.now();
       const diff = start - now;
       if (diff <= 0) return "";
+
       const totalMinutes = Math.floor(diff / 60000);
       const days = Math.floor(totalMinutes / (60 * 24));
       const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
       const mins = totalMinutes % 60;
+
       if (days >= 1) return `Starts in ${days}d ${hours}h`;
       if (hours >= 1) return `Starts in ${hours}h ${mins}m`;
       return `Starts in ${mins}m`;
@@ -246,11 +235,70 @@
       return `${label} • ${time} CT`;
     }
 
-    async function standingsText(team, teamDetails){
-      const summary = teamDetails?.team?.standingSummary || teamDetails?.team?.standingsSummary || "";
-      return summary ? String(summary) : "";
+    /* Standings (team endpoint first) */
+    const standingsCache = new Map();
+    const STANDINGS_TTL_MS = 10 * 60 * 1000;
+
+    function statPick(entry, predicate){
+      const stats = entry?.stats;
+      const arr = Array.isArray(stats) ? stats : [];
+      return arr.find(s => predicate(s));
     }
 
+    function parseStandingsEntry(entry){
+      const rank =
+        statPick(entry, s => /rank|seed/i.test(s?.name || "") || /rank|seed/i.test(s?.abbreviation || ""))?.displayValue || null;
+
+      const gb =
+        statPick(entry, s => (s?.abbreviation || "").toUpperCase() === "GB" || /games? behind|games? back/i.test(s?.name || ""))?.displayValue || null;
+
+      const group =
+        entry?.group?.shortName || entry?.group?.name ||
+        entry?.division?.name || entry?.conference?.name ||
+        null;
+
+      return { rank, gb, group };
+    }
+
+    async function getStandingsMap(sport, league){
+      const key = `${sport}:${league}`;
+      const cached = standingsCache.get(key);
+      if (cached && (Date.now() - cached.ts) < STANDINGS_TTL_MS) return cached.map;
+
+      const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/standings`);
+      const entries =
+        data?.standings?.entries ||
+        data?.children?.flatMap(c => c?.standings?.entries || []) ||
+        [];
+
+      const map = new Map();
+      for (const e of entries){
+        const teamId = e?.team?.id;
+        if (!teamId) continue;
+        const parsed = parseStandingsEntry(e);
+        if (parsed.rank || parsed.gb || parsed.group) map.set(String(teamId), parsed);
+      }
+
+      standingsCache.set(key, { ts: Date.now(), map });
+      return map;
+    }
+
+    async function standingsText(team, teamDetails){
+      const summary = teamDetails?.team?.standingSummary || teamDetails?.team?.standingsSummary || "";
+      if (summary) return String(summary);
+
+      const smap = await getStandingsMap(team.sport, team.league);
+      const info = smap.get(String(team.id));
+      if (!info) return "";
+
+      const parts = [];
+      if (info.rank) parts.push(`#${info.rank}`);
+      if (info.group) parts.push(String(info.group));
+      if (info.gb) parts.push(`GB ${info.gb}`);
+      return parts.length ? `Standings: ${parts.join(" • ")}` : "";
+    }
+
+    /* Urgent Moments */
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -260,14 +308,17 @@
       const comp = game?.competitions?.[0];
       const sit = comp?.situation;
       if (!sit) return [];
+
       const on1 = !!sit.onFirst, on2 = !!sit.onSecond, on3 = !!sit.onThird;
       const inning = toNum(sit.inning) ?? null;
+
       const awayScore = toNum(comp?.competitors?.[1]?.score);
       const homeScore = toNum(comp?.competitors?.[0]?.score);
 
       const alerts = [];
       if (on1 && on2 && on3) alerts.push("BASES LOADED");
       else if (on2 || on3) alerts.push("RISP");
+
       if (inning !== null && inning >= 9 && (on1 || on2 || on3) && awayScore !== null && homeScore !== null && awayScore === homeScore) {
         alerts.push("GO-AHEAD RUN ON");
       }
@@ -283,17 +334,22 @@
       const comp = game?.competitions?.[0];
       const sit = comp?.situation;
       if (!sit) return [];
+
       const period = toNum(sit.period);
       const clock = (sit.clock || "").trim();
       if (!period || !clock || period < 4) return [];
+
       const [mStr, sStr] = clock.split(":");
       const mins = toNum(mStr), secs = toNum(sStr);
       if (mins === null || secs === null) return [];
+
       const secondsLeft = mins * 60 + secs;
       if (secondsLeft > 300) return [];
+
       const a = toNum(comp?.competitors?.[1]?.score);
       const h = toNum(comp?.competitors?.[0]?.score);
       if (a === null || h === null) return [];
+
       return Math.abs(a - h) <= 6 ? ["CLUTCH"] : [];
     }
 
@@ -312,71 +368,65 @@
       return [];
     }
 
+    /* Determine who is batting in MLB (top=away, bottom=home) */
     function mlbBattingSideFromEvent(event){
       const comp = event?.competitions?.[0];
       const sit = comp?.situation;
       if (!sit) return null;
+
       const half = String(sit.inningHalf || sit.inningState || "").toLowerCase();
       if (half.includes("top")) return "away";
       if (half.includes("bottom") || half.includes("bot")) return "home";
       return null;
     }
 
-    // ✅ Pick the most relevant event from scoreboard: live/post first, else next upcoming
-    function pickBestEventForTeam(scoreboard, teamId){
-      const events = (scoreboard?.events || []).filter(e =>
-        e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
-      );
-      if (!events.length) return null;
+    async function getOpponentFromEvent(team, eventId, myTeamId){
+      const event = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/summary?event=${eventId}`);
+      const comp = event?.header?.competitions?.[0];
+      const competitors = comp?.competitors;
+      if (!competitors || competitors.length < 2) return null;
 
-      const byPriority = (e) => {
-        const state = e?.status?.type?.state;
-        if (state === "in") return 0;
-        if (state === "post") return 1;
-        if (state === "pre") return 2;
-        return 3;
+      const me  = competitors.find(c => String(c?.team?.id) === String(myTeamId));
+      const opp = competitors.find(c => String(c?.team?.id) !== String(myTeamId));
+      if (!opp) return null;
+
+      return {
+        oppName: opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent",
+        oppLogo: opp?.team?.logo || "",
+        atOrVs: (me?.homeAway === "away") ? "@" : "vs"
       };
-
-      events.sort((a,b) => {
-        const pa = byPriority(a), pb = byPriority(b);
-        if (pa !== pb) return pa - pb;
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-
-      return events[0];
     }
 
     async function getTeamData(team){
       const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-      const event = pickBestEventForTeam(scoreboard, team.id);
-
+      const game = scoreboard?.events?.find(e => e?.competitions?.[0]?.competitors?.some(c => c.team.id === team.id));
       const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
+
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
+
       const standings = await standingsText(team, teamDetails);
 
-      if (event){
-        const comp = event.competitions[0];
-        const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp  = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
+      if (game){
+        const comp = game.competitions[0];
+        const me   = comp.competitors.find(c => c.team.id === team.id);
+        const opp  = comp.competitors.find(c => c.team.id !== team.id);
 
-        const state = event.status.type.state; // pre/in/post
-        const startIso = event.date || null;
-
-        const myTeamObj = me?.team;
-        const oppTeamObj = opp?.team;
-
-        const oppName = teamName(oppTeamObj);
-        const oppLogo = teamLogo(oppTeamObj);
+        const state = game.status.type.state;
+        const oppName = opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent";
+        const oppLogo = opp?.team?.logo || "";
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
 
-        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : event.status.type.shortDetail;
+        const startIso = game.date || null;
+        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : game.status.type.shortDetail;
 
-        const alerts = getAlertsForGame(team.league, event);
+        const alerts = getAlertsForGame(team.league, game);
 
-        let myBatting = false, oppBatting = false;
+        // MLB batting highlight for top cards
+        let myBatting = false;
+        let oppBatting = false;
         if (team.league === "mlb" && state === "in") {
-          const battingSide = mlbBattingSideFromEvent(event);
+          const battingSide = mlbBattingSideFromEvent(game);
           if (battingSide) {
             myBatting = (me?.homeAway === battingSide);
             oppBatting = (opp?.homeAway === battingSide);
@@ -393,12 +443,10 @@
           logo,
           record,
           standings,
-
           oppName,
           oppLogo,
           atOrVs,
-
-          myLogo: teamLogo(myTeamObj) || logo,
+          myLogo: me?.team?.logo || logo,
           theirLogo: oppLogo,
           alerts,
           myBatting,
@@ -406,9 +454,11 @@
         };
       }
 
-      // If scoreboard doesn’t include the team in its window, fall back to teamDetails.nextEvent (name only)
       const next = teamDetails?.team?.nextEvent?.[0];
       const startIso = next?.date || null;
+
+      let oppInfo = null;
+      if (next?.id) oppInfo = await getOpponentFromEvent(team, next.id, team.id);
 
       return {
         status:"none",
@@ -418,9 +468,9 @@
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
-        nextOpponent: next?.shortName || "TBD",
-        nextOppLogo: "",
-        nextAtOrVs: "vs",
+        nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
+        nextOppLogo: oppInfo?.oppLogo || "",
+        nextAtOrVs: oppInfo?.atOrVs || "vs",
         alerts: [],
         myBatting:false,
         oppBatting:false
@@ -437,94 +487,79 @@
     async function updateDashboard(){
       const container = document.getElementById("cards-container");
       const teamResults = await Promise.all(TEAMS.map(t => getTeamData(t)));
-      const now = Date.now();
-
-      const visible = teamResults
-        .map((data, idx) => ({ data, idx }))
-        .filter(({ data, idx }) => {
-          if (data.status === "in" || data.status === "post" || data.status === "pre") return true;
-
-          const league = TEAMS[idx].league;
-
-          if (!data.startIso) return league === "nfl" ? false : true;
-
-          const diffDays = (new Date(data.startIso).getTime() - now) / 86400000;
-          if (league === "nfl") return diffDays <= NFL_SHOW_WITHIN_DAYS;
-          return diffDays <= HIDE_AFTER_DAYS;
-        });
-
-      const listToRender = visible.length ? visible : teamResults.map((data, idx) => ({ data, idx }));
-      const cols = Math.max(1, Math.min(4, listToRender.length));
-      document.documentElement.style.setProperty("--cols", cols);
-
       container.innerHTML = "";
 
-      const opponentBlock = (atOrVs, oppLogo, oppName, timeText, countdown) => {
-        const hasLogo = !!oppLogo;
-        return `
-          <div class="next-wrap">
-            <div class="next-label">NEXT</div>
-            <div class="opp-row">
-              <div class="opp-text">${atOrVs}</div>
-              ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
-                        : `<div class="opp-text">${oppName}</div>`}
-            </div>
-            ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
-            <div class="next-time">${timeText}</div>
-          </div>
-        `;
-      };
-
-      const scoreBlock = (data) => {
-        const pillText = normalizeDetailForPill(data.detail);
-        const alertsHtml = (data.alerts && data.alerts.length)
-          ? `<div class="alert-row">${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}</div>`
-          : "";
-
-        const myBattingClass = data.myBatting ? "batting" : "";
-        const oppBattingClass = data.oppBatting ? "batting" : "";
-
-        return `
-          <div class="score-row">
-            <div class="score-team ${myBattingClass}">
-              <img class="score-logo" src="${data.myLogo}" alt="">
-              <div class="score-num">${data.myScore}</div>
-            </div>
-            <div class="score-dash">-</div>
-            <div class="score-team ${oppBattingClass}">
-              <div class="score-num">${data.oppScore}</div>
-              <img class="score-logo" src="${data.theirLogo}" alt="">
-            </div>
-          </div>
-          ${alertsHtml}
-          ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
-        `;
-      };
-
-      listToRender.forEach(({ data, idx: i }) => {
+      teamResults.forEach((data, i) => {
         const card = document.createElement("div");
         card.className = "card";
+
         const badgeClass = `status-badge status-${data.status}`;
 
+        const opponentBlock = (atOrVs, oppLogo, oppName, timeText, countdown) => {
+          const hasLogo = !!oppLogo;
+          return `
+            <div class="next-wrap">
+              <div class="next-label">NEXT</div>
+              <div class="opp-row">
+                <div class="opp-text">${atOrVs}</div>
+                ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
+                          : `<div class="opp-text">${oppName}</div>`}
+              </div>
+
+              ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
+              <div class="next-time">${timeText}</div>
+            </div>
+          `;
+        };
+
+        const scoreBlock = () => {
+          const pillText = normalizeDetailForPill(data.detail);
+
+          const alertsHtml = (data.alerts && data.alerts.length)
+            ? `<div class="alert-row">
+                 ${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}
+               </div>`
+            : "";
+
+          const myBattingClass = data.myBatting ? "batting" : "";
+          const oppBattingClass = data.oppBatting ? "batting" : "";
+
+          return `
+            <div class="score-row">
+              <div class="score-team ${myBattingClass}">
+                <img class="score-logo" src="${data.myLogo}" alt="">
+                <div class="score-num">${data.myScore}</div>
+              </div>
+              <div class="score-dash">-</div>
+              <div class="score-team ${oppBattingClass}">
+                <div class="score-num">${data.oppScore}</div>
+                <img class="score-logo" src="${data.theirLogo}" alt="">
+              </div>
+            </div>
+
+            ${alertsHtml}
+            ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
+          `;
+        };
+
         let bottomBlock = "";
-        if (data.status === "in" || data.status === "post") {
-          bottomBlock = scoreBlock(data);
-        } else if (data.status === "pre") {
-          bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
-        } else {
-          bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
-        }
+        if (data.status === "in" || data.status === "post") bottomBlock = scoreBlock();
+        else if (data.status === "pre") bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
+        else bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
 
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
+
           <div>
             <div style="font-size:32px; font-weight:900;">${TEAMS[i].name}</div>
             <div style="color:#888;">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
           </div>
+
           ${bottomBlock}
         `;
+
         container.appendChild(card);
       });
     }
@@ -549,6 +584,7 @@
 
           let alertClass = "";
           let alertLabel = "";
+
           const alerts = getAlertsForGame(league.l, game);
           if (alerts.length) {
             alertClass = "ticker-alert-pulse";
@@ -567,6 +603,7 @@
               })()
             : game.status.type.shortDetail;
 
+          /* ✅ NEW: ticker batting highlight (MLB live only) */
           let awayWrapStart = "", awayWrapEnd = "";
           let homeWrapStart = "", homeWrapEnd = "";
           if (league.l === "mlb" && state === "in") {
@@ -578,12 +615,18 @@
           allItems.push(`
             <div class="ticker-item ${alertClass}">
               <div class="league-badge">${league.l.toUpperCase()}</div>
+
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}" alt=""></div>
               ${awayWrapStart}<span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>${awayWrapEnd}
+
               <span style="color:#222; margin:0 15px;">@</span>
+
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}" alt=""></div>
               ${homeWrapStart}<span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>${homeWrapEnd}
-              <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">${detail}</span>
+
+              <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">
+                ${detail}
+              </span>
               ${alertLabel}
             </div>
           `);
@@ -591,6 +634,7 @@
       }
 
       ticker.innerHTML = [...allItems, ...allItems].join("");
+
       const mover = document.querySelector(".ticker-move");
       const seconds = Math.max(120, allItems.length * 7);
       mover.style.animationDuration = `${seconds}s`;
@@ -598,6 +642,7 @@
 
     updateDashboard();
     updateTicker();
+
     setInterval(updateDashboard, 60000);
     setInterval(updateTicker, 300000);
   </script>
