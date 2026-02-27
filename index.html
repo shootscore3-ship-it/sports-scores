@@ -87,7 +87,6 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    /* MLB batting highlight (top cards) */
     .score-team.batting{
       border:2px solid var(--live);
       box-shadow:0 0 22px rgba(255,59,59,0.35);
@@ -131,7 +130,6 @@
       box-shadow:0 0 18px rgba(255,59,59,0.18);
     }
 
-    /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -179,9 +177,8 @@
     const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
     const CT_TZ = "America/Chicago";
 
-    // Hide windows
-    const HIDE_AFTER_DAYS = 3;      // NHL/NBA/MLB
-    const NFL_SHOW_WITHIN_DAYS = 7; // NFL only
+    const HIDE_AFTER_DAYS = 3;       // NHL/NBA/MLB
+    const NFL_SHOW_WITHIN_DAYS = 7;  // NFL
 
     const TEAMS = [
       { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
@@ -195,6 +192,14 @@
         const response = await fetch(workerUrl + encodeURIComponent(url));
         return await response.json();
       }catch(e){ return null; }
+    }
+
+    // ✅ Robust logo/name getters (prevents "undefined")
+    function teamLogo(t){
+      return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || "";
+    }
+    function teamName(t){
+      return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD";
     }
 
     function normalizeDetailForPill(detail){
@@ -317,52 +322,61 @@
       return null;
     }
 
-    // ✅ Used to reliably get opponent name/logo + @/vs from event summary
-    async function getOpponentFromEvent(team, eventId, myTeamId){
-      const event = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/summary?event=${eventId}`);
-      const comp = event?.header?.competitions?.[0];
-      const competitors = comp?.competitors;
-      if (!competitors || competitors.length < 2) return null;
+    // ✅ Pick the most relevant event from scoreboard: live/post first, else next upcoming
+    function pickBestEventForTeam(scoreboard, teamId){
+      const events = (scoreboard?.events || []).filter(e =>
+        e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
+      );
+      if (!events.length) return null;
 
-      const me  = competitors.find(c => String(c?.team?.id) === String(myTeamId));
-      const opp = competitors.find(c => String(c?.team?.id) !== String(myTeamId));
-      if (!opp) return null;
-
-      return {
-        oppName: opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent",
-        oppLogo: opp?.team?.logo || "",
-        atOrVs: (me?.homeAway === "away") ? "@" : "vs"
+      const byPriority = (e) => {
+        const state = e?.status?.type?.state;
+        if (state === "in") return 0;
+        if (state === "post") return 1;
+        if (state === "pre") return 2;
+        return 3;
       };
+
+      events.sort((a,b) => {
+        const pa = byPriority(a), pb = byPriority(b);
+        if (pa !== pb) return pa - pb;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+
+      return events[0];
     }
 
     async function getTeamData(team){
       const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-      const game = scoreboard?.events?.find(e => e?.competitions?.[0]?.competitors?.some(c => c.team.id === team.id));
-      const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
+      const event = pickBestEventForTeam(scoreboard, team.id);
 
+      const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(team, teamDetails);
 
-      if (game){
-        const comp = game.competitions[0];
-        const me   = comp.competitors.find(c => c.team.id === team.id);
-        const opp  = comp.competitors.find(c => c.team.id !== team.id);
+      if (event){
+        const comp = event.competitions[0];
+        const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
+        const opp  = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
 
-        const state = game.status.type.state;
-        const oppName = opp?.team?.shortDisplayName || opp?.team?.displayName || "Opponent";
-        const oppLogo = opp?.team?.logo || "";
+        const state = event.status.type.state; // pre/in/post
+        const startIso = event.date || null;
+
+        const myTeamObj = me?.team;
+        const oppTeamObj = opp?.team;
+
+        const oppName = teamName(oppTeamObj);
+        const oppLogo = teamLogo(oppTeamObj);
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
 
-        const startIso = game.date || null;
-        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : game.status.type.shortDetail;
+        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : event.status.type.shortDetail;
 
-        const alerts = getAlertsForGame(team.league, game);
+        const alerts = getAlertsForGame(team.league, event);
 
-        // MLB batting highlight (top cards)
         let myBatting = false, oppBatting = false;
         if (team.league === "mlb" && state === "in") {
-          const battingSide = mlbBattingSideFromEvent(game);
+          const battingSide = mlbBattingSideFromEvent(event);
           if (battingSide) {
             myBatting = (me?.homeAway === battingSide);
             oppBatting = (opp?.homeAway === battingSide);
@@ -380,12 +394,11 @@
           record,
           standings,
 
-          // ✅ IMPORTANT: restore these for PRE display
           oppName,
           oppLogo,
           atOrVs,
 
-          myLogo: me?.team?.logo || logo,
+          myLogo: teamLogo(myTeamObj) || logo,
           theirLogo: oppLogo,
           alerts,
           myBatting,
@@ -393,12 +406,9 @@
         };
       }
 
-      // OFF DAY -> use nextEvent and try to fetch opponent logo/name via event summary
+      // If scoreboard doesn’t include the team in its window, fall back to teamDetails.nextEvent (name only)
       const next = teamDetails?.team?.nextEvent?.[0];
       const startIso = next?.date || null;
-
-      let oppInfo = null;
-      if (next?.id) oppInfo = await getOpponentFromEvent(team, next.id, team.id);
 
       return {
         status:"none",
@@ -408,12 +418,9 @@
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
-
-        // ✅ provide logo/name for OFF DAY next opponent
-        nextOpponent: oppInfo?.oppName || next?.shortName || "TBD",
-        nextOppLogo: oppInfo?.oppLogo || "",
-        nextAtOrVs: oppInfo?.atOrVs || "vs",
-
+        nextOpponent: next?.shortName || "TBD",
+        nextOppLogo: "",
+        nextAtOrVs: "vs",
         alerts: [],
         myBatting:false,
         oppBatting:false
@@ -439,9 +446,6 @@
 
           const league = TEAMS[idx].league;
 
-          // If we don't know next game:
-          // - keep NHL/NBA/MLB visible
-          // - hide NFL (prevents offseason ghost events)
           if (!data.startIso) return league === "nfl" ? false : true;
 
           const diffDays = (new Date(data.startIso).getTime() - now) / 86400000;
@@ -455,57 +459,56 @@
 
       container.innerHTML = "";
 
+      const opponentBlock = (atOrVs, oppLogo, oppName, timeText, countdown) => {
+        const hasLogo = !!oppLogo;
+        return `
+          <div class="next-wrap">
+            <div class="next-label">NEXT</div>
+            <div class="opp-row">
+              <div class="opp-text">${atOrVs}</div>
+              ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
+                        : `<div class="opp-text">${oppName}</div>`}
+            </div>
+            ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
+            <div class="next-time">${timeText}</div>
+          </div>
+        `;
+      };
+
+      const scoreBlock = (data) => {
+        const pillText = normalizeDetailForPill(data.detail);
+        const alertsHtml = (data.alerts && data.alerts.length)
+          ? `<div class="alert-row">${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}</div>`
+          : "";
+
+        const myBattingClass = data.myBatting ? "batting" : "";
+        const oppBattingClass = data.oppBatting ? "batting" : "";
+
+        return `
+          <div class="score-row">
+            <div class="score-team ${myBattingClass}">
+              <img class="score-logo" src="${data.myLogo}" alt="">
+              <div class="score-num">${data.myScore}</div>
+            </div>
+            <div class="score-dash">-</div>
+            <div class="score-team ${oppBattingClass}">
+              <div class="score-num">${data.oppScore}</div>
+              <img class="score-logo" src="${data.theirLogo}" alt="">
+            </div>
+          </div>
+          ${alertsHtml}
+          ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
+        `;
+      };
+
       listToRender.forEach(({ data, idx: i }) => {
         const card = document.createElement("div");
         card.className = "card";
-
         const badgeClass = `status-badge status-${data.status}`;
-
-        const opponentBlock = (atOrVs, oppLogo, oppName, timeText, countdown) => {
-          const hasLogo = !!oppLogo;
-          return `
-            <div class="next-wrap">
-              <div class="next-label">NEXT</div>
-              <div class="opp-row">
-                <div class="opp-text">${atOrVs}</div>
-                ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
-                          : `<div class="opp-text">${oppName}</div>`}
-              </div>
-              ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
-              <div class="next-time">${timeText}</div>
-            </div>
-          `;
-        };
-
-        const scoreBlock = () => {
-          const pillText = normalizeDetailForPill(data.detail);
-          const alertsHtml = (data.alerts && data.alerts.length)
-            ? `<div class="alert-row">${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}</div>`
-            : "";
-
-          const myBattingClass = data.myBatting ? "batting" : "";
-          const oppBattingClass = data.oppBatting ? "batting" : "";
-
-          return `
-            <div class="score-row">
-              <div class="score-team ${myBattingClass}">
-                <img class="score-logo" src="${data.myLogo}" alt="">
-                <div class="score-num">${data.myScore}</div>
-              </div>
-              <div class="score-dash">-</div>
-              <div class="score-team ${oppBattingClass}">
-                <div class="score-num">${data.oppScore}</div>
-                <img class="score-logo" src="${data.theirLogo}" alt="">
-              </div>
-            </div>
-            ${alertsHtml}
-            ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
-          `;
-        };
 
         let bottomBlock = "";
         if (data.status === "in" || data.status === "post") {
-          bottomBlock = scoreBlock();
+          bottomBlock = scoreBlock(data);
         } else if (data.status === "pre") {
           bottomBlock = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
         } else {
@@ -515,16 +518,13 @@
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
-
           <div>
             <div style="font-size:32px; font-weight:900;">${TEAMS[i].name}</div>
             <div style="color:#888;">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
           </div>
-
           ${bottomBlock}
         `;
-
         container.appendChild(card);
       });
     }
@@ -549,7 +549,6 @@
 
           let alertClass = "";
           let alertLabel = "";
-
           const alerts = getAlertsForGame(league.l, game);
           if (alerts.length) {
             alertClass = "ticker-alert-pulse";
@@ -568,7 +567,6 @@
               })()
             : game.status.type.shortDetail;
 
-          // MLB batting highlight in ticker
           let awayWrapStart = "", awayWrapEnd = "";
           let homeWrapStart = "", homeWrapEnd = "";
           if (league.l === "mlb" && state === "in") {
