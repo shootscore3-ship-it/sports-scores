@@ -10,6 +10,7 @@
     :root{
       --bg:#050505; --card-bg:#111111; --text:#ffffff;
       --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
+      --cols: 4; /* ✅ auto-updated by JS */
     }
 
     body{
@@ -18,9 +19,14 @@
       overflow:hidden; display:flex; flex-direction:column;
     }
 
+    /* ✅ auto-expanding columns based on visible cards */
     .dashboard{
-      display:grid; grid-template-columns:repeat(4,1fr); gap:20px;
-      padding:20px; flex:1; box-sizing:border-box;
+      display:grid;
+      grid-template-columns:repeat(var(--cols), 1fr);
+      gap:20px;
+      padding:20px;
+      flex:1;
+      box-sizing:border-box;
       max-height:calc(100vh - 215px);
     }
 
@@ -150,7 +156,7 @@
     .ticker-team-logo{ width:115px; height:115px; object-fit:contain; }
     .league-badge{ background:#222; color:#888; font-size:24px; padding:5px 15px; border-radius:5px; margin-right:25px; }
 
-    /* ✅ NEW: ticker batting highlight around the batting team's abbreviation */
+    /* ticker batting highlight */
     .ticker-batting{
       display:inline-flex;
       align-items:center;
@@ -174,6 +180,9 @@
   <script>
     const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
     const CT_TZ = "America/Chicago";
+
+    // ✅ If a team is OFF DAY and their next game is more than this many days away, hide the card.
+    const HIDE_AFTER_DAYS = 3;
 
     const TEAMS = [
       { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
@@ -484,12 +493,31 @@
       return "OFF DAY";
     }
 
+    /* ✅ FULL updateDashboard with auto-hide + auto-expand columns */
     async function updateDashboard(){
       const container = document.getElementById("cards-container");
       const teamResults = await Promise.all(TEAMS.map(t => getTeamData(t)));
+
+      const now = Date.now();
+
+      const visible = teamResults
+        .map((data, idx) => ({ data, idx }))
+        .filter(({ data }) => {
+          if (data.status === "in" || data.status === "post" || data.status === "pre") return true;
+          if (!data.startIso) return true;
+          const diffDays = (new Date(data.startIso).getTime() - now) / 86400000;
+          return diffDays <= HIDE_AFTER_DAYS;
+        });
+
+      const listToRender = visible.length ? visible : teamResults.map((data, idx) => ({ data, idx }));
+
+      // Update columns based on how many we’re showing
+      const cols = Math.max(1, Math.min(4, listToRender.length));
+      document.documentElement.style.setProperty("--cols", cols);
+
       container.innerHTML = "";
 
-      teamResults.forEach((data, i) => {
+      listToRender.forEach(({ data, idx: i }) => {
         const card = document.createElement("div");
         card.className = "card";
 
@@ -603,7 +631,7 @@
               })()
             : game.status.type.shortDetail;
 
-          /* ✅ NEW: ticker batting highlight (MLB live only) */
+          // ✅ MLB batting highlight in ticker
           let awayWrapStart = "", awayWrapEnd = "";
           let homeWrapStart = "", homeWrapEnd = "";
           if (league.l === "mlb" && state === "in") {
