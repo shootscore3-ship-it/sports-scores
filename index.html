@@ -35,66 +35,104 @@
       border:2px solid #222; text-align:center; justify-content:space-between;
     }
 
-    /* Base sizes (4 cards) */
+    /* =========================
+       BASE SIZES (4 cards)
+       ========================= */
     .team-logo{ width:185px; height:185px; object-fit:contain; }
     .name-text{ font-size:32px; font-weight:900; }
     .record-text{ color:#888; }
     .opp-logo{ width:88px; height:88px; object-fit:contain; }
     .opp-text{ font-size:44px; font-weight:900; line-height:1; }
 
-    /* Auto-scale when fewer cards */
-    body[data-cols="3"] .team-logo{ width:210px; height:210px; }
-    body[data-cols="3"] .name-text{ font-size:38px; }
-    body[data-cols="3"] .opp-logo{ width:100px; height:100px; }
-    body[data-cols="3"] .opp-text{ font-size:52px; }
-
-    body[data-cols="2"] .team-logo{ width:240px; height:240px; }
-    body[data-cols="2"] .name-text{ font-size:44px; }
-    body[data-cols="2"] .opp-logo{ width:115px; height:115px; }
-    body[data-cols="2"] .opp-text{ font-size:60px; }
-
-    body[data-cols="1"] .team-logo{ width:280px; height:280px; }
-    body[data-cols="1"] .name-text{ font-size:52px; }
-    body[data-cols="1"] .opp-logo{ width:130px; height:130px; }
-    body[data-cols="1"] .opp-text{ font-size:72px; }
-
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
+    .standings-line{ margin-top:6px; font-size:14px; font-weight:800; color:#9a9a9a; letter-spacing:0.2px; }
+    .countdown{ font-size:16px; font-weight:900; }
+    .next-time{ font-size:18px; font-weight:800; }
+
+    .score-logo{ width:54px; height:54px; object-fit:contain; }
+    .score-num{ font-size:64px; font-weight:900; line-height:1; }
+    .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
+    .game-pill{ font-size:16px; font-weight:900; }
+
+    /* =========================
+       ✅ BIGGER WHEN COLLAPSED
+       ========================= */
+
+    /* 3 cards: big */
+    body[data-cols="3"] .team-logo{ width:255px; height:255px; }
+    body[data-cols="3"] .name-text{ font-size:46px; }
+    body[data-cols="3"] .standings-line{ font-size:17px; }
+    body[data-cols="3"] .opp-logo{ width:124px; height:124px; }
+    body[data-cols="3"] .opp-text{ font-size:68px; }
+    body[data-cols="3"] .status-badge{ font-size:20px; padding:7px 16px; }
+
+    body[data-cols="3"] .score-logo{ width:66px; height:66px; }
+    body[data-cols="3"] .score-num{ font-size:82px; }
+    body[data-cols="3"] .score-dash{ font-size:82px; }
+    body[data-cols="3"] .game-pill{ font-size:18px; }
+    body[data-cols="3"] .countdown{ font-size:18px; padding:7px 14px; }
+    body[data-cols="3"] .next-time{ font-size:20px; }
+
+    /* 2 cards: HUGE broadcast look */
+    body[data-cols="2"] .team-logo{ width:340px; height:340px; }
+    body[data-cols="2"] .name-text{ font-size:62px; }
+    body[data-cols="2"] .record-text{ font-size:20px; }
+    body[data-cols="2"] .standings-line{ font-size:22px; }
+    body[data-cols="2"] .opp-logo{ width:170px; height:170px; }
+    body[data-cols="2"] .opp-text{ font-size:96px; }
+    body[data-cols="2"] .status-badge{ font-size:26px; padding:10px 22px; }
+
+    body[data-cols="2"] .score-team{ padding:18px 22px; border-radius:18px; }
+    body[data-cols="2"] .score-logo{ width:92px; height:92px; }
+    body[data-cols="2"] .score-num{ font-size:120px; }
+    body[data-cols="2"] .score-dash{ font-size:120px; margin:0 6px; }
+    body[data-cols="2"] .game-pill{ font-size:24px; padding:12px 18px; }
+    body[data-cols="2"] .countdown{ font-size:24px; padding:10px 18px; }
+    body[data-cols="2"] .next-time{ font-size:28px; }
+
+    /* 1 card: MAX broadcast look */
+    body[data-cols="1"] .team-logo{ width:430px; height:430px; }
+    body[data-cols="1"] .name-text{ font-size:84px; }
+    body[data-cols="1"] .record-text{ font-size:26px; }
+    body[data-cols="1"] .standings-line{ font-size:26px; }
+    body[data-cols="1"] .opp-logo{ width:220px; height:220px; }
+    body[data-cols="1"] .opp-text{ font-size:128px; }
+    body[data-cols="1"] .status-badge{ font-size:34px; padding:12px 28px; border-radius:10px; }
+
+    body[data-cols="1"] .score-team{ padding:22px 28px; border-radius:22px; }
+    body[data-cols="1"] .score-logo{ width:120px; height:120px; }
+    body[data-cols="1"] .score-num{ font-size:160px; }
+    body[data-cols="1"] .score-dash{ font-size:160px; margin:0 10px; }
+    body[data-cols="1"] .game-pill{ font-size:30px; padding:14px 22px; }
+    body[data-cols="1"] .countdown{ font-size:30px; padding:12px 22px; }
+    body[data-cols="1"] .next-time{ font-size:34px; }
+
+    /* =========================
+       REST OF STYLES
+       ========================= */
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
     .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); }
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
     .status-none{ color:#444; border:1px solid #222; }
 
-    .standings-line{
-      margin-top:6px;
-      font-size:14px;
-      font-weight:800;
-      color:#9a9a9a;
-      letter-spacing:0.2px;
-    }
-    body[data-cols="3"] .standings-line{ font-size:15px; }
-    body[data-cols="2"] .standings-line{ font-size:16px; }
-    body[data-cols="1"] .standings-line{ font-size:18px; }
-
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
+    body[data-cols="2"] .next-label{ font-size:14px; letter-spacing:1.4px; }
+    body[data-cols="1"] .next-label{ font-size:16px; letter-spacing:1.6px; }
+
     .opp-row{ display:flex; align-items:center; gap:18px; }
 
     .countdown{
-      font-size:16px;
-      font-weight:900;
       color:#bdbdbd;
       letter-spacing:0.4px;
       text-transform:uppercase;
-      padding:6px 12px;
       border-radius:999px;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.08);
     }
 
     .next-time{
-      font-size:18px;
       color:#cfcfcf;
-      font-weight:800;
       letter-spacing:0.2px;
     }
 
@@ -102,32 +140,27 @@
       display:flex; align-items:center; justify-content:center;
       gap:18px; margin-top:4px;
     }
+    body[data-cols="2"] .score-row{ gap:24px; }
+    body[data-cols="1"] .score-row{ gap:28px; }
+
     .score-team{
       display:flex; align-items:center; gap:12px;
       padding:10px 14px; border-radius:14px;
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
     }
-
     .score-team.batting{
       border:2px solid var(--live);
       box-shadow:0 0 22px rgba(255,59,59,0.35);
       background:rgba(255,59,59,0.06);
     }
 
-    .score-logo{ width:54px; height:54px; object-fit:contain; }
-    .score-num{ font-size:64px; font-weight:900; line-height:1; }
-    .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
-
     .game-pill{
       margin-top:12px;
-      padding:8px 14px;
       border-radius:999px;
       background:rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.10);
       color:#cfcfcf;
-      font-size:16px;
-      font-weight:900;
       letter-spacing:0.6px;
       text-transform:uppercase;
     }
@@ -151,6 +184,8 @@
       color:#fff;
       box-shadow:0 0 18px rgba(255,59,59,0.18);
     }
+    body[data-cols="2"] .alert-pill{ font-size:16px; padding:10px 16px; }
+    body[data-cols="1"] .alert-pill{ font-size:18px; padding:12px 18px; }
 
     /* Ticker */
     .ticker-wrap{
@@ -200,8 +235,8 @@
     const workerUrl = "https://grumpys-scores-api.shootscore3.workers.dev/?url=";
     const CT_TZ = "America/Chicago";
 
-    const HIDE_AFTER_DAYS = 3;       // NHL/NBA/MLB
-    const NFL_SHOW_WITHIN_DAYS = 7;  // NFL
+    const HIDE_AFTER_DAYS = 3;
+    const NFL_SHOW_WITHIN_DAYS = 7;
 
     const TEAMS = [
       { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
@@ -367,7 +402,6 @@
       return events[0];
     }
 
-    // Try event summary -> best
     async function getOpponentFromEventSummary(team, eventId, myTeamId){
       if (!eventId) return null;
       const event = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/summary?event=${eventId}`);
@@ -386,30 +420,18 @@
       };
     }
 
-    // If summary fails: parse "MIN @ DEN" and lookup DEN team logo via teams search
     function parseShortNameForOpponent(shortName, myAbbrev){
       if (!shortName) return null;
       const s = String(shortName).toUpperCase().trim();
-
-      // Examples: "MIN @ DEN", "DEN @ MIN", "MIN VS DEN"
       const m = s.match(/^([A-Z]{2,4})\s*(?:@|VS)\s*([A-Z]{2,4})$/);
       if (!m) return null;
 
       const left = m[1], right = m[2];
       const isAt = s.includes("@");
 
-      // Determine opponent abbrev
-      let oppAbbrev = left === myAbbrev ? right : left;
-      // Determine @ vs from my perspective
-      // If string is "MIN @ DEN" and my is MIN => away => "@"
-      // If string is "DEN @ MIN" and my is MIN => home => "vs"
+      const oppAbbrev = (left === myAbbrev) ? right : left;
       let atOrVs = "vs";
-      if (isAt) {
-        atOrVs = (left === myAbbrev) ? "@" : "vs";
-      } else {
-        atOrVs = "vs";
-      }
-
+      if (isAt) atOrVs = (left === myAbbrev) ? "@" : "vs";
       return { oppAbbrev, atOrVs };
     }
 
@@ -476,14 +498,11 @@
         };
       }
 
-      // OFF DAY fallback
       const next = teamDetails?.team?.nextEvent?.[0];
       const startIso = next?.date || null;
 
-      // Step 1: event summary if id exists
       let oppInfo = await getOpponentFromEventSummary(team, next?.id, team.id);
 
-      // Step 2/3: parse shortName + lookup logo/name if needed
       if (!oppInfo) {
         const parsed = parseShortNameForOpponent(next?.shortName, myAbbrev);
         if (parsed?.oppAbbrev) {
