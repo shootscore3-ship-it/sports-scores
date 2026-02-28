@@ -634,20 +634,43 @@
       });
     }
 
+    /* ✅ TICKER: NHL then NBA then MLB, within each league: LIVE -> UPCOMING -> FINAL */
     async function updateTicker(){
       const leagues = [
         { l:"nhl", s:"hockey" },
         { l:"nba", s:"basketball" },
         { l:"mlb", s:"baseball" }
+        // later: { l:"nfl", s:"football" }
       ];
 
       const ticker = document.getElementById("ticker-content");
       let allItems = [];
 
+      const stateRank = (state) => {
+        if (state === "in") return 0;    // LIVE
+        if (state === "pre") return 1;   // UPCOMING
+        if (state === "post") return 2;  // FINAL
+        return 3;
+      };
+
       for (const league of leagues){
         const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`);
 
-        data?.events?.forEach(game => {
+        const events = (data?.events || []).slice().sort((a, b) => {
+          const sa = a?.status?.type?.state;
+          const sb = b?.status?.type?.state;
+
+          const ra = stateRank(sa);
+          const rb = stateRank(sb);
+          if (ra !== rb) return ra - rb;
+
+          // tie-breaker: earliest start time first
+          const ta = new Date(a?.date || 0).getTime();
+          const tb = new Date(b?.date || 0).getTime();
+          return ta - tb;
+        });
+
+        events.forEach(game => {
           const comp = game.competitions[0];
           const away = comp.competitors[1], home = comp.competitors[0];
           const state = game.status.type.state;
