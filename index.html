@@ -43,26 +43,31 @@
       overflow:hidden;
     }
 
-    /* Sections */
     .card-top{ width:100%; display:flex; justify-content:center; }
     .card-main{ display:flex; flex-direction:column; align-items:center; gap:10px; }
-    .card-middle{ width:100%; margin-top:14px; }
+    .card-middle{
+      width:100%;
+      margin-top:14px;
+      /* ✅ Ensure NEXT always fits */
+      flex: 0 1 auto;
+      min-height:0;
+      max-height: 260px;   /* clamp leaders area */
+      overflow:hidden;
+    }
     .card-bottom{ width:100%; margin-top:auto; padding-top:14px; }
 
-    /* Badge */
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
     .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); background:transparent; }
     .status-pre{ color:#cfcfcf; border:1px solid #444; background:transparent; }
     .status-none{ color:#444; border:1px solid #222; background:transparent; }
 
-    /* Main branding */
     .team-logo{ width:210px; height:210px; object-fit:contain; }
     .name-text{ font-size:34px; font-weight:900; }
     .record-text{ color:#888; font-weight:800; }
     .standings-line{ margin-top:4px; font-size:14px; font-weight:900; color:#9a9a9a; letter-spacing:0.2px; }
 
-    /* NEXT block */
+    /* NEXT */
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:16px; justify-content:center; }
@@ -87,7 +92,7 @@
       font-size:16px;
     }
 
-    /* Score block */
+    /* SCORE */
     .score-row{
       display:flex; align-items:center; justify-content:center;
       gap:16px;
@@ -102,10 +107,10 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* Leaders block (readable + compact, no “updates…” text) */
+    /* ✅ Compact leaders */
     .leaders{
       width:100%;
-      padding:14px 14px;
+      padding:12px 14px;
       border-radius:18px;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.10);
@@ -117,7 +122,7 @@
       letter-spacing:1px;
       text-transform:uppercase;
       color:rgba(255,255,255,0.55);
-      margin-bottom:10px;
+      margin-bottom:8px;
       text-align:left;
     }
     .leader-row{
@@ -125,7 +130,7 @@
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      padding:8px 0;
+      padding:6px 0;
       border-top:1px solid rgba(255,255,255,0.06);
     }
     .leader-row:first-of-type{ border-top:none; padding-top:0; }
@@ -134,7 +139,7 @@
       min-width:0;
     }
     .headshot{
-      width:46px; height:46px;
+      width:40px; height:40px;
       border-radius:999px;
       object-fit:cover;
       background:#222;
@@ -151,7 +156,7 @@
       line-height:1.1;
     }
     .leader-v{
-      font-size:15px;
+      font-size:14px;
       font-weight:900;
       color:rgba(255,255,255,0.92);
       white-space:nowrap;
@@ -160,14 +165,14 @@
       max-width: 360px;
     }
     .leader-stat{
-      font-size:16px;
+      font-size:15px;
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
       flex:0 0 auto;
     }
 
-    /* Ticker (unchanged) */
+    /* ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -235,6 +240,9 @@
       }
     }
 
+    function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
+    function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
+
     function ctDateKey(d){
       return (d instanceof Date ? d : new Date(d))
         .toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
@@ -279,10 +287,7 @@
       return `${label} • ${time} CT`;
     }
 
-    function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
-    function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
-
-    // ---------- Leaders cache (10 minutes) ----------
+    // ---------- LEADERS CACHE ----------
     const LEADERS_TTL_MS = 10 * 60 * 1000;
     const leadersCache = new Map();
     function cacheGet(key){
@@ -295,7 +300,7 @@
       leadersCache.set(key, { ts: Date.now(), block });
     }
 
-    // ---------- Wild leaders (readable: 3 lines for points) ----------
+    // Wild leaders (✅ 3 rows total so NEXT fits)
     function wildName(p){
       const fn = p?.firstName?.default || p?.firstName || "";
       const ln = p?.lastName?.default || p?.lastName || "";
@@ -310,37 +315,26 @@
       const goals1 = [...skaters].sort((a,b) => (b.goals ?? 0) - (a.goals ?? 0))[0];
       const ast1   = [...skaters].sort((a,b) => (b.assists ?? 0) - (a.assists ?? 0))[0];
 
-      const rows = [];
+      const ptsLine = topPts.map(p => `${wildName(p)} ${p.points}P`).join(" • ");
 
-      // Top 3 points as 3 separate rows
-      topPts.forEach((p, idx) => {
-        rows.push({
-          key: idx === 0 ? "PTS (TOP 3)" : "PTS",
-          name: wildName(p),
-          stat: `${p.points ?? 0}P`,
-          headshot: p?.headshot || ""
-        });
-      });
-
-      rows.push({ key:"GOALS", name:wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" });
-      rows.push({ key:"ASSISTS", name:wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" });
-
-      return rows;
+      return [
+        { key:"PTS (TOP 3)", name: ptsLine, stat:"", headshot: topPts[0]?.headshot || "" },
+        { key:"GOALS", name:wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
+        { key:"ASSISTS", name:wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
+      ];
     }
 
     async function getWildLeaders(){
       const cached = cacheGet("wild");
       if (cached) return cached;
-
       const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
       if (!nhl || nhl.__nonJson) return null;
-
       const block = buildWildLeaders(nhl);
       cacheSet("wild", block);
       return block;
     }
 
-    // ---------- Wolves leaders ----------
+    // Wolves leaders (4 rows)
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
@@ -392,17 +386,17 @@
       const stl = topBy(players, "stl");
 
       const block = [
-        { key:"PPG", name: ppg.name, stat: `${ppg.pts.toFixed(1)}`, headshot: NBA_HEADSHOT(ppg.id) },
-        { key:"REB", name: reb.name, stat: `${reb.reb.toFixed(1)}`, headshot: NBA_HEADSHOT(reb.id) },
-        { key:"AST", name: ast.name, stat: `${ast.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(ast.id) },
-        { key:"STL", name: stl.name, stat: `${stl.stl.toFixed(1)}`, headshot: NBA_HEADSHOT(stl.id) }
+        { key:"PPG", name: ppg.name, stat: ppg.pts.toFixed(1), headshot: NBA_HEADSHOT(ppg.id) },
+        { key:"REB", name: reb.name, stat: reb.reb.toFixed(1), headshot: NBA_HEADSHOT(reb.id) },
+        { key:"AST", name: ast.name, stat: ast.ast.toFixed(1), headshot: NBA_HEADSHOT(ast.id) },
+        { key:"STL", name: stl.name, stat: stl.stl.toFixed(1), headshot: NBA_HEADSHOT(stl.id) }
       ];
 
       cacheSet("wolves", block);
       return block;
     }
 
-    // ---------- event chooser (midnight + doubleheader + never show yesterday final) ----------
+    // ---------- event chooser ----------
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -413,15 +407,12 @@
       const todayCT = ctDateKey(new Date());
 
       const live = events.filter(e => e?.status?.type?.state === "in");
-
       const preToday = events
         .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) === todayCT)
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
       const postToday = events
         .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
       const preFuture = events
         .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -432,7 +423,6 @@
       if (nextPreToday) return nextPreToday;
 
       if (postToday.length) return postToday[0];
-
       if (preFuture.length) return preFuture[0];
 
       return events[0];
@@ -466,9 +456,7 @@
       let event = pickBestEventForTeam(scoreboard, team.id);
 
       const todayCT = ctDateKey(new Date());
-      if (event?.status?.type?.state === "post" && ctDateKey(event?.date) !== todayCT) {
-        event = null;
-      }
+      if (event?.status?.type?.state === "post" && ctDateKey(event?.date) !== todayCT) event = null;
 
       const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
@@ -624,18 +612,12 @@
         const card = document.createElement("div");
         card.className = "card";
 
-        const midLeaders = (data.showLeaders && (meta.league === "nhl" || meta.league === "nba"))
-          ? renderLeaders(data.leadersBlock)
-          : "";
+        const leadersHtml = (data.showLeaders && (meta.league === "nhl" || meta.league === "nba")) ? renderLeaders(data.leadersBlock) : "";
 
         let bottomHtml = "";
-        if (data.status === "in" || data.status === "post") {
-          bottomHtml = scoreBlock(data);
-        } else if (data.status === "pre") {
-          bottomHtml = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
-        } else {
-          bottomHtml = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
-        }
+        if (data.status === "in" || data.status === "post") bottomHtml = scoreBlock(data);
+        else if (data.status === "pre") bottomHtml = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
+        else bottomHtml = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
 
         card.innerHTML = `
           <div class="card-top">
@@ -650,7 +632,7 @@
           </div>
 
           <div class="card-middle">
-            ${midLeaders}
+            ${leadersHtml}
           </div>
 
           <div class="card-bottom">
@@ -671,16 +653,11 @@
       const ticker = document.getElementById("ticker-content");
       let allItems = [];
 
-      const stateRank = (state) => {
-        if (state === "in") return 0;
-        if (state === "pre") return 1;
-        if (state === "post") return 2;
-        return 3;
-      };
+      const stateRank = (state) => (state === "in" ? 0 : state === "pre" ? 1 : state === "post" ? 2 : 3);
 
       for (const league of leagues){
         const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`);
-        const events = (data?.events || []).slice().sort((a, b) => {
+        const events = (data?.events || []).slice().sort((a,b) => {
           const ra = stateRank(a?.status?.type?.state);
           const rb = stateRank(b?.status?.type?.state);
           if (ra !== rb) return ra - rb;
