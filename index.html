@@ -41,11 +41,7 @@
 
     .card-top{ width:100%; display:flex; justify-content:center; }
     .card-main{ display:flex; flex-direction:column; align-items:center; gap:10px; }
-    .card-middle{
-      width:100%;
-      margin-top:14px;
-      flex: 0 0 auto;
-    }
+    .card-middle{ width:100%; margin-top:14px; flex:0 0 auto; }
     .card-bottom{ width:100%; margin-top:auto; padding-top:14px; }
 
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
@@ -98,7 +94,7 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ Stats carousel (2 rows at a time) */
+    /* Leaders carousel */
     .leaders{
       width:100%;
       padding:12px 14px;
@@ -128,7 +124,7 @@
     }
     .dot.active{ background:rgba(255,255,255,0.55); }
 
-    .slides{ position:relative; min-height:120px; }
+    .slides{ position:relative; min-height:140px; }
     .slide{
       position:absolute; inset:0;
       opacity:0; transform:translateY(6px);
@@ -314,7 +310,7 @@
     };
     const cacheSet = (k, block) => leadersCache.set(k, { ts: Date.now(), block });
 
-    // Wild leaders -> 2 slides
+    // Wild slides: Slide 1 = 3 separate point rows (each has its headshot)
     function wildName(p){
       const fn = p?.firstName?.default || "";
       const ln = p?.lastName?.default || "";
@@ -329,17 +325,19 @@
       const goals1 = [...skaters].sort((a,b) => (b.goals ?? 0) - (a.goals ?? 0))[0];
       const ast1   = [...skaters].sort((a,b) => (b.assists ?? 0) - (a.assists ?? 0))[0];
 
-      const ptsLine = topPts.map(p => `${wildName(p)} ${p.points}P`).join(" • ");
+      const slide1 = topPts.map((p, i) => ({
+        key: i === 0 ? "PTS (TOP 3)" : "PTS",
+        name: wildName(p),
+        stat: `${p.points ?? 0}P`,
+        headshot: p?.headshot || ""
+      }));
 
-      return [
-        [ // slide 1
-          { key:"PTS (TOP 3)", name: ptsLine, stat:"", headshot: topPts[0]?.headshot || "" },
-        ],
-        [ // slide 2
-          { key:"GOALS", name: wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
-          { key:"ASSISTS", name: wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
-        ]
+      const slide2 = [
+        { key:"GOALS", name: wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
+        { key:"ASSISTS", name: wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
       ];
+
+      return [ slide1, slide2 ];
     }
 
     async function getWildSlides(){
@@ -352,7 +350,7 @@
       return slides;
     }
 
-    // Wolves leaders -> 2 slides
+    // Wolves slides
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
@@ -435,13 +433,10 @@
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       if (live.length) return live[0];
-
       const nextPreToday = preToday.find(e => new Date(e.date).getTime() >= now) || preToday[0];
       if (nextPreToday) return nextPreToday;
-
       if (postToday.length) return postToday[0];
       if (preFuture.length) return preFuture[0];
-
       return events[0];
     }
 
@@ -499,13 +494,15 @@
         const oppLogo = teamLogo(opp?.team);
         const atOrVs  = (me?.homeAway === "away") ? "@" : "vs";
 
-        const detail = (state === "pre" && startIso) ? nextLabelAndTime(startIso) : event.status.type.shortDetail;
+        // ✅ Always compute countdown/time for pre games
+        const timeText = startIso ? nextLabelAndTime(startIso) : (event.status.type.shortDetail || "TBD");
+        const cd = startIso ? countdownText(startIso) : "";
 
         return {
           status: state,
-          detail,
           startIso,
-          countdown: (state === "pre" && startIso) ? countdownText(startIso) : "",
+          countdown: (state === "pre") ? cd : "",
+          timeText: (state === "pre") ? timeText : "",
           myScore: me?.score ?? "",
           oppScore: opp?.score ?? "",
           logo, record, standings,
@@ -528,7 +525,7 @@
         showLeaders: true,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
-        nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
+        timeText: startIso ? nextLabelAndTime(startIso) : "TBD",
         nextOpponent: oppInfo?.oppName || "TBD",
         nextOppLogo: oppInfo?.oppLogo || "",
         nextAtOrVs: oppInfo?.atOrVs || "vs",
@@ -544,7 +541,6 @@
 
     function renderSlides(slides, teamKey){
       if (!slides || !slides.length) return "";
-
       const dots = slides.map((_,i)=> `<span class="dot ${i===0?"active":""}"></span>`).join("");
 
       const slideHtml = slides.map((rows, i) => `
@@ -592,7 +588,7 @@
           idx = (idx + 1) % slides.length;
           slides[idx].classList.add("active");
           dots[idx]?.classList.add("active");
-        }, 5200);
+        }, 15000); // ✅ 15 seconds
       });
     }
 
@@ -659,9 +655,13 @@
             : "";
 
         let bottomHtml = "";
-        if (data.status === "in" || data.status === "post") bottomHtml = scoreBlock(data);
-        else if (data.status === "pre") bottomHtml = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
-        else bottomHtml = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
+        if (data.status === "in" || data.status === "post") {
+          bottomHtml = scoreBlock(data);
+        } else if (data.status === "pre") {
+          bottomHtml = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.timeText || "", data.countdown || "");
+        } else {
+          bottomHtml = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.timeText || "", data.countdown || "");
+        }
 
         card.innerHTML = `
           <div class="card-top">
@@ -676,7 +676,6 @@
           </div>
 
           <div class="card-middle">${leadersHtml}</div>
-
           <div class="card-bottom">${bottomHtml}</div>
         `;
         container.appendChild(card);
