@@ -12,11 +12,13 @@
       --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
       --cols: 4;
     }
+
     body{
       margin:0; background:var(--bg); color:var(--text);
       font-family:'Inter',sans-serif; width:100vw; height:100vh;
       overflow:hidden; display:flex; flex-direction:column;
     }
+
     .dashboard{
       display:grid;
       grid-template-columns:repeat(var(--cols), 1fr);
@@ -26,46 +28,69 @@
       box-sizing:border-box;
       max-height:calc(100vh - 215px);
     }
+
     .card{
-      background:var(--card-bg); border-radius:20px; padding:25px;
-      display:flex; flex-direction:column; align-items:center;
-      border:2px solid #222; text-align:center; justify-content:space-between;
+      background:var(--card-bg);
+      border-radius:20px;
+      padding:24px;
+      border:2px solid #222;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      box-sizing:border-box;
+      min-height:0;
+      overflow:hidden;
     }
 
-    .team-logo{ width:185px; height:185px; object-fit:contain; }
-    .name-text{ font-size:32px; font-weight:900; }
-    .record-text{ color:#888; }
+    /* Sections */
+    .card-top{ width:100%; display:flex; justify-content:center; }
+    .card-main{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .card-middle{ width:100%; margin-top:14px; }
+    .card-bottom{ width:100%; margin-top:auto; padding-top:14px; }
 
+    /* Badge */
     .status-badge{ font-size:18px; font-weight:900; padding:6px 15px; border-radius:6px; }
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
-    .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); }
-    .status-pre{ color:#cfcfcf; border:1px solid #444; }
-    .status-none{ color:#444; border:1px solid #222; }
+    .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); background:transparent; }
+    .status-pre{ color:#cfcfcf; border:1px solid #444; background:transparent; }
+    .status-none{ color:#444; border:1px solid #222; background:transparent; }
 
-    .standings-line{ margin-top:6px; font-size:14px; font-weight:800; color:#9a9a9a; letter-spacing:0.2px; }
+    /* Main branding */
+    .team-logo{ width:210px; height:210px; object-fit:contain; }
+    .name-text{ font-size:34px; font-weight:900; }
+    .record-text{ color:#888; font-weight:800; }
+    .standings-line{ margin-top:4px; font-size:14px; font-weight:900; color:#9a9a9a; letter-spacing:0.2px; }
 
-    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
+    /* NEXT block */
+    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
-    .opp-row{ display:flex; align-items:center; gap:18px; }
-    .opp-logo{ width:88px; height:88px; object-fit:contain; }
-    .opp-text{ font-size:44px; font-weight:900; line-height:1; }
+    .opp-row{ display:flex; align-items:center; gap:16px; justify-content:center; }
+    .opp-logo{ width:92px; height:92px; object-fit:contain; }
+    .opp-text{ font-size:54px; font-weight:900; line-height:1; }
 
     .countdown{
       color:#bdbdbd;
       letter-spacing:0.4px;
       text-transform:uppercase;
       border-radius:999px;
-      padding:6px 12px;
+      padding:7px 12px;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.08);
       font-weight:900;
+      font-size:14px;
+    }
+    .next-time{
+      color:#cfcfcf;
+      letter-spacing:0.2px;
+      font-weight:900;
       font-size:16px;
     }
-    .next-time{ color:#cfcfcf; letter-spacing:0.2px; font-weight:800; font-size:18px; }
 
+    /* Score block */
     .score-row{
       display:flex; align-items:center; justify-content:center;
-      gap:18px; margin-top:4px;
+      gap:16px;
     }
     .score-team{
       display:flex; align-items:center; gap:12px;
@@ -73,66 +98,76 @@
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
     }
-    .score-logo{ width:54px; height:54px; object-fit:contain; }
+    .score-logo{ width:56px; height:56px; object-fit:contain; }
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* Leaders block w/ headshots */
+    /* Leaders block (readable + compact, no “updates…” text) */
     .leaders{
-      margin-top:12px;
       width:100%;
-      padding:12px 14px;
+      padding:14px 14px;
       border-radius:18px;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.10);
-      display:flex;
-      flex-direction:column;
-      gap:10px;
       box-sizing:border-box;
     }
-    .leader-row{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px;
+    .leaders-title{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.55);
+      margin-bottom:10px;
+      text-align:left;
     }
+    .leader-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 0;
+      border-top:1px solid rgba(255,255,255,0.06);
+    }
+    .leader-row:first-of-type{ border-top:none; padding-top:0; }
     .leader-left{
       display:flex; align-items:center; gap:10px;
       min-width:0;
     }
     .headshot{
-      width:44px; height:44px;
+      width:46px; height:46px;
       border-radius:999px;
       object-fit:cover;
       background:#222;
       border:1px solid rgba(255,255,255,0.12);
       flex:0 0 auto;
     }
-    .leader-text{ min-width:0; }
+    .leader-text{ min-width:0; text-align:left; }
     .leader-k{
-      font-size:12px; font-weight:900;
-      letter-spacing:0.8px; text-transform:uppercase;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:0.8px;
+      text-transform:uppercase;
       color:rgba(255,255,255,0.55);
+      line-height:1.1;
     }
     .leader-v{
-      font-size:14px; font-weight:900;
-      color:rgba(255,255,255,0.90);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      font-size:15px;
+      font-weight:900;
+      color:rgba(255,255,255,0.92);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
       max-width: 360px;
     }
     .leader-stat{
-      font-size:14px;
+      font-size:16px;
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
       flex:0 0 auto;
     }
-    .leaders-note{
-      font-size:12px;
-      font-weight:800;
-      color:rgba(255,255,255,0.45);
-      letter-spacing:0.2px;
-    }
 
-    /* Ticker */
+    /* Ticker (unchanged) */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -167,7 +202,6 @@
     const HIDE_AFTER_DAYS = 3;
     const NFL_SHOW_WITHIN_DAYS = 7;
 
-    // Wild/Wolves/Twins/Vikings (same as your layout)
     const TEAMS = [
       { id:"30", sport:"hockey",     league:"nhl", name:"Wild"   },
       { id:"16", sport:"basketball", league:"nba", name:"Wolves" },
@@ -175,18 +209,15 @@
       { id:"16", sport:"football",   league:"nfl", name:"Vikings"}
     ];
 
-    // --- NHL / NBA stats endpoints (leaders + headshots) ---
     const NHL_WILD_CLUB_STATS_URL = "https://api-web.nhle.com/v1/club-stats/MIN/20252026/2";
 
-    // NBA per-game stats (the “full params” version that worked for you)
     const NBA_WOLVES_LEAGUE_DASH_URL =
       "https://stats.nba.com/stats/leaguedashplayerstats" +
       "?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=" +
       "&Height=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0" +
-      "&PaceAdjust=N&PerMode=PerGame&period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025-26" +
+      "&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025-26" +
       "&SeasonSegment=&SeasonType=Regular%20Season&ShotClockRange=&StarterBench=&TeamID=1610612750&TwoWay=0&VsConference=&VsDivision=&Weight=";
 
-    // Headshot builders
     const NBA_HEADSHOT = (playerId) =>
       `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${playerId}.png`;
 
@@ -195,12 +226,11 @@
         const r = await fetch(workerUrl + encodeURIComponent(url));
         const ct = (r.headers.get("content-type") || "").toLowerCase();
         if (!ct.includes("application/json") && !ct.includes("text/json")) {
-          // Sometimes NBA returns text/html error pages
           const txt = await r.text();
           return { __nonJson: true, __text: txt, __status: r.status };
         }
         return await r.json();
-      } catch(e){
+      }catch(e){
         return null;
       }
     }
@@ -252,10 +282,9 @@
     function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
     function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
 
-    // ---------- LEADERS CACHE ----------
+    // ---------- Leaders cache (10 minutes) ----------
     const LEADERS_TTL_MS = 10 * 60 * 1000;
-    const leadersCache = new Map(); // key -> {ts, block}
-
+    const leadersCache = new Map();
     function cacheGet(key){
       const v = leadersCache.get(key);
       if (!v) return null;
@@ -266,28 +295,37 @@
       leadersCache.set(key, { ts: Date.now(), block });
     }
 
-    // ---------- Wild leaders via NHL club-stats ----------
+    // ---------- Wild leaders (readable: 3 lines for points) ----------
+    function wildName(p){
+      const fn = p?.firstName?.default || p?.firstName || "";
+      const ln = p?.lastName?.default || p?.lastName || "";
+      return (fn + " " + ln).trim() || "Unknown";
+    }
+
     function buildWildLeaders(nhl){
       const skaters = Array.isArray(nhl?.skaters) ? nhl.skaters : [];
       if (!skaters.length) return null;
 
-      const byPoints = [...skaters].sort((a,b) => (b.points ?? 0) - (a.points ?? 0)).slice(0,3);
+      const topPts = [...skaters].sort((a,b) => (b.points ?? 0) - (a.points ?? 0)).slice(0,3);
       const goals1 = [...skaters].sort((a,b) => (b.goals ?? 0) - (a.goals ?? 0))[0];
       const ast1   = [...skaters].sort((a,b) => (b.assists ?? 0) - (a.assists ?? 0))[0];
 
-      const nameOf = (p) => {
-        const fn = p?.firstName?.default || p?.firstName || "";
-        const ln = p?.lastName?.default || p?.lastName || "";
-        return (fn + " " + ln).trim() || "Unknown";
-      };
+      const rows = [];
 
-      const ptsLine = byPoints.map(p => `${nameOf(p)} ${p.points}P`).join(" • ");
+      // Top 3 points as 3 separate rows
+      topPts.forEach((p, idx) => {
+        rows.push({
+          key: idx === 0 ? "PTS (TOP 3)" : "PTS",
+          name: wildName(p),
+          stat: `${p.points ?? 0}P`,
+          headshot: p?.headshot || ""
+        });
+      });
 
-      return [
-        { key: "PTS (TOP 3)", name: ptsLine, stat: "", headshot: byPoints[0]?.headshot || "" },
-        { key: "GOALS", name: nameOf(goals1), stat: `${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
-        { key: "ASSISTS", name: nameOf(ast1), stat: `${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
-      ];
+      rows.push({ key:"GOALS", name:wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" });
+      rows.push({ key:"ASSISTS", name:wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" });
+
+      return rows;
     }
 
     async function getWildLeaders(){
@@ -302,14 +340,13 @@
       return block;
     }
 
-    // ---------- Wolves leaders via NBA leaguedashplayerstats ----------
+    // ---------- Wolves leaders ----------
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
 
-      const headers = rs.headers || rs?.resultSets?.[0]?.headers;
-      const rows = rs.rowSet || rs?.resultSets?.[0]?.rowSet;
-
+      const headers = rs.headers;
+      const rows = rs.rowSet;
       if (!Array.isArray(headers) || !Array.isArray(rows)) return null;
 
       const idx = (h) => headers.indexOf(h);
@@ -323,23 +360,19 @@
 
       if ([iId,iName,iPTS,iREB,iAST,iSTL].some(v => v < 0)) return null;
 
-      const players = rows.map(r => ({
+      return rows.map(r => ({
         id: r[iId],
         name: r[iName],
         pts: Number(r[iPTS]) || 0,
         reb: Number(r[iREB]) || 0,
         ast: Number(r[iAST]) || 0,
-        stl: Number(r[iSTL]) || 0,
+        stl: Number(r[iSTL]) || 0
       }));
-
-      return players;
     }
 
     function topBy(players, field){
       let best = null;
-      for (const p of players){
-        if (!best || p[field] > best[field]) best = p;
-      }
+      for (const p of players) if (!best || p[field] > best[field]) best = p;
       return best;
     }
 
@@ -348,8 +381,7 @@
       if (cached) return cached;
 
       const data = await fetchJson(NBA_WOLVES_LEAGUE_DASH_URL);
-      if (!data) return null;
-      if (data.__nonJson) return null;
+      if (!data || data.__nonJson) return null;
 
       const players = parseNbaResultSet(data);
       if (!players || !players.length) return null;
@@ -363,14 +395,14 @@
         { key:"PPG", name: ppg.name, stat: `${ppg.pts.toFixed(1)}`, headshot: NBA_HEADSHOT(ppg.id) },
         { key:"REB", name: reb.name, stat: `${reb.reb.toFixed(1)}`, headshot: NBA_HEADSHOT(reb.id) },
         { key:"AST", name: ast.name, stat: `${ast.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(ast.id) },
-        { key:"STL", name: stl.name, stat: `${stl.stl.toFixed(1)}`, headshot: NBA_HEADSHOT(stl.id) },
+        { key:"STL", name: stl.name, stat: `${stl.stl.toFixed(1)}`, headshot: NBA_HEADSHOT(stl.id) }
       ];
 
       cacheSet("wolves", block);
       return block;
     }
 
-    // ---------- Choose event (midnight + doubleheader), plus "never show yesterday final" ----------
+    // ---------- event chooser (midnight + doubleheader + never show yesterday final) ----------
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -381,12 +413,15 @@
       const todayCT = ctDateKey(new Date());
 
       const live = events.filter(e => e?.status?.type?.state === "in");
+
       const preToday = events
         .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) === todayCT)
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
       const postToday = events
         .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       const preFuture = events
         .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -430,7 +465,6 @@
       const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
       let event = pickBestEventForTeam(scoreboard, team.id);
 
-      // never show yesterday final
       const todayCT = ctDateKey(new Date());
       if (event?.status?.type?.state === "post" && ctDateKey(event?.date) !== todayCT) {
         event = null;
@@ -441,10 +475,9 @@
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(team, teamDetails);
 
-      // leaders only when NOT LIVE
       let leadersBlock = null;
-
-      if (!event || event?.status?.type?.state !== "in") {
+      const stateForLeaders = event?.status?.type?.state || "none";
+      if (stateForLeaders !== "in") {
         if (team.league === "nhl") leadersBlock = await getWildLeaders();
         if (team.league === "nba") leadersBlock = await getWolvesLeaders();
       }
@@ -500,8 +533,6 @@
         nextOpponent: oppInfo?.oppName || "TBD",
         nextOppLogo: oppInfo?.oppLogo || "",
         nextAtOrVs: oppInfo?.atOrVs || "vs",
-        myBatting:false,
-        oppBatting:false
       };
     }
 
@@ -513,13 +544,10 @@
     }
 
     function renderLeaders(block){
-      if (!block || !block.length) {
-        return `<div class="leaders"><div class="leaders-note">Leaders unavailable</div></div>`;
-      }
-
-      // special case: Wild top-3 row uses a combined string
+      if (!block || !block.length) return "";
       return `
         <div class="leaders">
+          <div class="leaders-title">Leaders</div>
           ${block.map(row => `
             <div class="leader-row">
               <div class="leader-left">
@@ -529,10 +557,9 @@
                   <div class="leader-v">${row.name}</div>
                 </div>
               </div>
-              ${row.stat ? `<div class="leader-stat">${row.stat}</div>` : `<div class="leader-stat"></div>`}
+              <div class="leader-stat">${row.stat || ""}</div>
             </div>
           `).join("")}
-          <div class="leaders-note">Updates about every 10 minutes</div>
         </div>
       `;
     }
@@ -542,7 +569,6 @@
       const teamResults = await Promise.all(TEAMS.map(t => getTeamData(t)));
       const now = Date.now();
 
-      // collapse logic
       const visible = teamResults
         .map((data, idx) => ({ data, idx }))
         .filter(({ data, idx }) => {
@@ -574,51 +600,67 @@
                         : `<div class="opp-text">${oppName}</div>`}
             </div>
             ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
-            <div class="next-time">${timeText}</div>
+            <div class="next-time">${timeText || "TBD"}</div>
           </div>
         `;
       };
 
-      const scoreBlock = (data) => {
-        return `
-          <div class="score-row">
-            <div class="score-team">
-              <img class="score-logo" src="${data.myLogo}" alt="">
-              <div class="score-num">${data.myScore}</div>
-            </div>
-            <div class="score-dash">-</div>
-            <div class="score-team">
-              <div class="score-num">${data.oppScore}</div>
-              <img class="score-logo" src="${data.theirLogo}" alt="">
-            </div>
+      const scoreBlock = (data) => `
+        <div class="score-row">
+          <div class="score-team">
+            <img class="score-logo" src="${data.myLogo}" alt="">
+            <div class="score-num">${data.myScore}</div>
           </div>
-        `;
-      };
+          <div class="score-dash">-</div>
+          <div class="score-team">
+            <div class="score-num">${data.oppScore}</div>
+            <img class="score-logo" src="${data.theirLogo}" alt="">
+          </div>
+        </div>
+      `;
 
       listToRender.forEach(({ data, idx }) => {
-        const teamMeta = TEAMS[idx];
+        const meta = TEAMS[idx];
         const card = document.createElement("div");
         card.className = "card";
+
+        const midLeaders = (data.showLeaders && (meta.league === "nhl" || meta.league === "nba"))
+          ? renderLeaders(data.leadersBlock)
+          : "";
+
+        let bottomHtml = "";
+        if (data.status === "in" || data.status === "post") {
+          bottomHtml = scoreBlock(data);
+        } else if (data.status === "pre") {
+          bottomHtml = opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown);
+        } else {
+          bottomHtml = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
+        }
+
         card.innerHTML = `
-          <div class="status-badge status-${data.status}">${statusLabel(data.status)}</div>
-          <img class="team-logo" src="${data.logo}" alt="${teamMeta.name}">
-          <div>
-            <div class="name-text">${teamMeta.name}</div>
+          <div class="card-top">
+            <div class="status-badge status-${data.status}">${statusLabel(data.status)}</div>
+          </div>
+
+          <div class="card-main">
+            <img class="team-logo" src="${data.logo}" alt="${meta.name}">
+            <div class="name-text">${meta.name}</div>
             <div class="record-text">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
-            ${data.showLeaders && (teamMeta.league === "nhl" || teamMeta.league === "nba") ? renderLeaders(data.leadersBlock) : ``}
           </div>
-          ${
-            (data.status === "in" || data.status === "post") ? scoreBlock(data)
-            : (data.status === "pre") ? opponentBlock(data.atOrVs, data.oppLogo, data.oppName, data.detail, data.countdown)
-            : opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown)
-          }
+
+          <div class="card-middle">
+            ${midLeaders}
+          </div>
+
+          <div class="card-bottom">
+            ${bottomHtml}
+          </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // Ticker (kept simple: NHL -> NBA -> MLB, and LIVE -> UPCOMING -> FINAL)
     async function updateTicker(){
       const leagues = [
         { l:"nhl", s:"hockey" },
@@ -636,9 +678,9 @@
         return 3;
       };
 
-      for (const league of leagues) {
+      for (const league of leagues){
         const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${league.s}/${league.l}/scoreboard`);
-        const events = (data?.events || []).slice().sort((a,b) => {
+        const events = (data?.events || []).slice().sort((a, b) => {
           const ra = stateRank(a?.status?.type?.state);
           const rb = stateRank(b?.status?.type?.state);
           if (ra !== rb) return ra - rb;
