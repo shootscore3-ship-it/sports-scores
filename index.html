@@ -129,11 +129,14 @@
 
     .slides{ position:relative; min-height:210px; }
 
+    /* ✅ Slide uses NO extra gap; rows control spacing */
     .slide{
       position:absolute; inset:0;
       opacity:0; transform:translateY(6px);
       transition:opacity .35s ease, transform .35s ease;
-      display:flex; flex-direction:column; gap:12px;
+      display:flex;
+      flex-direction:column;
+      gap:0;               /* was 12px */
       pointer-events:none;
     }
     .slide.active{
@@ -141,23 +144,29 @@
       pointer-events:auto;
     }
 
-    /* ✅ BIGGER stat rows */
+    /* ✅ Squeezed stat rows (keeps sizes, removes extra air) */
     .leader-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:14px;
-      padding:14px 0;
-      border-top:1px solid rgba(255,255,255,0.07);
+      gap:12px;
+      padding:8px 0;       /* was 14px 0 */
+      border-top:1px solid rgba(255,255,255,0.06);
     }
-    .leader-row:first-child{ border-top:none; padding-top:0; }
+    .leader-row:first-child{
+      border-top:none;
+      padding-top:0;
+    }
+    .leader-row:last-child{
+      padding-bottom:0;
+    }
 
     .leader-left{
       display:flex; align-items:center; gap:14px;
       min-width:0;
     }
     .headshot{
-      width:66px; height:66px;              /* ✅ bigger */
+      width:66px; height:66px;   /* unchanged */
       border-radius:999px;
       object-fit:cover;
       background:#222;
@@ -171,19 +180,21 @@
       letter-spacing:0.8px;
       text-transform:uppercase;
       color:rgba(255,255,255,0.55);
-      line-height:1.1;
+      line-height:1;       /* tighter */
+      margin-bottom:2px;   /* tiny separation */
     }
     .leader-v{
-      font-size:22px;                        /* ✅ bigger name */
+      font-size:22px;
       font-weight:900;
       color:rgba(255,255,255,0.97);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
       max-width: 360px;
+      line-height:1.05;    /* tighter */
     }
     .leader-stat{
-      font-size:24px;                        /* ✅ bigger totals */
+      font-size:24px;
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
@@ -542,7 +553,6 @@
       `;
     }
 
-    // ✅ dots match the number of slides (next + stat slides)
     function renderBottomPanel(teamKey, nextSlideHtml, extraSlidesHtml, totalSlides){
       const dots = Array.from({length: totalSlides}, (_,i) =>
         `<span class="dot ${i===0?"active":""}"></span>`
@@ -562,7 +572,6 @@
       `;
     }
 
-    // ✅ Wild slides now only: Top PTS + Goals/Assists
     function buildWildSlides(pack){
       if (!pack) return [];
       const { topPts, goals1, ast1 } = pack;
@@ -582,7 +591,6 @@
       return [slidePts, slideGA];
     }
 
-    // Wolves: Top 3 PTS + Other (REB/AST)
     function buildWolvesSlides(pack){
       if (!pack) return [];
       const { topPts, rebL, astL } = pack;
@@ -625,7 +633,6 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
-      // visibility rules (keeps Vikings hidden unless within 7 days)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
         if (d.league === "nfl") return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
@@ -664,7 +671,7 @@
             const slidesArr = (d.league === "nhl") ? buildWildSlides(d.pack) : buildWolvesSlides(d.pack);
             const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows)).join("");
 
-            const totalSlides = 1 + slidesArr.length; // next + stat slides
+            const totalSlides = 1 + slidesArr.length;
             bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml, totalSlides);
           } else {
             bottomHtml = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
