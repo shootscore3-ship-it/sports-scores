@@ -52,33 +52,7 @@
     .score-logo{ width:54px; height:54px; object-fit:contain; }
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
-
-    /* =========================
-       Stats block (Wild/Wolves)
-       ========================= */
-    .stats-block{
-      margin-top:12px;
-      width:100%;
-      padding:12px 14px;
-      border-radius:18px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.10);
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      box-sizing:border-box;
-    }
-    .stat-line{
-      font-size:14px;
-      font-weight:900;
-      letter-spacing:0.6px;
-      text-transform:uppercase;
-      color:rgba(255,255,255,0.80);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .stat-key{ color:rgba(255,255,255,0.55); margin-right:10px; }
+    .game-pill{ font-size:16px; font-weight:900; }
 
     /* =========================
        ✅ BIGGER WHEN COLLAPSED
@@ -91,11 +65,13 @@
     body[data-cols="3"] .opp-logo{ width:124px; height:124px; }
     body[data-cols="3"] .opp-text{ font-size:68px; }
     body[data-cols="3"] .status-badge{ font-size:20px; padding:7px 16px; }
+
     body[data-cols="3"] .score-logo{ width:66px; height:66px; }
     body[data-cols="3"] .score-num{ font-size:82px; }
     body[data-cols="3"] .score-dash{ font-size:82px; }
-    body[data-cols="3"] .stats-block{ padding:14px 16px; border-radius:20px; }
-    body[data-cols="3"] .stat-line{ font-size:16px; }
+    body[data-cols="3"] .game-pill{ font-size:18px; }
+    body[data-cols="3"] .countdown{ font-size:18px; padding:7px 14px; }
+    body[data-cols="3"] .next-time{ font-size:20px; }
 
     /* 2 cards: HUGE broadcast look */
     body[data-cols="2"] .team-logo{ width:340px; height:340px; }
@@ -105,12 +81,14 @@
     body[data-cols="2"] .opp-logo{ width:170px; height:170px; }
     body[data-cols="2"] .opp-text{ font-size:96px; }
     body[data-cols="2"] .status-badge{ font-size:26px; padding:10px 22px; }
+
     body[data-cols="2"] .score-team{ padding:18px 22px; border-radius:18px; }
     body[data-cols="2"] .score-logo{ width:92px; height:92px; }
     body[data-cols="2"] .score-num{ font-size:120px; }
     body[data-cols="2"] .score-dash{ font-size:120px; margin:0 6px; }
-    body[data-cols="2"] .stats-block{ padding:18px 20px; border-radius:24px; gap:10px; }
-    body[data-cols="2"] .stat-line{ font-size:20px; }
+    body[data-cols="2"] .game-pill{ font-size:24px; padding:12px 18px; }
+    body[data-cols="2"] .countdown{ font-size:24px; padding:10px 18px; }
+    body[data-cols="2"] .next-time{ font-size:28px; }
 
     /* 1 card: MAX broadcast look */
     body[data-cols="1"] .team-logo{ width:430px; height:430px; }
@@ -120,12 +98,14 @@
     body[data-cols="1"] .opp-logo{ width:220px; height:220px; }
     body[data-cols="1"] .opp-text{ font-size:128px; }
     body[data-cols="1"] .status-badge{ font-size:34px; padding:12px 28px; border-radius:10px; }
+
     body[data-cols="1"] .score-team{ padding:22px 28px; border-radius:22px; }
     body[data-cols="1"] .score-logo{ width:120px; height:120px; }
     body[data-cols="1"] .score-num{ font-size:160px; }
     body[data-cols="1"] .score-dash{ font-size:160px; margin:0 10px; }
-    body[data-cols="1"] .stats-block{ padding:22px 24px; border-radius:28px; gap:12px; }
-    body[data-cols="1"] .stat-line{ font-size:24px; }
+    body[data-cols="1"] .game-pill{ font-size:30px; padding:14px 22px; }
+    body[data-cols="1"] .countdown{ font-size:30px; padding:12px 22px; }
+    body[data-cols="1"] .next-time{ font-size:34px; }
 
     /* =========================
        REST OF STYLES
@@ -137,6 +117,9 @@
 
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
+    body[data-cols="2"] .next-label{ font-size:14px; letter-spacing:1.4px; }
+    body[data-cols="1"] .next-label{ font-size:16px; letter-spacing:1.6px; }
+
     .opp-row{ display:flex; align-items:center; gap:18px; }
 
     .countdown{
@@ -144,22 +127,65 @@
       letter-spacing:0.4px;
       text-transform:uppercase;
       border-radius:999px;
-      padding:6px 12px;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.08);
     }
-    .next-time{ color:#cfcfcf; letter-spacing:0.2px; }
+
+    .next-time{
+      color:#cfcfcf;
+      letter-spacing:0.2px;
+    }
 
     .score-row{
       display:flex; align-items:center; justify-content:center;
       gap:18px; margin-top:4px;
     }
+    body[data-cols="2"] .score-row{ gap:24px; }
+    body[data-cols="1"] .score-row{ gap:28px; }
+
     .score-team{
       display:flex; align-items:center; gap:12px;
       padding:10px 14px; border-radius:14px;
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
     }
+    .score-team.batting{
+      border:2px solid var(--live);
+      box-shadow:0 0 22px rgba(255,59,59,0.35);
+      background:rgba(255,59,59,0.06);
+    }
+
+    .game-pill{
+      margin-top:12px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
+      color:#cfcfcf;
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+    }
+
+    .alert-row{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    .alert-pill{
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+      background:rgba(255,59,59,0.12);
+      border:1px solid rgba(255,59,59,0.55);
+      color:#fff;
+      box-shadow:0 0 18px rgba(255,59,59,0.18);
+    }
+    body[data-cols="2"] .alert-pill{ font-size:16px; padding:10px 16px; }
+    body[data-cols="1"] .alert-pill{ font-size:18px; padding:12px 18px; }
 
     /* Ticker */
     .ticker-wrap{
@@ -184,6 +210,17 @@
     .ticker-logo-container{ width:120px; height:120px; display:flex; align-items:center; justify-content:center; margin:0 15px; }
     .ticker-team-logo{ width:115px; height:115px; object-fit:contain; }
     .league-badge{ background:#222; color:#888; font-size:24px; padding:5px 15px; border-radius:5px; margin-right:25px; }
+
+    .ticker-batting{
+      display:inline-flex;
+      align-items:center;
+      padding:8px 14px;
+      border-radius:14px;
+      border:3px solid var(--live);
+      background:rgba(255,59,59,0.08);
+      box-shadow:0 0 24px rgba(255,59,59,0.28);
+      line-height:1;
+    }
 
     @keyframes ticker-scroll{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
     @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:0.5;} }
@@ -215,8 +252,17 @@
       }catch(e){ return null; }
     }
 
-    function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
-    function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
+    function teamLogo(t){
+      return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || "";
+    }
+    function teamName(t){
+      return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD";
+    }
+
+    function normalizeDetailForPill(detail){
+      if (!detail) return "";
+      return String(detail).replace(/\s+/g, " ").trim();
+    }
 
     function countdownText(iso){
       if (!iso) return "";
@@ -262,99 +308,6 @@
       return summary ? String(summary) : "";
     }
 
-    /* =========================
-       Leaders (Wild/Wolves) - 10 min cache
-       ========================= */
-    const leadersCache = new Map();
-    const LEADERS_TTL_MS = 10 * 60 * 1000;
-
-    function safeVal(v){ return (v === null || v === undefined) ? "" : String(v).trim(); }
-
-    function findLeaderGroup(data, keywords){
-      const groups = data?.leaders;
-      if (!Array.isArray(groups)) return null;
-      const norm = (s) => String(s || "").toLowerCase();
-      for (const g of groups){
-        const hay = `${norm(g?.name)} ${norm(g?.displayName)} ${norm(g?.abbreviation)}`;
-        if (keywords.some(k => hay.includes(k))) return g;
-      }
-      return null;
-    }
-
-    function formatTop3Points(group){
-      const arr = Array.isArray(group?.leaders) ? group.leaders : [];
-      const top = arr.slice(0, 3).map(x => {
-        const nm = x?.athlete?.displayName || x?.athlete?.shortName || "";
-        const val = safeVal(x?.displayValue);
-        if (!nm || !val) return null;
-        return `${nm} ${val}`;
-      }).filter(Boolean);
-      return top.length ? top.join(" • ") : "";
-    }
-
-    function formatSingleLeader(group){
-      const first = group?.leaders?.[0];
-      const nm = first?.athlete?.displayName || first?.athlete?.shortName || "";
-      const val = safeVal(first?.displayValue);
-      if (!nm || !val) return "";
-      return `${nm} ${val}`;
-    }
-
-    async function getTeamLeadersBlock(team){
-      if (!(team.league === "nhl" || team.league === "nba")) return null;
-
-      const key = `${team.sport}:${team.league}:${team.id}`;
-      const cached = leadersCache.get(key);
-      if (cached && (Date.now() - cached.ts) < LEADERS_TTL_MS) return cached.block;
-
-      const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}/leaders`);
-      if (!data) return null;
-
-      let block = null;
-
-      if (team.league === "nhl") {
-        const ptsGroup = findLeaderGroup(data, ["points", "pts"]);
-        const gGroup   = findLeaderGroup(data, ["goals", "goal", "g"]);
-        const aGroup   = findLeaderGroup(data, ["assists", "assist", "a"]);
-
-        const ptsTop3 = ptsGroup ? formatTop3Points(ptsGroup) : "";
-        const goals1  = gGroup ? formatSingleLeader(gGroup) : "";
-        const ast1    = aGroup ? formatSingleLeader(aGroup) : "";
-
-        block = [
-          ptsTop3 ? { k:"PTS (TOP 3)", v: ptsTop3 } : null,
-          goals1  ? { k:"G", v: goals1 } : null,
-          ast1    ? { k:"A", v: ast1 } : null
-        ].filter(Boolean);
-      }
-
-      if (team.league === "nba") {
-        const ppgGroup = findLeaderGroup(data, ["points per game", "ppg", "points"]);
-        const rebGroup = findLeaderGroup(data, ["rebounds", "rpg", "reb"]);
-        const astGroup = findLeaderGroup(data, ["assists", "apg", "ast"]);
-        const stlGroup = findLeaderGroup(data, ["steals", "spg", "stl"]);
-
-        const ppg1 = ppgGroup ? formatSingleLeader(ppgGroup) : "";
-        const reb1 = rebGroup ? formatSingleLeader(rebGroup) : "";
-        const ast1 = astGroup ? formatSingleLeader(astGroup) : "";
-        const stl1 = stlGroup ? formatSingleLeader(stlGroup) : "";
-
-        block = [
-          ppg1 ? { k:"PPG", v: ppg1 } : null,
-          reb1 ? { k:"REB", v: reb1 } : null,
-          ast1 ? { k:"AST", v: ast1 } : null,
-          stl1 ? { k:"STL", v: stl1 } : null
-        ].filter(Boolean);
-      }
-
-      if (!block || !block.length) block = null;
-      leadersCache.set(key, { ts: Date.now(), block });
-      return block;
-    }
-
-    /* =========================
-       Alerts helpers (same as before)
-       ========================= */
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -426,56 +379,25 @@
       return null;
     }
 
-    /* =========================
-       ✅ Midnight + Doubleheader picker
-       LIVE first, then if there is a PRE game later today show that,
-       else show today's FINAL until midnight, else future PRE.
-       ========================= */
-    function ctDateKey(isoOrDateObj){
-      const d = (isoOrDateObj instanceof Date) ? isoOrDateObj : new Date(isoOrDateObj);
-      return d.toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
-    }
-
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
       );
       if (!events.length) return null;
 
-      const now = Date.now();
-      const todayCT = ctDateKey(new Date());
+      const prio = (e) => {
+        const s = e?.status?.type?.state;
+        if (s === "in") return 0;
+        if (s === "post") return 1;
+        if (s === "pre") return 2;
+        return 3;
+      };
 
-      const live = events.filter(e => e?.status?.type?.state === "in");
-
-      const preToday = events
-        .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) === todayCT)
-        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      const postToday = events
-        .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // most recent first
-
-      const preFuture = events
-        .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
-        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      const postOld = events
-        .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) !== todayCT)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      // 1) LIVE always
-      if (live.length) return live[0];
-
-      // 2) If there is an upcoming game today (doubleheader case), show the next one
-      const nextPreToday = preToday.find(e => new Date(e.date).getTime() >= now) || preToday[0];
-      if (nextPreToday) return nextPreToday;
-
-      // 3) No more games today → keep today's FINAL until midnight
-      if (postToday.length) return postToday[0];
-
-      // 4) Otherwise show next upcoming future game, else last old final
-      if (preFuture.length) return preFuture[0];
-      if (postOld.length) return postOld[0];
+      events.sort((a,b) => {
+        const pa = prio(a), pb = prio(b);
+        if (pa !== pb) return pa - pb;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
 
       return events[0];
     }
@@ -531,8 +453,6 @@
       const standings = await standingsText(team, teamDetails);
       const myAbbrev = String(teamDetails?.team?.abbreviation || "").toUpperCase();
 
-      const leadersBlock = await getTeamLeadersBlock(team);
-
       if (event){
         const comp = event.competitions[0];
         const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
@@ -567,8 +487,6 @@
           logo,
           record,
           standings,
-          leadersBlock,
-          showLeaders: (state !== "in"),  // only when not LIVE
           oppName,
           oppLogo,
           atOrVs,
@@ -602,8 +520,6 @@
         record,
         logo,
         standings,
-        leadersBlock,
-        showLeaders: true,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
@@ -621,17 +537,6 @@
       if (state === "post") return "FINAL";
       if (state === "pre") return "UP NEXT";
       return "OFF DAY";
-    }
-
-    function renderLeadersHtml(block){
-      if (!block || !block.length) return "";
-      return `
-        <div class="stats-block">
-          ${block.map(row => `
-            <div class="stat-line"><span class="stat-key">${row.k}:</span>${row.v}</div>
-          `).join("")}
-        </div>
-      `;
     }
 
     async function updateDashboard(){
@@ -676,18 +581,28 @@
       };
 
       const scoreBlock = (data) => {
+        const pillText = normalizeDetailForPill(data.detail);
+        const alertsHtml = (data.alerts && data.alerts.length)
+          ? `<div class="alert-row">${data.alerts.map(a => `<div class="alert-pill">${a}</div>`).join("")}</div>`
+          : "";
+
+        const myBattingClass = data.myBatting ? "batting" : "";
+        const oppBattingClass = data.oppBatting ? "batting" : "";
+
         return `
           <div class="score-row">
-            <div class="score-team">
+            <div class="score-team ${myBattingClass}">
               <img class="score-logo" src="${data.myLogo}" alt="">
               <div class="score-num">${data.myScore}</div>
             </div>
             <div class="score-dash">-</div>
-            <div class="score-team">
+            <div class="score-team ${oppBattingClass}">
               <div class="score-num">${data.oppScore}</div>
               <img class="score-logo" src="${data.theirLogo}" alt="">
             </div>
           </div>
+          ${alertsHtml}
+          ${pillText ? `<div class="game-pill">${pillText}</div>` : ``}
         `;
       };
 
@@ -705,8 +620,6 @@
           bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
         }
 
-        const leadersHtml = (data.showLeaders && data.leadersBlock) ? renderLeadersHtml(data.leadersBlock) : "";
-
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
@@ -714,7 +627,6 @@
             <div class="name-text">${TEAMS[i].name}</div>
             <div class="record-text">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
-            ${leadersHtml}
           </div>
           ${bottomBlock}
         `;
@@ -735,9 +647,9 @@
       let allItems = [];
 
       const stateRank = (state) => {
-        if (state === "in") return 0;
-        if (state === "pre") return 1;
-        if (state === "post") return 2;
+        if (state === "in") return 0;    // LIVE
+        if (state === "pre") return 1;   // UPCOMING
+        if (state === "post") return 2;  // FINAL
         return 3;
       };
 
@@ -752,6 +664,7 @@
           const rb = stateRank(sb);
           if (ra !== rb) return ra - rb;
 
+          // tie-breaker: earliest start time first
           const ta = new Date(a?.date || 0).getTime();
           const tb = new Date(b?.date || 0).getTime();
           return ta - tb;
@@ -761,6 +674,14 @@
           const comp = game.competitions[0];
           const away = comp.competitors[1], home = comp.competitors[0];
           const state = game.status.type.state;
+
+          let alertClass = "";
+          let alertLabel = "";
+          const alerts = getAlertsForGame(league.l, game);
+          if (alerts.length) {
+            alertClass = "ticker-alert-pulse";
+            alertLabel = `<span class="alert-badge">${alerts[0]}</span>`;
+          }
 
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
           const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
@@ -774,15 +695,24 @@
               })()
             : game.status.type.shortDetail;
 
+          let awayWrapStart = "", awayWrapEnd = "";
+          let homeWrapStart = "", homeWrapEnd = "";
+          if (league.l === "mlb" && state === "in") {
+            const battingSide = mlbBattingSideFromEvent(game);
+            if (battingSide === "away") { awayWrapStart = `<span class="ticker-batting">`; awayWrapEnd = `</span>`; }
+            if (battingSide === "home") { homeWrapStart = `<span class="ticker-batting">`; homeWrapEnd = `</span>`; }
+          }
+
           allItems.push(`
-            <div class="ticker-item">
+            <div class="ticker-item ${alertClass}">
               <div class="league-badge">${league.l.toUpperCase()}</div>
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}" alt=""></div>
-              <span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>
+              ${awayWrapStart}<span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>${awayWrapEnd}
               <span style="color:#222; margin:0 15px;">@</span>
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}" alt=""></div>
-              <span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>
+              ${homeWrapStart}<span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>${homeWrapEnd}
               <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">${detail}</span>
+              ${alertLabel}
             </div>
           `);
         });
