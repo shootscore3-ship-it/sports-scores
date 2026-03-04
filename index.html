@@ -515,19 +515,54 @@
       return null;
     }
 
-    function pickBestEventForTeam(scoreboard, teamId){
-      const events = (scoreboard?.events || []).filter(e =>
-        e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
-      );
-      if (!events.length) return null;
+    function ctDateKey(isoOrDateObj){
+  const d = (isoOrDateObj instanceof Date) ? isoOrDateObj : new Date(isoOrDateObj);
+  return d.toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+}
 
-      const prio = (e) => {
-        const s = e?.status?.type?.state;
-        if (s === "in") return 0;
-        if (s === "post") return 1;
-        if (s === "pre") return 2;
-        return 3;
-      };
+function pickBestEventForTeam(scoreboard, teamId){
+  const events = (scoreboard?.events || []).filter(e =>
+    e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
+  );
+  if (!events.length) return null;
+
+  const now = Date.now();
+  const todayCT = ctDateKey(new Date());
+
+  const live = events.filter(e => e?.status?.type?.state === "in");
+
+  const preToday = events
+    .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) === todayCT)
+    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const postToday = events
+    .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
+    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // most recent first
+
+  const preFuture = events
+    .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
+    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const postOld = events
+    .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) !== todayCT)
+    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // 1) LIVE always
+  if (live.length) return live[0];
+
+  // 2) If there is an upcoming game today (doubleheader case), show the next one
+  const nextPreToday = preToday.find(e => new Date(e.date).getTime() >= now) || preToday[0];
+  if (nextPreToday) return nextPreToday;
+
+  // 3) No more games today → keep today's FINAL until midnight
+  if (postToday.length) return postToday[0];
+
+  // 4) Otherwise show next upcoming future game, else last old final
+  if (preFuture.length) return preFuture[0];
+  if (postOld.length) return postOld[0];
+
+  return events[0];
+}
 
       events.sort((a,b) => {
         const pa = prio(a), pb = prio(b);
