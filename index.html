@@ -12,11 +12,13 @@
       --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
       --cols: 4;
     }
+
     body{
       margin:0; background:var(--bg); color:var(--text);
       font-family:'Inter',sans-serif; width:100vw; height:100vh;
       overflow:hidden; display:flex; flex-direction:column;
     }
+
     .dashboard{
       display:grid;
       grid-template-columns:repeat(var(--cols), 1fr);
@@ -26,6 +28,7 @@
       box-sizing:border-box;
       max-height:calc(100vh - 215px);
     }
+
     .card{
       background:var(--card-bg);
       border-radius:20px;
@@ -55,28 +58,28 @@
     .record-text{ color:#888; font-weight:800; }
     .standings-line{ margin-top:4px; font-size:14px; font-weight:900; color:#9a9a9a; letter-spacing:0.2px; }
 
-    /* Shared NEXT block */
-    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+    /* NEXT (bigger) */
+    .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
-    .opp-row{ display:flex; align-items:center; gap:16px; justify-content:center; }
-    .opp-logo{ width:92px; height:92px; object-fit:contain; }
-    .opp-text{ font-size:54px; font-weight:900; line-height:1; }
+    .opp-row{ display:flex; align-items:center; gap:18px; justify-content:center; }
+    .opp-logo{ width:120px; height:120px; object-fit:contain; }           /* bigger */
+    .opp-text{ font-size:64px; font-weight:900; line-height:1; }          /* bigger */
     .countdown{
-      color:#bdbdbd;
-      letter-spacing:0.4px;
+      color:#d0d0d0;
+      letter-spacing:0.5px;
       text-transform:uppercase;
       border-radius:999px;
-      padding:7px 12px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.08);
+      padding:9px 14px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
       font-weight:900;
-      font-size:14px;
+      font-size:15px;                                                     /* bigger */
     }
     .next-time{
-      color:#cfcfcf;
+      color:#e0e0e0;
       letter-spacing:0.2px;
       font-weight:900;
-      font-size:16px;
+      font-size:18px;                                                     /* bigger */
     }
 
     /* Score block */
@@ -94,20 +97,20 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ Bottom carousel panel (replaces “leaders box + next block”) */
+    /* ✅ Bigger bottom carousel panel */
     .panel{
       width:100%;
-      padding:14px 16px;
-      border-radius:18px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.10);
+      padding:16px 18px;
+      border-radius:20px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.12);
       box-sizing:border-box;
     }
     .panel-header{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      margin-bottom:10px;
+      margin-bottom:12px;
     }
     .panel-title{
       font-size:12px;
@@ -122,9 +125,11 @@
       width:7px; height:7px; border-radius:999px;
       background:rgba(255,255,255,0.18);
     }
-    .dot.active{ background:rgba(255,255,255,0.55); }
+    .dot.active{ background:rgba(255,255,255,0.60); }
 
-    .slides{ position:relative; min-height:170px; }
+    /* taller slide area so it uses the empty space */
+    .slides{ position:relative; min-height:210px; }
+
     .slide{
       position:absolute; inset:0;
       opacity:0; transform:translateY(6px);
@@ -137,14 +142,14 @@
       pointer-events:auto;
     }
 
-    /* Leader rows inside panel */
+    /* Leader rows inside panel (slightly bigger) */
     .leader-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:10px 0;
-      border-top:1px solid rgba(255,255,255,0.06);
+      padding:12px 0;
+      border-top:1px solid rgba(255,255,255,0.07);
     }
     .leader-row:first-child{ border-top:none; padding-top:0; }
 
@@ -153,11 +158,11 @@
       min-width:0;
     }
     .headshot{
-      width:46px; height:46px;
+      width:52px; height:52px;
       border-radius:999px;
       object-fit:cover;
       background:#222;
-      border:1px solid rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.14);
       flex:0 0 auto;
     }
     .leader-text{ min-width:0; text-align:left; }
@@ -170,16 +175,16 @@
       line-height:1.1;
     }
     .leader-v{
-      font-size:16px;
+      font-size:17px;
       font-weight:900;
-      color:rgba(255,255,255,0.95);
+      color:rgba(255,255,255,0.97);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
       max-width: 360px;
     }
     .leader-stat{
-      font-size:18px;
+      font-size:19px;
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
@@ -228,7 +233,6 @@
     ];
 
     const NHL_WILD_CLUB_STATS_URL = "https://api-web.nhle.com/v1/club-stats/MIN/20252026/2";
-
     const NBA_WOLVES_LEAGUE_DASH_URL =
       "https://stats.nba.com/stats/leaguedashplayerstats" +
       "?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=" +
@@ -243,14 +247,9 @@
       try{
         const r = await fetch(workerUrl + encodeURIComponent(url));
         const ct = (r.headers.get("content-type") || "").toLowerCase();
-        if (!ct.includes("application/json") && !ct.includes("text/json")) {
-          const txt = await r.text();
-          return { __nonJson:true, __text:txt, __status:r.status };
-        }
+        if (!ct.includes("application/json") && !ct.includes("text/json")) return null;
         return await r.json();
-      }catch(e){
-        return null;
-      }
+      }catch(e){ return null; }
     }
 
     function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
@@ -259,6 +258,11 @@
     function ctDateKey(d){
       return (d instanceof Date ? d : new Date(d))
         .toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+    }
+
+    function daysUntil(iso){
+      if (!iso) return Infinity;
+      return (new Date(iso).getTime() - Date.now()) / 86400000;
     }
 
     function countdownText(iso){
@@ -300,60 +304,44 @@
       return `${label} • ${time} CT`;
     }
 
-    /* Leaders cache (10 minutes) */
+    // cache
     const LEADERS_TTL_MS = 10 * 60 * 1000;
-    const leadersCache = new Map();
+    const cache = new Map();
     const cacheGet = (k) => {
-      const v = leadersCache.get(k);
+      const v = cache.get(k);
       if (!v) return null;
       if (Date.now() - v.ts > LEADERS_TTL_MS) return null;
-      return v.block;
+      return v.data;
     };
-    const cacheSet = (k, block) => leadersCache.set(k, { ts: Date.now(), block });
+    const cacheSet = (k, data) => cache.set(k, { ts: Date.now(), data });
 
-    /* ----- WILD STATS (slides 2 & 3) ----- */
+    // Wild stats pack
     function wildName(p){
       const fn = p?.firstName?.default || "";
       const ln = p?.lastName?.default || "";
       return (fn + " " + ln).trim() || "Unknown";
     }
+    async function getWildPack(){
+      const cached = cacheGet("wildPack");
+      if (cached) return cached;
+      const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
+      if (!nhl) return null;
 
-    function buildWildLeaders(nhl){
       const skaters = Array.isArray(nhl?.skaters) ? nhl.skaters : [];
       const goalies = Array.isArray(nhl?.goalies) ? nhl.goalies : [];
       if (!skaters.length) return null;
 
-      const topPts = [...skaters].sort((a,b) => (b.points ?? 0) - (a.points ?? 0)).slice(0,3);
-      const goals1 = [...skaters].sort((a,b) => (b.goals ?? 0) - (a.goals ?? 0))[0];
-      const ast1   = [...skaters].sort((a,b) => (b.assists ?? 0) - (a.assists ?? 0))[0];
+      const topPts = [...skaters].sort((a,b)=> (b.points??0)-(a.points??0)).slice(0,3);
+      const goals1 = [...skaters].sort((a,b)=> (b.goals??0)-(a.goals??0))[0];
+      const ast1   = [...skaters].sort((a,b)=> (b.assists??0)-(a.assists??0))[0];
+      const svLeader = goalies.length ? [...goalies].sort((a,b)=> (b.savePct??0)-(a.savePct??0))[0] : null;
 
-      // Save% leader (if goalie data is present)
-      let svLeader = null;
-      if (goalies.length){
-        svLeader = [...goalies].sort((a,b) => (b.savePct ?? 0) - (a.savePct ?? 0))[0];
-      }
-
-      return {
-        topPts,
-        goals1,
-        ast1,
-        svLeader
-      };
-    }
-
-    async function getWildPanels(){
-      const cached = cacheGet("wild_panels");
-      if (cached) return cached;
-
-      const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
-      if (!nhl || nhl.__nonJson) return null;
-
-      const pack = buildWildLeaders(nhl);
-      cacheSet("wild_panels", pack);
+      const pack = { topPts, goals1, ast1, svLeader };
+      cacheSet("wildPack", pack);
       return pack;
     }
 
-    /* ----- WOLVES STATS (slides 2 & 3) ----- */
+    // Wolves stats pack
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
@@ -367,31 +355,27 @@
       const iPTS = idx("PTS");
       const iREB = idx("REB");
       const iAST = idx("AST");
-      const iSTL = idx("STL");
-      if ([iId,iName,iPTS,iREB,iAST,iSTL].some(v => v < 0)) return null;
+      if ([iId,iName,iPTS,iREB,iAST].some(v => v < 0)) return null;
 
       return rows.map(r => ({
         id: r[iId],
         name: r[iName],
         pts: Number(r[iPTS]) || 0,
         reb: Number(r[iREB]) || 0,
-        ast: Number(r[iAST]) || 0,
-        stl: Number(r[iSTL]) || 0,
+        ast: Number(r[iAST]) || 0
       }));
     }
-
     function topBy(players, field){
       let best = null;
       for (const p of players) if (!best || p[field] > best[field]) best = p;
       return best;
     }
-
-    async function getWolvesPanels(){
-      const cached = cacheGet("wolves_panels");
+    async function getWolvesPack(){
+      const cached = cacheGet("wolvesPack");
       if (cached) return cached;
 
       const data = await fetchJson(NBA_WOLVES_LEAGUE_DASH_URL);
-      if (!data || data.__nonJson) return null;
+      if (!data) return null;
 
       const players = parseNbaResultSet(data);
       if (!players || !players.length) return null;
@@ -401,11 +385,11 @@
       const astL = topBy(players, "ast");
 
       const pack = { topPts, rebL, astL };
-      cacheSet("wolves_panels", pack);
+      cacheSet("wolvesPack", pack);
       return pack;
     }
 
-    /* ----- ESPN EVENT PICKER ----- */
+    // ESPN event picker
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -434,7 +418,7 @@
       return events[0];
     }
 
-    async function standingsText(team, teamDetails){
+    async function standingsText(teamDetails){
       const summary = teamDetails?.team?.standingSummary || teamDetails?.team?.standingsSummary || "";
       return summary ? String(summary) : "";
     }
@@ -459,22 +443,19 @@
 
     async function getTeamData(team){
       const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-      let event = pickBestEventForTeam(scoreboard, team.id);
-
-      const todayCT = ctDateKey(new Date());
-      if (event?.status?.type?.state === "post" && ctDateKey(event?.date) !== todayCT) event = null;
+      const event = pickBestEventForTeam(scoreboard, team.id);
 
       const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
-      const standings = await standingsText(team, teamDetails);
+      const standings = await standingsText(teamDetails);
 
-      // Determine NEXT info regardless of state
-      let nextAtOrVs = "vs", nextOppLogo = "", nextOpponent = "TBD", nextIso = null;
+      // next info
+      let nextIso = null, nextAtOrVs = "vs", nextOppLogo = "", nextOpponent = "TBD";
       if (event){
         const comp = event.competitions[0];
-        const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp  = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
+        const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
+        const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
         nextIso = event.date || null;
         nextAtOrVs = (me?.homeAway === "away") ? "@" : "vs";
         nextOppLogo = teamLogo(opp?.team);
@@ -489,39 +470,38 @@
       }
 
       const nextCountdown = nextIso ? countdownText(nextIso) : "";
-      const nextTimeText  = nextIso ? nextLabelAndTime(nextIso) : "TBD";
+      const nextTimeText = nextIso ? nextLabelAndTime(nextIso) : "TBD";
+      const daysUntilNext = daysUntil(nextIso);
 
-      // Wild/Wolves bottom panel data (only when not live)
-      let panelPack = null;
+      // panel packs
       const state = event?.status?.type?.state || "none";
       const showPanel = (team.league === "nhl" || team.league === "nba") && state !== "in";
-
+      let pack = null;
       if (showPanel){
-        if (team.league === "nhl") panelPack = await getWildPanels();
-        if (team.league === "nba") panelPack = await getWolvesPanels();
+        if (team.league === "nhl") pack = await getWildPack();
+        if (team.league === "nba") pack = await getWolvesPack();
       }
 
+      // scores if live/final
+      let myScore="", oppScore="", myLogo="", theirLogo="";
       if (event){
         const comp = event.competitions[0];
-        const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp  = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
-        return {
-          status: state,
-          logo, record, standings,
-          myScore: me?.score ?? "",
-          oppScore: opp?.score ?? "",
-          myLogo: teamLogo(me?.team) || logo,
-          theirLogo: teamLogo(opp?.team) || "",
-          nextAtOrVs, nextOppLogo, nextOpponent, nextCountdown, nextTimeText,
-          panelPack, showPanel
-        };
+        const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
+        const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
+        myScore = me?.score ?? "";
+        oppScore = opp?.score ?? "";
+        myLogo = teamLogo(me?.team) || logo;
+        theirLogo = teamLogo(opp?.team) || "";
       }
 
       return {
-        status: "none",
+        league: team.league,
+        name: team.name,
+        status: state,
         logo, record, standings,
-        nextAtOrVs, nextOppLogo, nextOpponent, nextCountdown, nextTimeText,
-        panelPack, showPanel
+        nextIso, daysUntilNext, nextAtOrVs, nextOppLogo, nextOpponent, nextCountdown, nextTimeText,
+        showPanel, pack,
+        myScore, oppScore, myLogo, theirLogo
       };
     }
 
@@ -530,24 +510,6 @@
       if (state === "post") return "FINAL";
       if (state === "pre") return "UP NEXT";
       return "OFF DAY";
-    }
-
-    /* ----- Bottom rotating panel builder ----- */
-    function renderBottomPanel(teamKey, nextBlockHtml, slidesHtml){
-      const dots = [0,1,2].map(i => `<span class="dot ${i===0?"active":""}"></span>`).join("");
-      return `
-        <div class="panel" data-bottom-carousel="${teamKey}">
-          <div class="panel-header">
-            <div class="panel-title">INFO</div>
-            <div class="dots">${dots}</div>
-          </div>
-
-          <div class="slides">
-            <div class="slide active">${nextBlockHtml}</div>
-            ${slidesHtml}
-          </div>
-        </div>
-      `;
     }
 
     function renderNextSlide(atOrVs, oppLogo, oppName, countdown, timeText){
@@ -585,12 +547,28 @@
       `;
     }
 
-    function buildWildSlidesFromPack(pack){
-      if (!pack) return [];
+    function renderBottomPanel(teamKey, nextSlideHtml, extraSlidesHtml){
+      const dots = [0,1,2].map(i => `<span class="dot ${i===0?"active":""}"></span>`).join("");
+      return `
+        <div class="panel" data-bottom-carousel="${teamKey}">
+          <div class="panel-header">
+            <div class="panel-title">INFO</div>
+            <div class="dots">${dots}</div>
+          </div>
+          <div class="slides">
+            <div class="slide active">${nextSlideHtml}</div>
+            ${extraSlidesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function buildWildSlides(pack){
+      if (!pack) return [[],[],[]];
       const { topPts, goals1, ast1, svLeader } = pack;
 
-      const slidePts = (topPts || []).map((p, i) => ({
-        key: i === 0 ? "PTS (TOP 3)" : "PTS",
+      const slidePts = (topPts || []).map((p,i)=>({
+        key: i===0 ? "PTS (TOP 3)" : "PTS",
         name: wildName(p),
         stat: `${p.points ?? 0}P`,
         headshot: p.headshot || ""
@@ -601,54 +579,41 @@
         { key:"ASSISTS", name: wildName(ast1), stat: `${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" }
       ];
 
-      const slideSV = [];
-      if (svLeader){
-        slideSV.push({
-          key: "SAVE%",
-          name: wildName(svLeader),
-          stat: svLeader.savePct != null ? `${Number(svLeader.savePct).toFixed(3)}` : "",
-          headshot: svLeader.headshot || ""
-        });
-      } else {
-        // graceful fallback: show goals+assists again if goalie data isn't present
-        slideSV.push(...slideGA);
-      }
+      const slideSV = svLeader ? [
+        { key:"SAVE%", name: wildName(svLeader), stat: svLeader.savePct != null ? `${Number(svLeader.savePct).toFixed(3)}` : "", headshot: svLeader.headshot || "" }
+      ] : slideGA;
 
       return [slidePts, slideGA, slideSV];
     }
 
-    function buildWolvesSlidesFromPack(pack){
-      if (!pack) return [];
+    function buildWolvesSlides(pack){
+      if (!pack) return [[],[],[]];
       const { topPts, rebL, astL } = pack;
 
-      const slidePts = (topPts || []).map((p, i) => ({
-        key: i === 0 ? "PTS (TOP 3)" : "PTS",
+      const slidePts = (topPts || []).map((p,i)=>({
+        key: i===0 ? "PTS (TOP 3)" : "PTS",
         name: p.name,
         stat: `${p.pts.toFixed(1)}`,
         headshot: NBA_HEADSHOT(p.id)
       }));
 
-      // Your “one other stat” slide (I chose REB leader + AST leader)
       const slideOther = [
         { key:"REB", name: rebL.name, stat: `${rebL.reb.toFixed(1)}`, headshot: NBA_HEADSHOT(rebL.id) },
-        { key:"AST", name: astL.name, stat: `${astL.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(astL.id) },
+        { key:"AST", name: astL.name, stat: `${astL.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(astL.id) }
       ];
 
-      // Third slide can repeat “other” or you can swap in STL leader later if you want
       return [slidePts, slideOther, slideOther];
     }
 
     function startBottomCarousels(){
-      const boxes = document.querySelectorAll("[data-bottom-carousel]");
-      boxes.forEach(box => {
+      document.querySelectorAll("[data-bottom-carousel]").forEach(box => {
         if (box.dataset.running === "1") return;
         box.dataset.running = "1";
 
         const slides = box.querySelectorAll(".slide");
         const dots = box.querySelectorAll(".dot");
-        if (slides.length <= 1) return;
-
         let idx = 0;
+
         setInterval(() => {
           slides[idx].classList.remove("active");
           dots[idx]?.classList.remove("active");
@@ -661,90 +626,65 @@
 
     async function updateDashboard(){
       const container = document.getElementById("cards-container");
-      const teamResults = await Promise.all(TEAMS.map(t => getTeamData(t)));
-      const now = Date.now();
+      const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
-      const visible = teamResults
-        .map((data, idx) => ({ data, idx }))
-        .filter(({ data, idx }) => {
-          if (data.status === "in" || data.status === "post" || data.status === "pre") return true;
-          const league = TEAMS[idx].league;
-          if (!data.nextTimeText) return league === "nfl" ? false : true;
-          return true;
-        });
+      // ✅ VISIBILITY RULES (this fixes Vikings)
+      const visible = results.filter(d => {
+        if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
 
-      const listToRender = visible.length ? visible : teamResults.map((data, idx) => ({ data, idx }));
-      const cols = Math.max(1, Math.min(4, listToRender.length));
-      document.documentElement.style.setProperty("--cols", cols);
+        if (d.league === "nfl") {
+          return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
+        }
+        return d.daysUntilNext <= HIDE_AFTER_DAYS;
+      });
+
+      const list = visible.length ? visible : results.filter(d => d.league !== "nfl"); // fallback
+
+      document.documentElement.style.setProperty("--cols", Math.max(1, Math.min(4, list.length)));
       container.innerHTML = "";
 
-      const scoreBlock = (data) => `
+      const scoreBlock = (d) => `
         <div class="score-row">
           <div class="score-team">
-            <img class="score-logo" src="${data.myLogo}" alt="">
-            <div class="score-num">${data.myScore}</div>
+            <img class="score-logo" src="${d.myLogo}" alt="">
+            <div class="score-num">${d.myScore}</div>
           </div>
           <div class="score-dash">-</div>
           <div class="score-team">
-            <div class="score-num">${data.oppScore}</div>
-            <img class="score-logo" src="${data.theirLogo}" alt="">
+            <div class="score-num">${d.oppScore}</div>
+            <img class="score-logo" src="${d.theirLogo}" alt="">
           </div>
         </div>
       `;
 
-      listToRender.forEach(({ data, idx }) => {
-        const meta = TEAMS[idx];
+      list.forEach(d => {
         const card = document.createElement("div");
         card.className = "card";
 
         let bottomHtml = "";
-
-        // LIVE / FINAL = show score
-        if (data.status === "in" || data.status === "post") {
-          bottomHtml = scoreBlock(data);
+        if (d.status === "in" || d.status === "post") {
+          bottomHtml = scoreBlock(d);
         } else {
-          // NOT LIVE:
-          // Wild/Wolves use rotating bottom panel
-          if (data.showPanel && (meta.league === "nhl" || meta.league === "nba")) {
-            const nextSlide = renderNextSlide(
-              data.nextAtOrVs,
-              data.nextOppLogo,
-              data.nextOpponent,
-              data.nextCountdown,
-              data.nextTimeText
-            );
-
-            let slides = [];
-            if (meta.league === "nhl") slides = buildWildSlidesFromPack(data.panelPack);
-            if (meta.league === "nba") slides = buildWolvesSlidesFromPack(data.panelPack);
-
+          if (d.showPanel && (d.league === "nhl" || d.league === "nba")) {
+            const nextSlide = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
+            const slides = (d.league === "nhl") ? buildWildSlides(d.pack) : buildWolvesSlides(d.pack);
             const extraSlidesHtml = slides.map(rows => renderLeaderSlide(rows)).join("");
-
-            bottomHtml = renderBottomPanel(meta.league + "_" + meta.name, nextSlide, extraSlidesHtml);
+            bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml);
           } else {
-            // Twins/Vikings keep standard NEXT
-            bottomHtml = renderNextSlide(
-              data.nextAtOrVs,
-              data.nextOppLogo,
-              data.nextOpponent,
-              data.nextCountdown,
-              data.nextTimeText
-            );
+            bottomHtml = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
           }
         }
 
         card.innerHTML = `
           <div class="card-top">
-            <div class="status-badge status-${data.status}">${statusLabel(data.status)}</div>
+            <div class="status-badge status-${d.status}">${statusLabel(d.status)}</div>
           </div>
-
           <div class="card-main">
-            <img class="team-logo" src="${data.logo}" alt="${meta.name}">
-            <div class="name-text">${meta.name}</div>
-            <div class="record-text">${data.record}</div>
-            ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
+            <img class="team-logo" src="${d.logo}" alt="${d.name}">
+            <div class="name-text">${d.name}</div>
+            <div class="record-text">${d.record}</div>
+            ${d.standings ? `<div class="standings-line">${d.standings}</div>` : ``}
           </div>
-
           <div class="card-bottom">${bottomHtml}</div>
         `;
         container.appendChild(card);
