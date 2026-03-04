@@ -58,7 +58,7 @@
     .record-text{ color:#888; font-weight:800; }
     .standings-line{ margin-top:4px; font-size:14px; font-weight:900; color:#9a9a9a; letter-spacing:0.2px; }
 
-    /* NEXT (bigger) */
+    /* NEXT */
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:18px; justify-content:center; }
@@ -97,13 +97,13 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ Bottom carousel panel — NO fill, NO outline */
+    /* Bottom carousel panel — NO fill, NO outline */
     .panel{
       width:100%;
       padding:16px 18px;
       border-radius:20px;
       background:transparent;
-      border:none; /* <- no outline */
+      border:none;
       box-sizing:border-box;
     }
     .panel-header{
@@ -127,7 +127,6 @@
     }
     .dot.active{ background:rgba(255,255,255,0.60); }
 
-    /* uses the empty space */
     .slides{ position:relative; min-height:210px; }
 
     .slide{
@@ -142,23 +141,23 @@
       pointer-events:auto;
     }
 
-    /* Leader rows inside panel */
+    /* ✅ BIGGER stat rows */
     .leader-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
-      padding:12px 0;
+      gap:14px;
+      padding:14px 0;
       border-top:1px solid rgba(255,255,255,0.07);
     }
     .leader-row:first-child{ border-top:none; padding-top:0; }
 
     .leader-left{
-      display:flex; align-items:center; gap:12px;
+      display:flex; align-items:center; gap:14px;
       min-width:0;
     }
     .headshot{
-      width:52px; height:52px;
+      width:66px; height:66px;              /* ✅ bigger */
       border-radius:999px;
       object-fit:cover;
       background:#222;
@@ -167,7 +166,7 @@
     }
     .leader-text{ min-width:0; text-align:left; }
     .leader-k{
-      font-size:11px;
+      font-size:12px;
       font-weight:900;
       letter-spacing:0.8px;
       text-transform:uppercase;
@@ -175,7 +174,7 @@
       line-height:1.1;
     }
     .leader-v{
-      font-size:17px;
+      font-size:22px;                        /* ✅ bigger name */
       font-weight:900;
       color:rgba(255,255,255,0.97);
       white-space:nowrap;
@@ -184,7 +183,7 @@
       max-width: 360px;
     }
     .leader-stat{
-      font-size:19px;
+      font-size:24px;                        /* ✅ bigger totals */
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
@@ -315,7 +314,7 @@
     };
     const cacheSet = (k, data) => cache.set(k, { ts: Date.now(), data });
 
-    // Wild stats pack
+    // Wild stats pack (NO save% now)
     function wildName(p){
       const fn = p?.firstName?.default || "";
       const ln = p?.lastName?.default || "";
@@ -328,15 +327,13 @@
       if (!nhl) return null;
 
       const skaters = Array.isArray(nhl?.skaters) ? nhl.skaters : [];
-      const goalies = Array.isArray(nhl?.goalies) ? nhl.goalies : [];
       if (!skaters.length) return null;
 
       const topPts = [...skaters].sort((a,b)=> (b.points??0)-(a.points??0)).slice(0,3);
       const goals1 = [...skaters].sort((a,b)=> (b.goals??0)-(a.goals??0))[0];
       const ast1   = [...skaters].sort((a,b)=> (b.assists??0)-(a.assists??0))[0];
-      const svLeader = goalies.length ? [...goalies].sort((a,b)=> (b.savePct??0)-(a.savePct??0))[0] : null;
 
-      const pack = { topPts, goals1, ast1, svLeader };
+      const pack = { topPts, goals1, ast1 };
       cacheSet("wildPack", pack);
       return pack;
     }
@@ -473,7 +470,6 @@
       const nextTimeText = nextIso ? nextLabelAndTime(nextIso) : "TBD";
       const daysUntilNext = daysUntil(nextIso);
 
-      // panel packs
       const state = event?.status?.type?.state || "none";
       const showPanel = (team.league === "nhl" || team.league === "nba") && state !== "in";
       let pack = null;
@@ -482,7 +478,6 @@
         if (team.league === "nba") pack = await getWolvesPack();
       }
 
-      // scores if live/final
       let myScore="", oppScore="", myLogo="", theirLogo="";
       if (event){
         const comp = event.competitions[0];
@@ -547,8 +542,12 @@
       `;
     }
 
-    function renderBottomPanel(teamKey, nextSlideHtml, extraSlidesHtml){
-      const dots = [0,1,2].map(i => `<span class="dot ${i===0?"active":""}"></span>`).join("");
+    // ✅ dots match the number of slides (next + stat slides)
+    function renderBottomPanel(teamKey, nextSlideHtml, extraSlidesHtml, totalSlides){
+      const dots = Array.from({length: totalSlides}, (_,i) =>
+        `<span class="dot ${i===0?"active":""}"></span>`
+      ).join("");
+
       return `
         <div class="panel" data-bottom-carousel="${teamKey}">
           <div class="panel-header">
@@ -563,9 +562,10 @@
       `;
     }
 
+    // ✅ Wild slides now only: Top PTS + Goals/Assists
     function buildWildSlides(pack){
-      if (!pack) return [[],[],[]];
-      const { topPts, goals1, ast1, svLeader } = pack;
+      if (!pack) return [];
+      const { topPts, goals1, ast1 } = pack;
 
       const slidePts = (topPts || []).map((p,i)=>({
         key: i===0 ? "PTS (TOP 3)" : "PTS",
@@ -579,15 +579,12 @@
         { key:"ASSISTS", name: wildName(ast1), stat: `${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" }
       ];
 
-      const slideSV = svLeader ? [
-        { key:"SAVE%", name: wildName(svLeader), stat: svLeader.savePct != null ? `${Number(svLeader.savePct).toFixed(3)}` : "", headshot: svLeader.headshot || "" }
-      ] : slideGA;
-
-      return [slidePts, slideGA, slideSV];
+      return [slidePts, slideGA];
     }
 
+    // Wolves: Top 3 PTS + Other (REB/AST)
     function buildWolvesSlides(pack){
-      if (!pack) return [[],[],[]];
+      if (!pack) return [];
       const { topPts, rebL, astL } = pack;
 
       const slidePts = (topPts || []).map((p,i)=>({
@@ -602,7 +599,7 @@
         { key:"AST", name: astL.name, stat: `${astL.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(astL.id) }
       ];
 
-      return [slidePts, slideOther, slideOther];
+      return [slidePts, slideOther];
     }
 
     function startBottomCarousels(){
@@ -628,18 +625,14 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
-      // ✅ VISIBILITY RULES (hides Vikings when > 7 days out)
+      // visibility rules (keeps Vikings hidden unless within 7 days)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
-
-        if (d.league === "nfl") {
-          return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
-        }
+        if (d.league === "nfl") return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
         return d.daysUntilNext <= HIDE_AFTER_DAYS;
       });
 
-      const list = visible.length ? visible : results.filter(d => d.league !== "nfl"); // fallback
-
+      const list = visible.length ? visible : results.filter(d => d.league !== "nfl");
       document.documentElement.style.setProperty("--cols", Math.max(1, Math.min(4, list.length)));
       container.innerHTML = "";
 
@@ -667,9 +660,12 @@
         } else {
           if (d.showPanel && (d.league === "nhl" || d.league === "nba")) {
             const nextSlide = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
-            const slides = (d.league === "nhl") ? buildWildSlides(d.pack) : buildWolvesSlides(d.pack);
-            const extraSlidesHtml = slides.map(rows => renderLeaderSlide(rows)).join("");
-            bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml);
+
+            const slidesArr = (d.league === "nhl") ? buildWildSlides(d.pack) : buildWolvesSlides(d.pack);
+            const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows)).join("");
+
+            const totalSlides = 1 + slidesArr.length; // next + stat slides
+            bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml, totalSlides);
           } else {
             bottomHtml = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
           }
