@@ -83,8 +83,6 @@
     /* =========================
        ✅ BIGGER WHEN COLLAPSED
        ========================= */
-
-    /* 3 cards: big */
     body[data-cols="3"] .team-logo{ width:255px; height:255px; }
     body[data-cols="3"] .name-text{ font-size:46px; }
     body[data-cols="3"] .standings-line{ font-size:17px; }
@@ -97,7 +95,6 @@
     body[data-cols="3"] .stats-block{ padding:14px 16px; border-radius:20px; }
     body[data-cols="3"] .stat-line{ font-size:16px; }
 
-    /* 2 cards: HUGE broadcast look */
     body[data-cols="2"] .team-logo{ width:340px; height:340px; }
     body[data-cols="2"] .name-text{ font-size:62px; }
     body[data-cols="2"] .record-text{ font-size:20px; }
@@ -112,7 +109,6 @@
     body[data-cols="2"] .stats-block{ padding:18px 20px; border-radius:24px; gap:10px; }
     body[data-cols="2"] .stat-line{ font-size:20px; }
 
-    /* 1 card: MAX broadcast look */
     body[data-cols="1"] .team-logo{ width:430px; height:430px; }
     body[data-cols="1"] .name-text{ font-size:84px; }
     body[data-cols="1"] .record-text{ font-size:26px; }
@@ -127,9 +123,7 @@
     body[data-cols="1"] .stats-block{ padding:22px 24px; border-radius:28px; gap:12px; }
     body[data-cols="1"] .stat-line{ font-size:24px; }
 
-    /* =========================
-       REST OF STYLES
-       ========================= */
+    /* Status styles */
     .status-in{ background:var(--live); animation:pulse 2s infinite; }
     .status-post{ color:var(--final-gold); border:1px solid var(--final-gold); }
     .status-pre{ color:#cfcfcf; border:1px solid #444; }
@@ -160,6 +154,11 @@
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
     }
+    .score-team.batting{
+      border:2px solid var(--live);
+      box-shadow:0 0 22px rgba(255,59,59,0.35);
+      background:rgba(255,59,59,0.06);
+    }
 
     /* Ticker */
     .ticker-wrap{
@@ -184,6 +183,16 @@
     .ticker-logo-container{ width:120px; height:120px; display:flex; align-items:center; justify-content:center; margin:0 15px; }
     .ticker-team-logo{ width:115px; height:115px; object-fit:contain; }
     .league-badge{ background:#222; color:#888; font-size:24px; padding:5px 15px; border-radius:5px; margin-right:25px; }
+
+    .ticker-batting{
+      display:inline-flex; align-items:center;
+      padding:8px 14px;
+      border-radius:14px;
+      border:3px solid var(--live);
+      background:rgba(255,59,59,0.08);
+      box-shadow:0 0 24px rgba(255,59,59,0.28);
+      line-height:1;
+    }
 
     @keyframes ticker-scroll{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
     @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:0.5;} }
@@ -217,6 +226,11 @@
 
     function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
     function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
+
+    function ctDateKey(isoOrDateObj){
+      const d = (isoOrDateObj instanceof Date) ? isoOrDateObj : new Date(isoOrDateObj);
+      return d.toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+    }
 
     function countdownText(iso){
       if (!iso) return "";
@@ -262,9 +276,7 @@
       return summary ? String(summary) : "";
     }
 
-    /* =========================
-       Leaders (Wild/Wolves) - 10 min cache
-       ========================= */
+    /* Leaders cache (10 min) */
     const leadersCache = new Map();
     const LEADERS_TTL_MS = 10 * 60 * 1000;
 
@@ -352,70 +364,6 @@
       return block;
     }
 
-    /* =========================
-       Alerts helpers (same as before)
-       ========================= */
-    function toNum(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
-
-    function mlbAlerts(game){
-      const comp = game?.competitions?.[0];
-      const sit = comp?.situation;
-      if (!sit) return [];
-      const on1 = !!sit.onFirst, on2 = !!sit.onSecond, on3 = !!sit.onThird;
-      const inning = toNum(sit.inning) ?? null;
-      const awayScore = toNum(comp?.competitors?.[1]?.score);
-      const homeScore = toNum(comp?.competitors?.[0]?.score);
-
-      const alerts = [];
-      if (on1 && on2 && on3) alerts.push("BASES LOADED");
-      else if (on2 || on3) alerts.push("RISP");
-      if (inning !== null && inning >= 9 && (on1 || on2 || on3) && awayScore !== null && homeScore !== null && awayScore === homeScore) {
-        alerts.push("GO-AHEAD RUN ON");
-      }
-      return alerts;
-    }
-
-    function nhlAlerts(game){
-      const sit = game?.competitions?.[0]?.situation;
-      return sit?.onPowerPlay ? ["POWER PLAY"] : [];
-    }
-
-    function nbaAlerts(game){
-      const comp = game?.competitions?.[0];
-      const sit = comp?.situation;
-      if (!sit) return [];
-      const period = toNum(sit.period);
-      const clock = (sit.clock || "").trim();
-      if (!period || !clock || period < 4) return [];
-      const [mStr, sStr] = clock.split(":");
-      const mins = toNum(mStr), secs = toNum(sStr);
-      if (mins === null || secs === null) return [];
-      const secondsLeft = mins * 60 + secs;
-      if (secondsLeft > 300) return [];
-      const a = toNum(comp?.competitors?.[1]?.score);
-      const h = toNum(comp?.competitors?.[0]?.score);
-      if (a === null || h === null) return [];
-      return Math.abs(a - h) <= 6 ? ["CLUTCH"] : [];
-    }
-
-    function nflAlerts(game){
-      const sit = game?.competitions?.[0]?.situation;
-      return sit?.isRedZone ? ["RED ZONE"] : [];
-    }
-
-    function getAlertsForGame(league, game){
-      const state = game?.status?.type?.state;
-      if (state !== "in") return [];
-      if (league === "mlb") return mlbAlerts(game);
-      if (league === "nhl") return nhlAlerts(game);
-      if (league === "nba") return nbaAlerts(game);
-      if (league === "nfl") return nflAlerts(game);
-      return [];
-    }
-
     function mlbBattingSideFromEvent(event){
       const comp = event?.competitions?.[0];
       const sit = comp?.situation;
@@ -426,16 +374,15 @@
       return null;
     }
 
-    /* =========================
-       ✅ Midnight + Doubleheader picker
-       LIVE first, then if there is a PRE game later today show that,
-       else show today's FINAL until midnight, else future PRE.
-       ========================= */
-    function ctDateKey(isoOrDateObj){
-      const d = (isoOrDateObj instanceof Date) ? isoOrDateObj : new Date(isoOrDateObj);
-      return d.toLocaleDateString("en-US", { timeZone: CT_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+    function getAlertsForGame(league, game){
+      const state = game?.status?.type?.state;
+      if (state !== "in") return [];
+      const sit = game?.competitions?.[0]?.situation;
+      if (league === "nhl" && sit?.onPowerPlay) return ["POWER PLAY"];
+      return [];
     }
 
+    /* ✅ event chooser (midnight + doubleheader), then HARD FAILSAFE: never show yesterday FINAL */
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -453,30 +400,26 @@
 
       const postToday = events
         .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // most recent first
+        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       const preFuture = events
         .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const postOld = events
-        .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) !== todayCT)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
       // 1) LIVE always
       if (live.length) return live[0];
 
-      // 2) If there is an upcoming game today (doubleheader case), show the next one
+      // 2) Next upcoming today (doubleheader / later today)
       const nextPreToday = preToday.find(e => new Date(e.date).getTime() >= now) || preToday[0];
       if (nextPreToday) return nextPreToday;
 
-      // 3) No more games today → keep today's FINAL until midnight
+      // 3) No more games today: keep today's FINAL until midnight
       if (postToday.length) return postToday[0];
 
-      // 4) Otherwise show next upcoming future game, else last old final
+      // 4) Otherwise show next future game
       if (preFuture.length) return preFuture[0];
-      if (postOld.length) return postOld[0];
 
+      // fallback: return first
       return events[0];
     }
 
@@ -523,7 +466,13 @@
 
     async function getTeamData(team){
       const scoreboard = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/scoreboard`);
-      const event = pickBestEventForTeam(scoreboard, team.id);
+      let event = pickBestEventForTeam(scoreboard, team.id);
+
+      // ✅ HARD FAILSAFE: if ESPN scoreboard is stuck on yesterday FINAL, drop it so we show nextEvent instead
+      const todayCT = ctDateKey(new Date());
+      if (event?.status?.type?.state === "post" && ctDateKey(event?.date) !== todayCT) {
+        event = null;
+      }
 
       const teamDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}`);
       const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
@@ -568,7 +517,7 @@
           record,
           standings,
           leadersBlock,
-          showLeaders: (state !== "in"),  // only when not LIVE
+          showLeaders: (state !== "in"),
           oppName,
           oppLogo,
           atOrVs,
@@ -580,6 +529,7 @@
         };
       }
 
+      // Fallback: nextEvent from team endpoint
       const next = teamDetails?.team?.nextEvent?.[0];
       const startIso = next?.date || null;
 
@@ -676,14 +626,17 @@
       };
 
       const scoreBlock = (data) => {
+        const myBattingClass = data.myBatting ? "batting" : "";
+        const oppBattingClass = data.oppBatting ? "batting" : "";
+
         return `
           <div class="score-row">
-            <div class="score-team">
+            <div class="score-team ${myBattingClass}">
               <img class="score-logo" src="${data.myLogo}" alt="">
               <div class="score-num">${data.myScore}</div>
             </div>
             <div class="score-dash">-</div>
-            <div class="score-team">
+            <div class="score-team ${oppBattingClass}">
               <div class="score-num">${data.oppScore}</div>
               <img class="score-logo" src="${data.theirLogo}" alt="">
             </div>
@@ -762,6 +715,14 @@
           const away = comp.competitors[1], home = comp.competitors[0];
           const state = game.status.type.state;
 
+          let alertClass = "";
+          let alertLabel = "";
+          const alerts = getAlertsForGame(league.l, game);
+          if (alerts.length) {
+            alertClass = "ticker-alert-pulse";
+            alertLabel = `<span class="alert-badge">${alerts[0]}</span>`;
+          }
+
           const awayScoreText = (state === "pre") ? "" : (away.score ?? "");
           const homeScoreText = (state === "pre") ? "" : (home.score ?? "");
 
@@ -774,15 +735,24 @@
               })()
             : game.status.type.shortDetail;
 
+          let awayWrapStart = "", awayWrapEnd = "";
+          let homeWrapStart = "", homeWrapEnd = "";
+          if (league.l === "mlb" && state === "in") {
+            const battingSide = mlbBattingSideFromEvent(game);
+            if (battingSide === "away") { awayWrapStart = `<span class="ticker-batting">`; awayWrapEnd = `</span>`; }
+            if (battingSide === "home") { homeWrapStart = `<span class="ticker-batting">`; homeWrapEnd = `</span>`; }
+          }
+
           allItems.push(`
-            <div class="ticker-item">
+            <div class="ticker-item ${alertClass}">
               <div class="league-badge">${league.l.toUpperCase()}</div>
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${away.team.logo}" alt=""></div>
-              <span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>
+              ${awayWrapStart}<span>${away.team.abbreviation}${awayScoreText !== "" ? ` ${awayScoreText}` : ""}</span>${awayWrapEnd}
               <span style="color:#222; margin:0 15px;">@</span>
               <div class="ticker-logo-container"><img class="ticker-team-logo" src="${home.team.logo}" alt=""></div>
-              <span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>
+              ${homeWrapStart}<span>${home.team.abbreviation}${homeScoreText !== "" ? ` ${homeScoreText}` : ""}</span>${homeWrapEnd}
               <span style="margin-left:30px; color:${state === "in" ? "var(--live)" : (state === "post" ? "var(--final-gold)" : "#888")}">${detail}</span>
+              ${alertLabel}
             </div>
           `);
         });
