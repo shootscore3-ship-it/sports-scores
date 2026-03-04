@@ -5,20 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MN Sports Center - 2026 Pro Edition</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
   <style>
     :root{
       --bg:#050505; --card-bg:#111111; --text:#ffffff;
       --live:#ff3b3b; --final-gold:#D4AF37; --accent:#1a1a1a;
       --cols: 4;
     }
-
     body{
       margin:0; background:var(--bg); color:var(--text);
       font-family:'Inter',sans-serif; width:100vw; height:100vh;
       overflow:hidden; display:flex; flex-direction:column;
     }
-
     .dashboard{
       display:grid;
       grid-template-columns:repeat(var(--cols), 1fr);
@@ -28,7 +25,6 @@
       box-sizing:border-box;
       max-height:calc(100vh - 215px);
     }
-
     .card{
       background:var(--card-bg);
       border-radius:20px;
@@ -48,11 +44,7 @@
     .card-middle{
       width:100%;
       margin-top:14px;
-      /* ✅ Ensure NEXT always fits */
-      flex: 0 1 auto;
-      min-height:0;
-      max-height: 260px;   /* clamp leaders area */
-      overflow:hidden;
+      flex: 0 0 auto;
     }
     .card-bottom{ width:100%; margin-top:auto; padding-top:14px; }
 
@@ -73,7 +65,6 @@
     .opp-row{ display:flex; align-items:center; gap:16px; justify-content:center; }
     .opp-logo{ width:92px; height:92px; object-fit:contain; }
     .opp-text{ font-size:54px; font-weight:900; line-height:1; }
-
     .countdown{
       color:#bdbdbd;
       letter-spacing:0.4px;
@@ -107,7 +98,7 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ Compact leaders */
+    /* ✅ Stats carousel (2 rows at a time) */
     .leaders{
       width:100%;
       padding:12px 14px;
@@ -116,30 +107,56 @@
       border:1px solid rgba(255,255,255,0.10);
       box-sizing:border-box;
     }
+    .leaders-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:8px;
+    }
     .leaders-title{
       font-size:12px;
       font-weight:900;
       letter-spacing:1px;
       text-transform:uppercase;
       color:rgba(255,255,255,0.55);
-      margin-bottom:8px;
       text-align:left;
     }
+    .dots{ display:flex; gap:6px; }
+    .dot{
+      width:7px; height:7px; border-radius:999px;
+      background:rgba(255,255,255,0.18);
+    }
+    .dot.active{ background:rgba(255,255,255,0.55); }
+
+    .slides{ position:relative; min-height:120px; }
+    .slide{
+      position:absolute; inset:0;
+      opacity:0; transform:translateY(6px);
+      transition:opacity .35s ease, transform .35s ease;
+      display:flex; flex-direction:column; gap:10px;
+      pointer-events:none;
+    }
+    .slide.active{
+      opacity:1; transform:translateY(0);
+      pointer-events:auto;
+    }
+
     .leader-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      padding:6px 0;
+      padding:10px 0;
       border-top:1px solid rgba(255,255,255,0.06);
     }
-    .leader-row:first-of-type{ border-top:none; padding-top:0; }
+    .leader-row:first-child{ border-top:none; padding-top:0; }
+
     .leader-left{
-      display:flex; align-items:center; gap:10px;
+      display:flex; align-items:center; gap:12px;
       min-width:0;
     }
     .headshot{
-      width:40px; height:40px;
+      width:46px; height:46px;
       border-radius:999px;
       object-fit:cover;
       background:#222;
@@ -156,23 +173,22 @@
       line-height:1.1;
     }
     .leader-v{
-      font-size:14px;
+      font-size:16px;
       font-weight:900;
-      color:rgba(255,255,255,0.92);
+      color:rgba(255,255,255,0.95);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
       max-width: 360px;
     }
     .leader-stat{
-      font-size:15px;
+      font-size:18px;
       font-weight:900;
       color: var(--final-gold);
       white-space:nowrap;
-      flex:0 0 auto;
     }
 
-    /* ticker */
+    /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
       display:flex; align-items:center; overflow:hidden;
@@ -232,7 +248,7 @@
         const ct = (r.headers.get("content-type") || "").toLowerCase();
         if (!ct.includes("application/json") && !ct.includes("text/json")) {
           const txt = await r.text();
-          return { __nonJson: true, __text: txt, __status: r.status };
+          return { __nonJson:true, __text:txt, __status:r.status };
         }
         return await r.json();
       }catch(e){
@@ -287,27 +303,25 @@
       return `${label} • ${time} CT`;
     }
 
-    // ---------- LEADERS CACHE ----------
+    /* Leaders cache (10 min) */
     const LEADERS_TTL_MS = 10 * 60 * 1000;
     const leadersCache = new Map();
-    function cacheGet(key){
-      const v = leadersCache.get(key);
+    const cacheGet = (k) => {
+      const v = leadersCache.get(k);
       if (!v) return null;
       if (Date.now() - v.ts > LEADERS_TTL_MS) return null;
       return v.block;
-    }
-    function cacheSet(key, block){
-      leadersCache.set(key, { ts: Date.now(), block });
-    }
+    };
+    const cacheSet = (k, block) => leadersCache.set(k, { ts: Date.now(), block });
 
-    // Wild leaders (✅ 3 rows total so NEXT fits)
+    // Wild leaders -> 2 slides
     function wildName(p){
-      const fn = p?.firstName?.default || p?.firstName || "";
-      const ln = p?.lastName?.default || p?.lastName || "";
+      const fn = p?.firstName?.default || "";
+      const ln = p?.lastName?.default || "";
       return (fn + " " + ln).trim() || "Unknown";
     }
 
-    function buildWildLeaders(nhl){
+    function buildWildSlides(nhl){
       const skaters = Array.isArray(nhl?.skaters) ? nhl.skaters : [];
       if (!skaters.length) return null;
 
@@ -318,40 +332,41 @@
       const ptsLine = topPts.map(p => `${wildName(p)} ${p.points}P`).join(" • ");
 
       return [
-        { key:"PTS (TOP 3)", name: ptsLine, stat:"", headshot: topPts[0]?.headshot || "" },
-        { key:"GOALS", name:wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
-        { key:"ASSISTS", name:wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
+        [ // slide 1
+          { key:"PTS (TOP 3)", name: ptsLine, stat:"", headshot: topPts[0]?.headshot || "" },
+        ],
+        [ // slide 2
+          { key:"GOALS", name: wildName(goals1), stat:`${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
+          { key:"ASSISTS", name: wildName(ast1), stat:`${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" },
+        ]
       ];
     }
 
-    async function getWildLeaders(){
-      const cached = cacheGet("wild");
+    async function getWildSlides(){
+      const cached = cacheGet("wild_slides");
       if (cached) return cached;
       const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
       if (!nhl || nhl.__nonJson) return null;
-      const block = buildWildLeaders(nhl);
-      cacheSet("wild", block);
-      return block;
+      const slides = buildWildSlides(nhl);
+      cacheSet("wild_slides", slides);
+      return slides;
     }
 
-    // Wolves leaders (4 rows)
+    // Wolves leaders -> 2 slides
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
-
       const headers = rs.headers;
       const rows = rs.rowSet;
       if (!Array.isArray(headers) || !Array.isArray(rows)) return null;
 
       const idx = (h) => headers.indexOf(h);
-
       const iId = idx("PLAYER_ID");
       const iName = idx("PLAYER_NAME");
       const iPTS = idx("PTS");
       const iREB = idx("REB");
       const iAST = idx("AST");
       const iSTL = idx("STL");
-
       if ([iId,iName,iPTS,iREB,iAST,iSTL].some(v => v < 0)) return null;
 
       return rows.map(r => ({
@@ -360,18 +375,16 @@
         pts: Number(r[iPTS]) || 0,
         reb: Number(r[iREB]) || 0,
         ast: Number(r[iAST]) || 0,
-        stl: Number(r[iSTL]) || 0
+        stl: Number(r[iSTL]) || 0,
       }));
     }
-
     function topBy(players, field){
       let best = null;
       for (const p of players) if (!best || p[field] > best[field]) best = p;
       return best;
     }
-
-    async function getWolvesLeaders(){
-      const cached = cacheGet("wolves");
+    async function getWolvesSlides(){
+      const cached = cacheGet("wolves_slides");
       if (cached) return cached;
 
       const data = await fetchJson(NBA_WOLVES_LEAGUE_DASH_URL);
@@ -385,18 +398,22 @@
       const ast = topBy(players, "ast");
       const stl = topBy(players, "stl");
 
-      const block = [
-        { key:"PPG", name: ppg.name, stat: ppg.pts.toFixed(1), headshot: NBA_HEADSHOT(ppg.id) },
-        { key:"REB", name: reb.name, stat: reb.reb.toFixed(1), headshot: NBA_HEADSHOT(reb.id) },
-        { key:"AST", name: ast.name, stat: ast.ast.toFixed(1), headshot: NBA_HEADSHOT(ast.id) },
-        { key:"STL", name: stl.name, stat: stl.stl.toFixed(1), headshot: NBA_HEADSHOT(stl.id) }
+      const slides = [
+        [
+          { key:"PPG", name: ppg.name, stat: ppg.pts.toFixed(1), headshot: NBA_HEADSHOT(ppg.id) },
+          { key:"REB", name: reb.name, stat: reb.reb.toFixed(1), headshot: NBA_HEADSHOT(reb.id) },
+        ],
+        [
+          { key:"AST", name: ast.name, stat: ast.ast.toFixed(1), headshot: NBA_HEADSHOT(ast.id) },
+          { key:"STL", name: stl.name, stat: stl.stl.toFixed(1), headshot: NBA_HEADSHOT(stl.id) },
+        ]
       ];
 
-      cacheSet("wolves", block);
-      return block;
+      cacheSet("wolves_slides", slides);
+      return slides;
     }
 
-    // ---------- event chooser ----------
+    // Event chooser
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -463,11 +480,11 @@
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(team, teamDetails);
 
-      let leadersBlock = null;
+      let slides = null;
       const stateForLeaders = event?.status?.type?.state || "none";
       if (stateForLeaders !== "in") {
-        if (team.league === "nhl") leadersBlock = await getWildLeaders();
-        if (team.league === "nba") leadersBlock = await getWolvesLeaders();
+        if (team.league === "nhl") slides = await getWildSlides();
+        if (team.league === "nba") slides = await getWolvesSlides();
       }
 
       if (event){
@@ -491,14 +508,10 @@
           countdown: (state === "pre" && startIso) ? countdownText(startIso) : "",
           myScore: me?.score ?? "",
           oppScore: opp?.score ?? "",
-          logo,
-          record,
-          standings,
-          leadersBlock,
+          logo, record, standings,
+          slides,
           showLeaders: (state !== "in"),
-          oppName,
-          oppLogo,
-          atOrVs,
+          oppName, oppLogo, atOrVs,
           myLogo: teamLogo(me?.team) || logo,
           theirLogo: oppLogo
         };
@@ -510,10 +523,8 @@
 
       return {
         status:"none",
-        record,
-        logo,
-        standings,
-        leadersBlock,
+        record, logo, standings,
+        slides,
         showLeaders: true,
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
@@ -531,25 +542,58 @@
       return "OFF DAY";
     }
 
-    function renderLeaders(block){
-      if (!block || !block.length) return "";
-      return `
-        <div class="leaders">
-          <div class="leaders-title">Leaders</div>
-          ${block.map(row => `
+    function renderSlides(slides, teamKey){
+      if (!slides || !slides.length) return "";
+
+      const dots = slides.map((_,i)=> `<span class="dot ${i===0?"active":""}"></span>`).join("");
+
+      const slideHtml = slides.map((rows, i) => `
+        <div class="slide ${i===0?"active":""}">
+          ${rows.map(r => `
             <div class="leader-row">
               <div class="leader-left">
-                <img class="headshot" src="${row.headshot || ""}" alt="">
+                <img class="headshot" src="${r.headshot || ""}" alt="">
                 <div class="leader-text">
-                  <div class="leader-k">${row.key}</div>
-                  <div class="leader-v">${row.name}</div>
+                  <div class="leader-k">${r.key}</div>
+                  <div class="leader-v">${r.name}</div>
                 </div>
               </div>
-              <div class="leader-stat">${row.stat || ""}</div>
+              <div class="leader-stat">${r.stat || ""}</div>
             </div>
           `).join("")}
         </div>
+      `).join("");
+
+      return `
+        <div class="leaders" data-carousel="${teamKey}">
+          <div class="leaders-header">
+            <div class="leaders-title">LEADERS</div>
+            <div class="dots">${dots}</div>
+          </div>
+          <div class="slides">${slideHtml}</div>
+        </div>
       `;
+    }
+
+    function startCarousels(){
+      const boxes = document.querySelectorAll("[data-carousel]");
+      boxes.forEach(box => {
+        if (box.dataset.running === "1") return;
+        box.dataset.running = "1";
+
+        const slides = box.querySelectorAll(".slide");
+        const dots = box.querySelectorAll(".dot");
+        if (slides.length <= 1) return;
+
+        let idx = 0;
+        setInterval(() => {
+          slides[idx].classList.remove("active");
+          dots[idx]?.classList.remove("active");
+          idx = (idx + 1) % slides.length;
+          slides[idx].classList.add("active");
+          dots[idx]?.classList.add("active");
+        }, 5200);
+      });
     }
 
     async function updateDashboard(){
@@ -561,10 +605,8 @@
         .map((data, idx) => ({ data, idx }))
         .filter(({ data, idx }) => {
           if (data.status === "in" || data.status === "post" || data.status === "pre") return true;
-
           const league = TEAMS[idx].league;
           if (!data.startIso) return league === "nfl" ? false : true;
-
           const diffDays = (new Date(data.startIso).getTime() - now) / 86400000;
           if (league === "nfl") return diffDays <= NFL_SHOW_WITHIN_DAYS;
           return diffDays <= HIDE_AFTER_DAYS;
@@ -573,7 +615,6 @@
       const listToRender = visible.length ? visible : teamResults.map((data, idx) => ({ data, idx }));
       const cols = Math.max(1, Math.min(4, listToRender.length));
       document.documentElement.style.setProperty("--cols", cols);
-      document.body.setAttribute("data-cols", String(cols));
 
       container.innerHTML = "";
 
@@ -612,7 +653,10 @@
         const card = document.createElement("div");
         card.className = "card";
 
-        const leadersHtml = (data.showLeaders && (meta.league === "nhl" || meta.league === "nba")) ? renderLeaders(data.leadersBlock) : "";
+        const leadersHtml =
+          data.showLeaders && (meta.league === "nhl" || meta.league === "nba")
+            ? renderSlides(data.slides, meta.league + "_" + meta.name)
+            : "";
 
         let bottomHtml = "";
         if (data.status === "in" || data.status === "post") bottomHtml = scoreBlock(data);
@@ -631,16 +675,14 @@
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
           </div>
 
-          <div class="card-middle">
-            ${leadersHtml}
-          </div>
+          <div class="card-middle">${leadersHtml}</div>
 
-          <div class="card-bottom">
-            ${bottomHtml}
-          </div>
+          <div class="card-bottom">${bottomHtml}</div>
         `;
         container.appendChild(card);
       });
+
+      startCarousels();
     }
 
     async function updateTicker(){
