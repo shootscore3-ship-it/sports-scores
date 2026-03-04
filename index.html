@@ -62,8 +62,8 @@
     .next-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
     .next-label{ color:#444; font-size:12px; font-weight:900; letter-spacing:1px; }
     .opp-row{ display:flex; align-items:center; gap:18px; justify-content:center; }
-    .opp-logo{ width:120px; height:120px; object-fit:contain; }           /* bigger */
-    .opp-text{ font-size:64px; font-weight:900; line-height:1; }          /* bigger */
+    .opp-logo{ width:120px; height:120px; object-fit:contain; }
+    .opp-text{ font-size:64px; font-weight:900; line-height:1; }
     .countdown{
       color:#d0d0d0;
       letter-spacing:0.5px;
@@ -73,13 +73,13 @@
       background:rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.10);
       font-weight:900;
-      font-size:15px;                                                     /* bigger */
+      font-size:15px;
     }
     .next-time{
       color:#e0e0e0;
       letter-spacing:0.2px;
       font-weight:900;
-      font-size:18px;                                                     /* bigger */
+      font-size:18px;
     }
 
     /* Score block */
@@ -97,13 +97,13 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* ✅ Bigger bottom carousel panel */
+    /* ✅ Bottom carousel panel — NO fill, NO outline */
     .panel{
       width:100%;
       padding:16px 18px;
       border-radius:20px;
-      background:rgba(255,255,255,0.05);
-      border:1px solid rgba(255,255,255,0.12);
+      background:transparent;
+      border:none; /* <- no outline */
       box-sizing:border-box;
     }
     .panel-header{
@@ -117,7 +117,7 @@
       font-weight:900;
       letter-spacing:1px;
       text-transform:uppercase;
-      color:rgba(255,255,255,0.55);
+      color:rgba(255,255,255,0.45);
       text-align:left;
     }
     .dots{ display:flex; gap:6px; }
@@ -127,7 +127,7 @@
     }
     .dot.active{ background:rgba(255,255,255,0.60); }
 
-    /* taller slide area so it uses the empty space */
+    /* uses the empty space */
     .slides{ position:relative; min-height:210px; }
 
     .slide{
@@ -142,7 +142,7 @@
       pointer-events:auto;
     }
 
-    /* Leader rows inside panel (slightly bigger) */
+    /* Leader rows inside panel */
     .leader-row{
       display:flex;
       align-items:center;
@@ -628,7 +628,7 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
-      // ✅ VISIBILITY RULES (this fixes Vikings)
+      // ✅ VISIBILITY RULES (hides Vikings when > 7 days out)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
 
