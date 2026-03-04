@@ -55,6 +55,33 @@
     .game-pill{ font-size:16px; font-weight:900; }
 
     /* =========================
+       Stats block (Wild/Wolves)
+       ========================= */
+    .stats-block{
+      margin-top:12px;
+      width:100%;
+      padding:12px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      box-sizing:border-box;
+    }
+    .stat-line{
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.80);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .stat-key{ color:rgba(255,255,255,0.55); margin-right:10px; }
+
+    /* =========================
        ✅ BIGGER WHEN COLLAPSED
        ========================= */
 
@@ -73,6 +100,9 @@
     body[data-cols="3"] .countdown{ font-size:18px; padding:7px 14px; }
     body[data-cols="3"] .next-time{ font-size:20px; }
 
+    body[data-cols="3"] .stats-block{ padding:14px 16px; border-radius:20px; }
+    body[data-cols="3"] .stat-line{ font-size:16px; }
+
     /* 2 cards: HUGE broadcast look */
     body[data-cols="2"] .team-logo{ width:340px; height:340px; }
     body[data-cols="2"] .name-text{ font-size:62px; }
@@ -90,6 +120,9 @@
     body[data-cols="2"] .countdown{ font-size:24px; padding:10px 18px; }
     body[data-cols="2"] .next-time{ font-size:28px; }
 
+    body[data-cols="2"] .stats-block{ padding:18px 20px; border-radius:24px; gap:10px; }
+    body[data-cols="2"] .stat-line{ font-size:20px; }
+
     /* 1 card: MAX broadcast look */
     body[data-cols="1"] .team-logo{ width:430px; height:430px; }
     body[data-cols="1"] .name-text{ font-size:84px; }
@@ -106,6 +139,9 @@
     body[data-cols="1"] .game-pill{ font-size:30px; padding:14px 22px; }
     body[data-cols="1"] .countdown{ font-size:30px; padding:12px 22px; }
     body[data-cols="1"] .next-time{ font-size:34px; }
+
+    body[data-cols="1"] .stats-block{ padding:22px 24px; border-radius:28px; gap:12px; }
+    body[data-cols="1"] .stat-line{ font-size:24px; }
 
     /* =========================
        REST OF STYLES
@@ -131,10 +167,7 @@
       border:1px solid rgba(255,255,255,0.08);
     }
 
-    .next-time{
-      color:#cfcfcf;
-      letter-spacing:0.2px;
-    }
+    .next-time{ color:#cfcfcf; letter-spacing:0.2px; }
 
     .score-row{
       display:flex; align-items:center; justify-content:center;
@@ -308,6 +341,109 @@
       return summary ? String(summary) : "";
     }
 
+    /* =========================
+       ✅ Leaders (Wild/Wolves)
+       ========================= */
+    const leadersCache = new Map();
+    const LEADERS_TTL_MS = 10 * 60 * 1000;
+
+    function safeVal(v){
+      return (v === null || v === undefined) ? "" : String(v).trim();
+    }
+
+    function findLeaderGroup(data, keywords){
+      const groups = data?.leaders;
+      if (!Array.isArray(groups)) return null;
+
+      const norm = (s) => String(s || "").toLowerCase();
+
+      // try keyword match against group.name/displayName/abbreviation
+      for (const g of groups){
+        const hay = `${norm(g?.name)} ${norm(g?.displayName)} ${norm(g?.abbreviation)}`;
+        if (keywords.some(k => hay.includes(k))) return g;
+      }
+      return null;
+    }
+
+    function formatTop3Points(group){
+      const arr = Array.isArray(group?.leaders) ? group.leaders : [];
+      const top = arr.slice(0, 3).map(x => {
+        const nm = x?.athlete?.displayName || x?.athlete?.shortName || "";
+        const val = safeVal(x?.displayValue);
+        if (!nm || !val) return null;
+        return `${nm} ${val}`;
+      }).filter(Boolean);
+
+      return top.length ? top.join(" • ") : "";
+    }
+
+    function formatSingleLeader(group){
+      const first = group?.leaders?.[0];
+      const nm = first?.athlete?.displayName || first?.athlete?.shortName || "";
+      const val = safeVal(first?.displayValue);
+      if (!nm || !val) return "";
+      return `${nm} ${val}`;
+    }
+
+    async function getTeamLeadersBlock(team){
+      // only for Wild + Wolves
+      if (!(team.league === "nhl" || team.league === "nba")) return null;
+
+      const key = `${team.sport}:${team.league}:${team.id}`;
+      const cached = leadersCache.get(key);
+      if (cached && (Date.now() - cached.ts) < LEADERS_TTL_MS) return cached.block;
+
+      const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${team.sport}/${team.league}/teams/${team.id}/leaders`);
+      if (!data) return null;
+
+      let block = null;
+
+      if (team.league === "nhl") {
+        // Points group (top 3)
+        const ptsGroup = findLeaderGroup(data, ["points", "pts"]);
+        const gGroup   = findLeaderGroup(data, ["goals", "goal", "g"]);
+        const aGroup   = findLeaderGroup(data, ["assists", "assist", "a"]);
+
+        const ptsTop3 = ptsGroup ? formatTop3Points(ptsGroup) : "";
+        const goals1  = gGroup ? formatSingleLeader(gGroup) : "";
+        const ast1    = aGroup ? formatSingleLeader(aGroup) : "";
+
+        block = [
+          ptsTop3 ? { k:"PTS (TOP 3)", v: ptsTop3 } : null,
+          goals1  ? { k:"G", v: goals1 } : null,
+          ast1    ? { k:"A", v: ast1 } : null
+        ].filter(Boolean);
+      }
+
+      if (team.league === "nba") {
+        const ppgGroup = findLeaderGroup(data, ["points per game", "ppg", "points"]);
+        const rebGroup = findLeaderGroup(data, ["rebounds", "rpg", "reb"]);
+        const astGroup = findLeaderGroup(data, ["assists", "apg", "ast"]);
+        const stlGroup = findLeaderGroup(data, ["steals", "spg", "stl"]);
+
+        const ppg1 = ppgGroup ? formatSingleLeader(ppgGroup) : "";
+        const reb1 = rebGroup ? formatSingleLeader(rebGroup) : "";
+        const ast1 = astGroup ? formatSingleLeader(astGroup) : "";
+        const stl1 = stlGroup ? formatSingleLeader(stlGroup) : "";
+
+        block = [
+          ppg1 ? { k:"PPG", v: ppg1 } : null,
+          reb1 ? { k:"REB", v: reb1 } : null,
+          ast1 ? { k:"AST", v: ast1 } : null,
+          stl1 ? { k:"STL", v: stl1 } : null
+        ].filter(Boolean);
+      }
+
+      // If we failed to build anything, return null
+      if (!block || !block.length) block = null;
+
+      leadersCache.set(key, { ts: Date.now(), block });
+      return block;
+    }
+
+    /* =========================
+       Alerts + helper logic
+       ========================= */
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -453,6 +589,9 @@
       const standings = await standingsText(team, teamDetails);
       const myAbbrev = String(teamDetails?.team?.abbreviation || "").toUpperCase();
 
+      // We'll compute leaders block, but only DISPLAY it when NOT LIVE.
+      const leadersBlock = await getTeamLeadersBlock(team);
+
       if (event){
         const comp = event.competitions[0];
         const me   = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
@@ -487,6 +626,8 @@
           logo,
           record,
           standings,
+          leadersBlock,
+          showLeaders: (state !== "in"),   // ✅ only when not LIVE
           oppName,
           oppLogo,
           atOrVs,
@@ -520,6 +661,8 @@
         record,
         logo,
         standings,
+        leadersBlock,
+        showLeaders: true,             // ✅ definitely not live
         startIso,
         countdown: startIso ? countdownText(startIso) : "",
         nextTime: startIso ? nextLabelAndTime(startIso) : "TBD",
@@ -537,6 +680,17 @@
       if (state === "post") return "FINAL";
       if (state === "pre") return "UP NEXT";
       return "OFF DAY";
+    }
+
+    function renderLeadersHtml(block){
+      if (!block || !block.length) return "";
+      return `
+        <div class="stats-block">
+          ${block.map(row => `
+            <div class="stat-line"><span class="stat-key">${row.k}:</span>${row.v}</div>
+          `).join("")}
+        </div>
+      `;
     }
 
     async function updateDashboard(){
@@ -620,6 +774,8 @@
           bottomBlock = opponentBlock(data.nextAtOrVs, data.nextOppLogo, data.nextOpponent, data.nextTime, data.countdown);
         }
 
+        const leadersHtml = (data.showLeaders && data.leadersBlock) ? renderLeadersHtml(data.leadersBlock) : "";
+
         card.innerHTML = `
           <div class="${badgeClass}">${statusLabel(data.status)}</div>
           <img class="team-logo" src="${data.logo}" alt="${TEAMS[i].name} logo">
@@ -627,6 +783,7 @@
             <div class="name-text">${TEAMS[i].name}</div>
             <div class="record-text">${data.record}</div>
             ${data.standings ? `<div class="standings-line">${data.standings}</div>` : ``}
+            ${leadersHtml}
           </div>
           ${bottomBlock}
         `;
@@ -647,9 +804,9 @@
       let allItems = [];
 
       const stateRank = (state) => {
-        if (state === "in") return 0;    // LIVE
-        if (state === "pre") return 1;   // UPCOMING
-        if (state === "post") return 2;  // FINAL
+        if (state === "in") return 0;
+        if (state === "pre") return 1;
+        if (state === "post") return 2;
         return 3;
       };
 
@@ -664,7 +821,6 @@
           const rb = stateRank(sb);
           if (ra !== rb) return ra - rb;
 
-          // tie-breaker: earliest start time first
           const ta = new Date(a?.date || 0).getTime();
           const tb = new Date(b?.date || 0).getTime();
           return ta - tb;
