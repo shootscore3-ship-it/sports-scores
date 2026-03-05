@@ -257,8 +257,7 @@
 
     // Twins (MLB)
     const MLB_TWINS_TEAM_ID = 142;
-    const MLB_SEASON = new Date().getFullYear(); // 2026
-    let MLB_GAME_TYPE = "S"; // stays S until a regular-season game date is <= today
+    const MLB_SEASON = new Date().getFullYear();
     const MLB_HEADSHOT = (personId) =>
       `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_auto:best/v1/people/${personId}/headshot/67/current`;
 
@@ -334,6 +333,64 @@
 
       const time = start.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
       return `${label} • ${time} CT`;
+    }
+
+    // ---------------- MLB NEXT GAME (Twins) via MLB StatsAPI schedule ----------------
+    async function getTwinsNextGame(){
+      const cacheKey = `twinsNext:${MLB_SEASON}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const now = Date.now();
+      const today = new Date().toISOString().slice(0,10);
+      const endDateObj = new Date(Date.now() + 14*86400000);
+      const endDate = endDateObj.toISOString().slice(0,10);
+
+      // Decide if regular season has started (for Twins) — if not, use spring training
+      const checkRegUrl =
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}` +
+        `&gameType=R&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
+
+      const regCheck = await fetchJson(checkRegUrl);
+      const regStarted = (regCheck?.dates || []).some(d => (d?.games || []).length > 0);
+
+      const gameType = regStarted ? "R" : "S";
+
+      const schedUrl =
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}` +
+        `&gameType=${gameType}&startDate=${today}&endDate=${endDate}`;
+
+      const sched = await fetchJson(schedUrl);
+      const dates = sched?.dates || [];
+
+      // Flatten games and choose the soonest game with start time in the future
+      let best = null;
+      for (const d of dates){
+        for (const g of (d?.games || [])){
+          const iso = g?.gameDate;
+          const t = iso ? new Date(iso).getTime() : 0;
+          if (!t || t <= now) continue;
+
+          const teams = g?.teams || {};
+          const home = teams?.home?.team;
+          const away = teams?.away?.team;
+
+          const isAway = String(away?.id) === String(MLB_TWINS_TEAM_ID);
+          const opp = isAway ? home : away;
+
+          best = {
+            nextIso: iso,
+            nextAtOrVs: isAway ? "@" : "vs",
+            nextOpponent: opp?.abbreviation || opp?.name || "TBD",
+            nextOppLogo: "", // (optional later)
+          };
+          break;
+        }
+        if (best) break;
+      }
+
+      cacheSet(cacheKey, best);
+      return best;
     }
 
     // ---------------- Wild pack ----------------
@@ -450,7 +507,7 @@
       return [slidePts, slideOther];
     }
 
-    // ---------------- Twins pack (MLB) — FULL TEAM, auto Spring->Regular ----------------
+    // ---------------- Twins pack (MLB) — your working stat slides ----------------
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -478,30 +535,24 @@
         [0]?.x || null;
     }
 
-    // Only switch to Regular Season once a regular-season game date is <= today.
     async function detectMlbGameType(){
-      const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+      const today = new Date().toISOString().slice(0,10);
       const scheduleUrl =
-        `https://statsapi.mlb.com/api/v1/schedule` +
-        `?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}&gameType=R` +
-        `&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}` +
+        `&gameType=R&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
 
       const sched = await fetchJson(scheduleUrl);
       const dates = sched?.dates || [];
-      const hasRegularGameAlready = dates.some(d => (d?.games || []).length > 0);
-
-      MLB_GAME_TYPE = hasRegularGameAlready ? "R" : "S";
+      return dates.some(d => (d?.games || []).length > 0) ? "R" : "S";
     }
 
-    async function mlbTeamStats(group){
+    async function mlbTeamStats(group, gameType){
       const url =
         `https://statsapi.mlb.com/api/v1/stats` +
-        `?stats=season` +
-        `&group=${encodeURIComponent(group)}` +
+        `?stats=season&group=${encodeURIComponent(group)}` +
         `&season=${encodeURIComponent(MLB_SEASON)}` +
-        `&gameType=${encodeURIComponent(MLB_GAME_TYPE)}` +
-        `&sportId=1` +
-        `&teamId=${encodeURIComponent(MLB_TWINS_TEAM_ID)}` +
+        `&gameType=${encodeURIComponent(gameType)}` +
+        `&sportId=1&teamId=${encodeURIComponent(MLB_TWINS_TEAM_ID)}` +
         `&playerPool=ALL`;
 
       const data = await fetchJson(url);
@@ -513,16 +564,14 @@
       const cached = cacheGet("twinsPack");
       if (cached) return cached;
 
-      await detectMlbGameType();
+      const gameType = await detectMlbGameType();
 
-      // Try chosen gameType first (S in spring). If empty and it chose R, fall back to S.
-      let hitters = await mlbTeamStats("hitting");
-      let pitchers = await mlbTeamStats("pitching");
+      let hitters = await mlbTeamStats("hitting", gameType);
+      let pitchers = await mlbTeamStats("pitching", gameType);
 
-      if ((!hitters.length && !pitchers.length) && MLB_GAME_TYPE === "R") {
-        MLB_GAME_TYPE = "S";
-        hitters = await mlbTeamStats("hitting");
-        pitchers = await mlbTeamStats("pitching");
+      if ((!hitters.length && !pitchers.length) && gameType === "R") {
+        hitters = await mlbTeamStats("hitting", "S");
+        pitchers = await mlbTeamStats("pitching", "S");
       }
 
       if (!hitters.length && !pitchers.length) return null;
@@ -560,6 +609,7 @@
     }
 
     // ---------------- ESPN event picker + opponent ----------------
+    // Fix: never pick a "pre" event that's already in the past
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -567,24 +617,21 @@
       if (!events.length) return null;
 
       const now = Date.now();
-      const todayCT = ctDateKey(new Date());
 
       const live = events.filter(e => e?.status?.type?.state === "in");
-      const preToday = events
-        .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) === todayCT)
-        .sort((a,b) => new Date(a.date) - new Date(b.date));
-      const postToday = events
-        .filter(e => e?.status?.type?.state === "post" && ctDateKey(e?.date) === todayCT)
-        .sort((a,b) => new Date(b.date) - new Date(a.date));
+
       const preFuture = events
-        .filter(e => e?.status?.type?.state === "pre" && ctDateKey(e?.date) !== todayCT)
+        .filter(e => e?.status?.type?.state === "pre" && new Date(e?.date || 0).getTime() > now)
         .sort((a,b) => new Date(a.date) - new Date(b.date));
 
+      const postRecent = events
+        .filter(e => e?.status?.type?.state === "post")
+        .sort((a,b) => new Date(b.date) - new Date(a.date));
+
       if (live.length) return live[0];
-      const nextPreToday = preToday.find(e => new Date(e.date).getTime() >= now) || preToday[0];
-      if (nextPreToday) return nextPreToday;
-      if (postToday.length) return postToday[0];
       if (preFuture.length) return preFuture[0];
+      if (postRecent.length) return postRecent[0];
+
       return events[0];
     }
 
@@ -620,9 +667,19 @@
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(teamDetails);
 
-      // next info
+      // next info (default ESPN)
       let nextIso = null, nextAtOrVs = "vs", nextOppLogo = "", nextOpponent = "TBD";
-      if (event){
+
+      // ✅ MLB override: use MLB StatsAPI schedule for Twins next game (fixes wrong “Tue 3/3” issue)
+      if (team.league === "mlb" && team.name === "Twins") {
+        const mlbNext = await getTwinsNextGame();
+        if (mlbNext) {
+          nextIso = mlbNext.nextIso;
+          nextAtOrVs = mlbNext.nextAtOrVs;
+          nextOppLogo = mlbNext.nextOppLogo || "";
+          nextOpponent = mlbNext.nextOpponent || "TBD";
+        }
+      } else if (event){
         const comp = event.competitions[0];
         const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
         const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
@@ -659,7 +716,7 @@
       if (event){
         const comp = event.competitions[0];
         const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp = comp.competitors.find(c => String(c?.team?.id) === String(team.id) ? false : true);
+        const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
         myScore = me?.score ?? "";
         oppScore = opp?.score ?? "";
         myLogo = teamLogo(me?.team) || logo;
@@ -691,8 +748,11 @@
           <div class="next-label">NEXT</div>
           <div class="opp-row">
             <div class="opp-text">${atOrVs}</div>
-            ${hasLogo ? `<img class="opp-logo" src="${oppLogo}" alt="">`
-                      : `<div class="opp-text">${oppName}</div>`}
+            ${
+              hasLogo
+                ? `<img class="opp-logo" src="${oppLogo}" alt="">`
+                : `<div class="opp-text">${oppName}</div>`
+            }
           </div>
           ${countdown ? `<div class="countdown">${countdown}</div>` : ``}
           <div class="next-time">${timeText || "TBD"}</div>
