@@ -257,8 +257,8 @@
 
     // Twins (MLB)
     const MLB_TWINS_TEAM_ID = 142;
-    const MLB_SEASON = new Date().getFullYear(); // 2026
-    let MLB_GAME_TYPE = "S"; // stays S until a regular-season game date is <= today
+    const MLB_SEASON = new Date().getFullYear();     // 2026 in your case
+    let MLB_GAME_TYPE = "S";                         // auto switches to "R" when regular season exists
     const MLB_HEADSHOT = (personId) =>
       `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_auto:best/v1/people/${personId}/headshot/67/current`;
 
@@ -451,21 +451,33 @@
     }
 
     // ---------------- Twins pack (MLB) — FULL TEAM, auto Spring->Regular ----------------
+    async function detectMlbGameType(){
+      const scheduleUrl =
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}&gameType=R`;
+      const sched = await fetchJson(scheduleUrl);
+      const dates = sched?.dates || [];
+      const hasRegularSeason = dates.some(d => (d?.games || []).length > 0);
+      MLB_GAME_TYPE = hasRegularSeason ? "R" : "S";
+    }
+
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     }
+
     function fmtAvg(v){
       const n = toNum(v);
       if (n == null) return "—";
       if (n > 0 && n < 1) return n.toFixed(3).replace(/^0/, "");
       return n.toFixed(3);
     }
+
     function fmtEra(v){
       const n = toNum(v);
       if (n == null) return "—";
       return n.toFixed(2);
     }
+
     function mlbName(s){ return s?.player?.fullName || s?.player?.name || "—"; }
     function mlbId(s){ return s?.player?.id || null; }
 
@@ -476,21 +488,6 @@
         .filter(o => o.v != null)
         .sort((a,b) => (a.v - b.v) * mult)
         [0]?.x || null;
-    }
-
-    // Only switch to Regular Season once a regular-season game date is <= today.
-    async function detectMlbGameType(){
-      const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-      const scheduleUrl =
-        `https://statsapi.mlb.com/api/v1/schedule` +
-        `?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}&gameType=R` +
-        `&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
-
-      const sched = await fetchJson(scheduleUrl);
-      const dates = sched?.dates || [];
-      const hasRegularGameAlready = dates.some(d => (d?.games || []).length > 0);
-
-      MLB_GAME_TYPE = hasRegularGameAlready ? "R" : "S";
     }
 
     async function mlbTeamStats(group){
@@ -515,15 +512,10 @@
 
       await detectMlbGameType();
 
-      // Try chosen gameType first (S in spring). If empty and it chose R, fall back to S.
-      let hitters = await mlbTeamStats("hitting");
-      let pitchers = await mlbTeamStats("pitching");
-
-      if ((!hitters.length && !pitchers.length) && MLB_GAME_TYPE === "R") {
-        MLB_GAME_TYPE = "S";
-        hitters = await mlbTeamStats("hitting");
-        pitchers = await mlbTeamStats("pitching");
-      }
+      const [hitters, pitchers] = await Promise.all([
+        mlbTeamStats("hitting"),
+        mlbTeamStats("pitching")
+      ]);
 
       if (!hitters.length && !pitchers.length) return null;
 
@@ -659,7 +651,7 @@
       if (event){
         const comp = event.competitions[0];
         const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp = comp.competitors.find(c => String(c?.team?.id) === String(team.id) ? false : true);
+        const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
         myScore = me?.score ?? "";
         oppScore = opp?.score ?? "";
         myLogo = teamLogo(me?.team) || logo;
@@ -761,6 +753,7 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
+      // visibility rules (keep Vikings hidden unless within 7 days)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
         if (d.league === "nfl") return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
