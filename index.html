@@ -129,14 +129,13 @@
 
     .slides{ position:relative; min-height:210px; }
 
-    /* ✅ Slide uses NO extra gap; rows control spacing */
     .slide{
       position:absolute; inset:0;
       opacity:0; transform:translateY(6px);
       transition:opacity .35s ease, transform .35s ease;
       display:flex;
       flex-direction:column;
-      gap:0;               /* was 12px */
+      gap:0;
       pointer-events:none;
     }
     .slide.active{
@@ -144,13 +143,13 @@
       pointer-events:auto;
     }
 
-    /* ✅ Squeezed stat rows (keeps sizes, removes extra air) */
+    /* Squeezed rows so top-3 fits */
     .leader-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:8px 0;       /* was 14px 0 */
+      padding:8px 0;
       border-top:1px solid rgba(255,255,255,0.06);
     }
     .leader-row:first-child{
@@ -166,7 +165,7 @@
       min-width:0;
     }
     .headshot{
-      width:66px; height:66px;   /* unchanged */
+      width:66px; height:66px;
       border-radius:999px;
       object-fit:cover;
       background:#222;
@@ -180,8 +179,8 @@
       letter-spacing:0.8px;
       text-transform:uppercase;
       color:rgba(255,255,255,0.55);
-      line-height:1;       /* tighter */
-      margin-bottom:2px;   /* tiny separation */
+      line-height:1;
+      margin-bottom:2px;
     }
     .leader-v{
       font-size:22px;
@@ -191,7 +190,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
       max-width: 360px;
-      line-height:1.05;    /* tighter */
+      line-height:1.05;
     }
     .leader-stat{
       font-size:24px;
@@ -242,7 +241,10 @@
       { id:"16", sport:"football",   league:"nfl", name:"Vikings"}
     ];
 
+    // Wild stats
     const NHL_WILD_CLUB_STATS_URL = "https://api-web.nhle.com/v1/club-stats/MIN/20252026/2";
+
+    // Wolves stats
     const NBA_WOLVES_LEAGUE_DASH_URL =
       "https://stats.nba.com/stats/leaguedashplayerstats" +
       "?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=" +
@@ -253,14 +255,33 @@
     const NBA_HEADSHOT = (playerId) =>
       `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${playerId}.png`;
 
+    // Twins stats (MLB)
+    const MLB_TWINS_TEAM_ID = 142; // Twins
+    const MLB_SEASON = new Date().getFullYear(); // 2026
+    const MLB_HEADSHOT = (personId) =>
+      `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_auto:best/v1/people/${personId}/headshot/67/current`;
+
     async function fetchJson(url){
       try{
         const r = await fetch(workerUrl + encodeURIComponent(url));
         const ct = (r.headers.get("content-type") || "").toLowerCase();
         if (!ct.includes("application/json") && !ct.includes("text/json")) return null;
         return await r.json();
-      }catch(e){ return null; }
+      }catch(e){
+        return null;
+      }
     }
+
+    // cache (10 minutes)
+    const LEADERS_TTL_MS = 10 * 60 * 1000;
+    const cache = new Map();
+    const cacheGet = (k) => {
+      const v = cache.get(k);
+      if (!v) return null;
+      if (Date.now() - v.ts > LEADERS_TTL_MS) return null;
+      return v.data;
+    };
+    const cacheSet = (k, data) => cache.set(k, { ts: Date.now(), data });
 
     function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
     function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
@@ -314,26 +335,17 @@
       return `${label} • ${time} CT`;
     }
 
-    // cache
-    const LEADERS_TTL_MS = 10 * 60 * 1000;
-    const cache = new Map();
-    const cacheGet = (k) => {
-      const v = cache.get(k);
-      if (!v) return null;
-      if (Date.now() - v.ts > LEADERS_TTL_MS) return null;
-      return v.data;
-    };
-    const cacheSet = (k, data) => cache.set(k, { ts: Date.now(), data });
-
-    // Wild stats pack (NO save% now)
+    // ---------------- Wild pack ----------------
     function wildName(p){
       const fn = p?.firstName?.default || "";
       const ln = p?.lastName?.default || "";
       return (fn + " " + ln).trim() || "Unknown";
     }
+
     async function getWildPack(){
       const cached = cacheGet("wildPack");
       if (cached) return cached;
+
       const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
       if (!nhl) return null;
 
@@ -349,7 +361,26 @@
       return pack;
     }
 
-    // Wolves stats pack
+    function buildWildSlides(pack){
+      if (!pack) return [];
+      const { topPts, goals1, ast1 } = pack;
+
+      const slidePts = (topPts || []).map((p,i)=>({
+        key: i===0 ? "PTS (TOP 3)" : "PTS",
+        name: wildName(p),
+        stat: `${p.points ?? 0}P`,
+        headshot: p.headshot || ""
+      }));
+
+      const slideGA = [
+        { key:"GOALS", name: wildName(goals1), stat: `${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
+        { key:"ASSISTS", name: wildName(ast1), stat: `${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" }
+      ];
+
+      return [slidePts, slideGA];
+    }
+
+    // ---------------- Wolves pack ----------------
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
@@ -373,11 +404,13 @@
         ast: Number(r[iAST]) || 0
       }));
     }
+
     function topBy(players, field){
       let best = null;
       for (const p of players) if (!best || p[field] > best[field]) best = p;
       return best;
     }
+
     async function getWolvesPack(){
       const cached = cacheGet("wolvesPack");
       if (cached) return cached;
@@ -397,7 +430,121 @@
       return pack;
     }
 
-    // ESPN event picker
+    function buildWolvesSlides(pack){
+      if (!pack) return [];
+      const { topPts, rebL, astL } = pack;
+
+      const slidePts = (topPts || []).map((p,i)=>({
+        key: i===0 ? "PTS (TOP 3)" : "PTS",
+        name: p.name,
+        stat: `${p.pts.toFixed(1)}`,
+        headshot: NBA_HEADSHOT(p.id)
+      }));
+
+      const slideOther = [
+        { key:"REB", name: rebL.name, stat: `${rebL.reb.toFixed(1)}`, headshot: NBA_HEADSHOT(rebL.id) },
+        { key:"AST", name: astL.name, stat: `${astL.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(astL.id) }
+      ];
+
+      return [slidePts, slideOther];
+    }
+
+    // ---------------- Twins pack (MLB) ----------------
+    function fmtAvg(v){
+      if (v === null || v === undefined) return "";
+      const n = Number(v);
+      if (!isFinite(n)) return String(v);
+      // show .312 style
+      if (n > 0 && n < 1) return n.toFixed(3).replace(/^0/, "");
+      return String(v);
+    }
+    function fmtNum(v){
+      if (v === null || v === undefined) return "";
+      const n = Number(v);
+      if (!isFinite(n)) return String(v);
+      // keep 2 decimals for ERA
+      return (n % 1 === 0) ? String(n) : String(n);
+    }
+
+    function leadersByCat(resp, key){
+      // resp.teamLeaders: [{ leaderCategory, leaders:[{person:{id,fullName}, value}] }]
+      const arr = resp?.teamLeaders || [];
+      return arr.find(x => String(x?.leaderCategory).toLowerCase() === key)?.leaders || [];
+    }
+
+    async function getPitcherWL(personId){
+      if (!personId) return null;
+      const cacheKey = `mlbWL:${personId}:${MLB_SEASON}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const url =
+        `https://statsapi.mlb.com/api/v1/people/${personId}/stats` +
+        `?stats=season&group=pitching&season=${MLB_SEASON}`;
+
+      const data = await fetchJson(url);
+      const split = data?.stats?.[0]?.splits?.[0];
+      const wins = split?.stat?.wins;
+      const losses = split?.stat?.losses;
+      const wl = (wins != null && losses != null) ? `${wins}-${losses}` : null;
+
+      cacheSet(cacheKey, wl);
+      return wl;
+    }
+
+    async function getTwinsPack(){
+      const cached = cacheGet("twinsPack");
+      if (cached) return cached;
+
+      const hittersUrl =
+        `https://statsapi.mlb.com/api/v1/teams/${MLB_TWINS_TEAM_ID}/leaders` +
+        `?leaderCategories=battingAverage,homeRuns,runsBattedIn&season=${MLB_SEASON}&limit=1`;
+
+      const pitchersUrl =
+        `https://statsapi.mlb.com/api/v1/teams/${MLB_TWINS_TEAM_ID}/leaders` +
+        `?leaderCategories=earnedRunAverage,strikeouts,wins&season=${MLB_SEASON}&limit=1`;
+
+      const [hitters, pitchers] = await Promise.all([fetchJson(hittersUrl), fetchJson(pitchersUrl)]);
+      if (!hitters || !pitchers) return null;
+
+      const avg = leadersByCat(hitters, "battingaverage")[0];
+      const hr  = leadersByCat(hitters, "homeruns")[0];
+      const rbi = leadersByCat(hitters, "runsbattedin")[0];
+
+      const era = leadersByCat(pitchers, "earnedrunaverage")[0];
+      const so  = leadersByCat(pitchers, "strikeouts")[0];
+      const winL = leadersByCat(pitchers, "wins")[0];
+
+      const wlId = winL?.person?.id;
+      const wlName = winL?.person?.fullName || winL?.person?.name || "—";
+      const wl = await getPitcherWL(wlId);
+
+      const pack = { avg, hr, rbi, era, so, wlName, wlId, wl };
+      cacheSet("twinsPack", pack);
+      return pack;
+    }
+
+    function buildTwinsSlides(pack){
+      if (!pack) return [];
+
+      const slideHitters = [
+        { key:"AVG", name: pack.avg?.person?.fullName || "—", stat: fmtAvg(pack.avg?.value), headshot: pack.avg?.person?.id ? MLB_HEADSHOT(pack.avg.person.id) : "" },
+        { key:"HR",  name: pack.hr?.person?.fullName || "—",  stat: String(pack.hr?.value ?? ""), headshot: pack.hr?.person?.id ? MLB_HEADSHOT(pack.hr.person.id) : "" },
+        { key:"RBI", name: pack.rbi?.person?.fullName || "—", stat: String(pack.rbi?.value ?? ""), headshot: pack.rbi?.person?.id ? MLB_HEADSHOT(pack.rbi.person.id) : "" },
+      ];
+
+      const wlText = pack.wl || (pack.wlId ? "—" : "");
+
+      const slidePitchers = [
+        { key:"ERA", name: pack.era?.person?.fullName || "—", stat: String(pack.era?.value ?? ""), headshot: pack.era?.person?.id ? MLB_HEADSHOT(pack.era.person.id) : "" },
+        { key:"SO",  name: pack.so?.person?.fullName || "—",  stat: String(pack.so?.value ?? ""), headshot: pack.so?.person?.id ? MLB_HEADSHOT(pack.so.person.id) : "" },
+        { key:"W-L", name: pack.wlName || "—",                 stat: wlText, headshot: pack.wlId ? MLB_HEADSHOT(pack.wlId) : "" },
+      ];
+
+      return [slideHitters, slidePitchers];
+    }
+
+    // ---------------- ESPN event picker + opponent ----------------
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -482,13 +629,17 @@
       const daysUntilNext = daysUntil(nextIso);
 
       const state = event?.status?.type?.state || "none";
-      const showPanel = (team.league === "nhl" || team.league === "nba") && state !== "in";
+
+      // Panels for NHL/NBA/MLB when not live
+      const showPanel = (team.league === "nhl" || team.league === "nba" || team.league === "mlb") && state !== "in";
       let pack = null;
       if (showPanel){
         if (team.league === "nhl") pack = await getWildPack();
         if (team.league === "nba") pack = await getWolvesPack();
+        if (team.league === "mlb") pack = await getTwinsPack();
       }
 
+      // scores if live/final
       let myScore="", oppScore="", myLogo="", theirLogo="";
       if (event){
         const comp = event.competitions[0];
@@ -540,7 +691,7 @@
           ${rows.map(r => `
             <div class="leader-row">
               <div class="leader-left">
-                <img class="headshot" src="${r.headshot || ""}" alt="">
+                ${r.headshot ? `<img class="headshot" src="${r.headshot}" alt="">` : `<div class="headshot"></div>`}
                 <div class="leader-text">
                   <div class="leader-k">${r.key}</div>
                   <div class="leader-v">${r.name}</div>
@@ -572,44 +723,6 @@
       `;
     }
 
-    function buildWildSlides(pack){
-      if (!pack) return [];
-      const { topPts, goals1, ast1 } = pack;
-
-      const slidePts = (topPts || []).map((p,i)=>({
-        key: i===0 ? "PTS (TOP 3)" : "PTS",
-        name: wildName(p),
-        stat: `${p.points ?? 0}P`,
-        headshot: p.headshot || ""
-      }));
-
-      const slideGA = [
-        { key:"GOALS", name: wildName(goals1), stat: `${goals1?.goals ?? 0}G`, headshot: goals1?.headshot || "" },
-        { key:"ASSISTS", name: wildName(ast1), stat: `${ast1?.assists ?? 0}A`, headshot: ast1?.headshot || "" }
-      ];
-
-      return [slidePts, slideGA];
-    }
-
-    function buildWolvesSlides(pack){
-      if (!pack) return [];
-      const { topPts, rebL, astL } = pack;
-
-      const slidePts = (topPts || []).map((p,i)=>({
-        key: i===0 ? "PTS (TOP 3)" : "PTS",
-        name: p.name,
-        stat: `${p.pts.toFixed(1)}`,
-        headshot: NBA_HEADSHOT(p.id)
-      }));
-
-      const slideOther = [
-        { key:"REB", name: rebL.name, stat: `${rebL.reb.toFixed(1)}`, headshot: NBA_HEADSHOT(rebL.id) },
-        { key:"AST", name: astL.name, stat: `${astL.ast.toFixed(1)}`, headshot: NBA_HEADSHOT(astL.id) }
-      ];
-
-      return [slidePts, slideOther];
-    }
-
     function startBottomCarousels(){
       document.querySelectorAll("[data-bottom-carousel]").forEach(box => {
         if (box.dataset.running === "1") return;
@@ -633,6 +746,7 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
+      // visibility rules (keep Vikings hidden unless within 7 days)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
         if (d.league === "nfl") return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
@@ -665,12 +779,15 @@
         if (d.status === "in" || d.status === "post") {
           bottomHtml = scoreBlock(d);
         } else {
-          if (d.showPanel && (d.league === "nhl" || d.league === "nba")) {
+          if (d.showPanel && (d.league === "nhl" || d.league === "nba" || d.league === "mlb")) {
             const nextSlide = renderNextSlide(d.nextAtOrVs, d.nextOppLogo, d.nextOpponent, d.nextCountdown, d.nextTimeText);
 
-            const slidesArr = (d.league === "nhl") ? buildWildSlides(d.pack) : buildWolvesSlides(d.pack);
-            const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows)).join("");
+            let slidesArr = [];
+            if (d.league === "nhl") slidesArr = buildWildSlides(d.pack);
+            else if (d.league === "nba") slidesArr = buildWolvesSlides(d.pack);
+            else if (d.league === "mlb") slidesArr = buildTwinsSlides(d.pack);
 
+            const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows)).join("");
             const totalSlides = 1 + slidesArr.length;
             bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml, totalSlides);
           } else {
