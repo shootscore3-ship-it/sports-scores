@@ -255,10 +255,9 @@
     const NBA_HEADSHOT = (playerId) =>
       `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${playerId}.png`;
 
-    // Twins (MLB)
-    const MLB_TWINS_TEAM_ID = 142;
+    // Twins stats (MLB)
+    const MLB_TWINS_TEAM_ID = 142; // Twins
     const MLB_SEASON = new Date().getFullYear(); // 2026
-    let MLB_GAME_TYPE = "S"; // stays S until a regular-season game date is <= today
     const MLB_HEADSHOT = (personId) =>
       `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_auto:best/v1/people/${personId}/headshot/67/current`;
 
@@ -286,6 +285,12 @@
 
     function teamLogo(t){ return t?.logo || t?.logos?.[0]?.href || t?.logos?.[0]?.url || ""; }
     function teamName(t){ return t?.shortDisplayName || t?.displayName || t?.name || t?.abbreviation || "TBD"; }
+
+    // ✅ headshot fallback helper (if headshot missing/broken => team logo)
+    function safeHeadshot(src, fallback){
+      if (!src) return fallback || "";
+      return src;
+    }
 
     function ctDateKey(d){
       return (d instanceof Date ? d : new Date(d))
@@ -450,93 +455,68 @@
       return [slidePts, slideOther];
     }
 
-    // ---------------- Twins pack (MLB) — FULL TEAM, auto Spring->Regular ----------------
-    function toNum(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
+    // ---------------- Twins pack (MLB) ----------------
     function fmtAvg(v){
-      const n = toNum(v);
-      if (n == null) return "—";
+      if (v === null || v === undefined) return "";
+      const n = Number(v);
+      if (!isFinite(n)) return String(v);
       if (n > 0 && n < 1) return n.toFixed(3).replace(/^0/, "");
-      return n.toFixed(3);
-    }
-    function fmtEra(v){
-      const n = toNum(v);
-      if (n == null) return "—";
-      return n.toFixed(2);
-    }
-    function mlbName(s){ return s?.player?.fullName || s?.player?.name || "—"; }
-    function mlbId(s){ return s?.player?.id || null; }
-
-    function topOne(splits, getter, dir="desc"){
-      const mult = dir === "asc" ? 1 : -1;
-      return [...splits]
-        .map(x => ({ x, v: toNum(getter(x)) }))
-        .filter(o => o.v != null)
-        .sort((a,b) => (a.v - b.v) * mult)
-        [0]?.x || null;
+      return String(v);
     }
 
-    // Only switch to Regular Season once a regular-season game date is <= today.
-    async function detectMlbGameType(){
-      const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-      const scheduleUrl =
-        `https://statsapi.mlb.com/api/v1/schedule` +
-        `?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}&gameType=R` +
-        `&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
-
-      const sched = await fetchJson(scheduleUrl);
-      const dates = sched?.dates || [];
-      const hasRegularGameAlready = dates.some(d => (d?.games || []).length > 0);
-
-      MLB_GAME_TYPE = hasRegularGameAlready ? "R" : "S";
+    function leadersByCat(resp, key){
+      const arr = resp?.teamLeaders || [];
+      return arr.find(x => String(x?.leaderCategory).toLowerCase() === key)?.leaders || [];
     }
 
-    async function mlbTeamStats(group){
+    async function getPitcherWL(personId){
+      if (!personId) return null;
+      const cacheKey = `mlbWL:${personId}:${MLB_SEASON}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
       const url =
-        `https://statsapi.mlb.com/api/v1/stats` +
-        `?stats=season` +
-        `&group=${encodeURIComponent(group)}` +
-        `&season=${encodeURIComponent(MLB_SEASON)}` +
-        `&gameType=${encodeURIComponent(MLB_GAME_TYPE)}` +
-        `&sportId=1` +
-        `&teamId=${encodeURIComponent(MLB_TWINS_TEAM_ID)}` +
-        `&playerPool=ALL`;
+        `https://statsapi.mlb.com/api/v1/people/${personId}/stats` +
+        `?stats=season&group=pitching&season=${MLB_SEASON}`;
 
       const data = await fetchJson(url);
-      const splits = data?.stats?.[0]?.splits;
-      return Array.isArray(splits) ? splits : [];
+      const split = data?.stats?.[0]?.splits?.[0];
+      const wins = split?.stat?.wins;
+      const losses = split?.stat?.losses;
+      const wl = (wins != null && losses != null) ? `${wins}-${losses}` : null;
+
+      cacheSet(cacheKey, wl);
+      return wl;
     }
 
     async function getTwinsPack(){
       const cached = cacheGet("twinsPack");
       if (cached) return cached;
 
-      await detectMlbGameType();
+      const hittersUrl =
+        `https://statsapi.mlb.com/api/v1/teams/${MLB_TWINS_TEAM_ID}/leaders` +
+        `?leaderCategories=battingAverage,homeRuns,runsBattedIn&season=${MLB_SEASON}&limit=1`;
 
-      // Try chosen gameType first (S in spring). If empty and it chose R, fall back to S.
-      let hitters = await mlbTeamStats("hitting");
-      let pitchers = await mlbTeamStats("pitching");
+      const pitchersUrl =
+        `https://statsapi.mlb.com/api/v1/teams/${MLB_TWINS_TEAM_ID}/leaders` +
+        `?leaderCategories=earnedRunAverage,strikeouts,wins&season=${MLB_SEASON}&limit=1`;
 
-      if ((!hitters.length && !pitchers.length) && MLB_GAME_TYPE === "R") {
-        MLB_GAME_TYPE = "S";
-        hitters = await mlbTeamStats("hitting");
-        pitchers = await mlbTeamStats("pitching");
-      }
+      const [hitters, pitchers] = await Promise.all([fetchJson(hittersUrl), fetchJson(pitchersUrl)]);
+      if (!hitters || !pitchers) return null;
 
-      if (!hitters.length && !pitchers.length) return null;
+      const avg = leadersByCat(hitters, "battingaverage")[0];
+      const hr  = leadersByCat(hitters, "homeruns")[0];
+      const rbi = leadersByCat(hitters, "runsbattedin")[0];
 
-      const avgTop = topOne(hitters, s => s?.stat?.avg, "desc");
-      const hrTop  = topOne(hitters, s => s?.stat?.homeRuns, "desc");
-      const rbiTop = topOne(hitters, s => s?.stat?.rbi, "desc");
+      const era = leadersByCat(pitchers, "earnedrunaverage")[0];
+      const so  = leadersByCat(pitchers, "strikeouts")[0];
+      const winL = leadersByCat(pitchers, "wins")[0];
 
-      const eraTop = topOne(pitchers, s => s?.stat?.era, "asc");
-      const soTop  = topOne(pitchers, s => s?.stat?.strikeOuts, "desc");
-      const winTop = topOne(pitchers, s => s?.stat?.wins, "desc");
-      const wlText = winTop ? `${winTop?.stat?.wins ?? 0}-${winTop?.stat?.losses ?? 0}` : "—";
+      const wlId = winL?.person?.id;
+      const wlName = winL?.person?.fullName || winL?.person?.name || "—";
+      const wl = await getPitcherWL(wlId);
 
-      const pack = { avgTop, hrTop, rbiTop, eraTop, soTop, winTop, wlText };
+      const pack = { avg, hr, rbi, era, so, wlName, wlId, wl };
       cacheSet("twinsPack", pack);
       return pack;
     }
@@ -545,15 +525,17 @@
       if (!pack) return [];
 
       const slideHitters = [
-        { key:"AVG", name: mlbName(pack.avgTop), stat: fmtAvg(pack.avgTop?.stat?.avg), headshot: mlbId(pack.avgTop) ? MLB_HEADSHOT(mlbId(pack.avgTop)) : "" },
-        { key:"HR",  name: mlbName(pack.hrTop),  stat: String(pack.hrTop?.stat?.homeRuns ?? "—"), headshot: mlbId(pack.hrTop) ? MLB_HEADSHOT(mlbId(pack.hrTop)) : "" },
-        { key:"RBI", name: mlbName(pack.rbiTop), stat: String(pack.rbiTop?.stat?.rbi ?? "—"), headshot: mlbId(pack.rbiTop) ? MLB_HEADSHOT(mlbId(pack.rbiTop)) : "" },
+        { key:"AVG", name: pack.avg?.person?.fullName || "—", stat: fmtAvg(pack.avg?.value), headshot: pack.avg?.person?.id ? MLB_HEADSHOT(pack.avg.person.id) : "" },
+        { key:"HR",  name: pack.hr?.person?.fullName || "—",  stat: String(pack.hr?.value ?? ""), headshot: pack.hr?.person?.id ? MLB_HEADSHOT(pack.hr.person.id) : "" },
+        { key:"RBI", name: pack.rbi?.person?.fullName || "—", stat: String(pack.rbi?.value ?? ""), headshot: pack.rbi?.person?.id ? MLB_HEADSHOT(pack.rbi.person.id) : "" },
       ];
 
+      const wlText = pack.wl || (pack.wlId ? "—" : "");
+
       const slidePitchers = [
-        { key:"ERA", name: mlbName(pack.eraTop), stat: fmtEra(pack.eraTop?.stat?.era), headshot: mlbId(pack.eraTop) ? MLB_HEADSHOT(mlbId(pack.eraTop)) : "" },
-        { key:"SO",  name: mlbName(pack.soTop),  stat: String(pack.soTop?.stat?.strikeOuts ?? "—"), headshot: mlbId(pack.soTop) ? MLB_HEADSHOT(mlbId(pack.soTop)) : "" },
-        { key:"W-L", name: mlbName(pack.winTop), stat: pack.wlText || "—", headshot: mlbId(pack.winTop) ? MLB_HEADSHOT(mlbId(pack.winTop)) : "" },
+        { key:"ERA", name: pack.era?.person?.fullName || "—", stat: String(pack.era?.value ?? ""), headshot: pack.era?.person?.id ? MLB_HEADSHOT(pack.era.person.id) : "" },
+        { key:"SO",  name: pack.so?.person?.fullName || "—",  stat: String(pack.so?.value ?? ""), headshot: pack.so?.person?.id ? MLB_HEADSHOT(pack.so.person.id) : "" },
+        { key:"W-L", name: pack.wlName || "—",                 stat: wlText, headshot: pack.wlId ? MLB_HEADSHOT(pack.wlId) : "" },
       ];
 
       return [slideHitters, slidePitchers];
@@ -659,7 +641,7 @@
       if (event){
         const comp = event.competitions[0];
         const me = comp.competitors.find(c => String(c?.team?.id) === String(team.id));
-        const opp = comp.competitors.find(c => String(c?.team?.id) === String(team.id) ? false : true);
+        const opp = comp.competitors.find(c => String(c?.team?.id) !== String(team.id));
         myScore = me?.score ?? "";
         oppScore = opp?.score ?? "";
         myLogo = teamLogo(me?.team) || logo;
@@ -700,13 +682,19 @@
       `;
     }
 
-    function renderLeaderSlide(rows){
+    // ✅ render slide rows + fallback to team logo if headshot fails/missing
+    function renderLeaderSlide(rows, fallbackLogo){
       return `
         <div class="slide">
           ${rows.map(r => `
             <div class="leader-row">
               <div class="leader-left">
-                ${r.headshot ? `<img class="headshot" src="${r.headshot}" alt="">` : `<div class="headshot"></div>`}
+                ${
+                  (r.headshot || fallbackLogo)
+                    ? `<img class="headshot" src="${safeHeadshot(r.headshot, fallbackLogo)}" alt=""
+                           onerror="this.onerror=null; this.src='${fallbackLogo}'">`
+                    : `<div class="headshot"></div>`
+                }
                 <div class="leader-text">
                   <div class="leader-k">${r.key}</div>
                   <div class="leader-v">${r.name}</div>
@@ -761,6 +749,7 @@
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
 
+      // visibility rules (keep Vikings hidden unless within 7 days)
       const visible = results.filter(d => {
         if (d.status === "in" || d.status === "post" || d.status === "pre") return true;
         if (d.league === "nfl") return d.daysUntilNext <= NFL_SHOW_WITHIN_DAYS;
@@ -801,7 +790,8 @@
             else if (d.league === "nba") slidesArr = buildWolvesSlides(d.pack);
             else if (d.league === "mlb") slidesArr = buildTwinsSlides(d.pack);
 
-            const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows)).join("");
+            // ✅ pass d.logo so missing/broken headshots fall back to team logo
+            const extraSlidesHtml = slidesArr.map(rows => renderLeaderSlide(rows, d.logo)).join("");
             const totalSlides = 1 + slidesArr.length;
             bottomHtml = renderBottomPanel(d.league + "_" + d.name, nextSlide, extraSlidesHtml, totalSlides);
           } else {
