@@ -97,7 +97,7 @@
     .score-num{ font-size:64px; font-weight:900; line-height:1; }
     .score-dash{ font-size:64px; font-weight:900; line-height:1; color:#666; }
 
-    /* Bottom carousel panel — NO fill, NO outline */
+    /* Bottom carousel panel */
     .panel{
       width:100%;
       padding:16px 18px;
@@ -188,13 +188,13 @@
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      max-width: 360px;
+      max-width:360px;
       line-height:1.05;
     }
     .leader-stat{
       font-size:24px;
       font-weight:900;
-      color: var(--final-gold);
+      color:var(--final-gold);
       white-space:nowrap;
     }
 
@@ -443,8 +443,9 @@
       { id:"16", sport:"football",   league:"nfl", name:"Vikings"}
     ];
 
-    // Wild stats
-    const NHL_WILD_CLUB_STATS_URL = "https://api-web.nhle.com/v1/club-stats/MIN/20252026/2";
+    // Wild / NHL
+    const NHL_SEASON_CODE = "20252026";
+    const NHL_WILD_CLUB_STATS_URL = `https://api-web.nhle.com/v1/club-stats/MIN/${NHL_SEASON_CODE}/2`;
 
     // Wolves stats
     const NBA_WOLVES_LEAGUE_DASH_URL =
@@ -600,6 +601,72 @@
       return x?.headshot || x?.image || x?.images?.[0]?.href || x?.images?.[0]?.url || x?.photo || "";
     }
 
+    function normalizePlayerName(name){
+      return String(name || "")
+        .toLowerCase()
+        .replace(/\./g, "")
+        .replace(/'/g, "")
+        .replace(/-/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function buildNhlHeadshotLookupFromClubStats(data){
+      const lookup = new Map();
+
+      const skaters = Array.isArray(data?.skaters) ? data.skaters : [];
+      const goalies = Array.isArray(data?.goalies) ? data.goalies : [];
+      const allPlayers = [...skaters, ...goalies];
+
+      for (const p of allPlayers){
+        const first = p?.firstName?.default || "";
+        const last = p?.lastName?.default || "";
+        const full = `${first} ${last}`.trim();
+        const shot = p?.headshot || "";
+
+        if (full && shot){
+          lookup.set(normalizePlayerName(full), shot);
+        }
+      }
+
+      return lookup;
+    }
+
+    async function getNhlTeamHeadshotLookup(teamAbbr){
+      if (!teamAbbr) return new Map();
+
+      const cacheKey = `nhlHeadshots:${teamAbbr}:${NHL_SEASON_CODE}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const url = `https://api-web.nhle.com/v1/club-stats/${teamAbbr}/${NHL_SEASON_CODE}/2`;
+      const data = await fetchJson(url);
+      const lookup = buildNhlHeadshotLookupFromClubStats(data || {});
+
+      cacheSet(cacheKey, lookup);
+      return lookup;
+    }
+
+    function applyNhlHeadshotsToGoals(goals, wildLookup, oppLookup, wildLogo, oppLogo){
+      return (goals || []).map(g => {
+        const key = normalizePlayerName(g.scorer);
+        const isWildGoal = !!g.teamLogo && !!wildLogo && g.teamLogo === wildLogo;
+        const preferredLookup = isWildGoal ? wildLookup : oppLookup;
+        const fallbackLookup = isWildGoal ? oppLookup : wildLookup;
+
+        const betterHeadshot =
+          preferredLookup?.get(key) ||
+          fallbackLookup?.get(key) ||
+          g.headshot ||
+          "";
+
+        return {
+          ...g,
+          headshot: betterHeadshot
+        };
+      });
+    }
+
     function findScoringPlaysDeep(obj){
       if (!obj || typeof obj !== "object") return [];
       if (Array.isArray(obj?.scoringPlays)) return obj.scoringPlays;
@@ -732,7 +799,24 @@
         buildWildStatusLineFromCompetition(eventComp) ||
         statusLabel(event?.status?.type?.state);
 
-      const goals = summary ? parseWildScoringPlays(summary, wildLogo, oppLogo) : [];
+      let goals = summary ? parseWildScoringPlays(summary, wildLogo, oppLogo) : [];
+
+      const wildAbbr =
+        wildComp?.team?.abbreviation ||
+        wildComp?.team?.shortDisplayName ||
+        "MIN";
+
+      const oppAbbr =
+        oppComp?.team?.abbreviation ||
+        oppComp?.team?.shortDisplayName ||
+        "";
+
+      const [wildLookup, oppLookup] = await Promise.all([
+        getNhlTeamHeadshotLookup(wildAbbr),
+        getNhlTeamHeadshotLookup(oppAbbr)
+      ]);
+
+      goals = applyNhlHeadshotsToGoals(goals, wildLookup, oppLookup, wildLogo, oppLogo);
 
       const pack = {
         wildLogo,
