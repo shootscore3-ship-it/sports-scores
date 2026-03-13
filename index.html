@@ -199,6 +199,208 @@
       white-space:nowrap;
     }
 
+    /* Wild live/final custom area */
+    .wild-live-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      width:100%;
+    }
+
+    .wild-live-scoreboard{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:26px;
+      width:100%;
+      padding:12px 16px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      box-sizing:border-box;
+    }
+
+    .wild-side{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width:0;
+    }
+
+    .wild-live-team-logo{
+      width:72px;
+      height:72px;
+      object-fit:contain;
+      flex:0 0 auto;
+    }
+
+    .wild-live-score{
+      font-size:72px;
+      font-weight:900;
+      line-height:1;
+      color:#fff;
+    }
+
+    .wild-live-divider{
+      font-size:34px;
+      font-weight:900;
+      color:#666;
+      line-height:1;
+      flex:0 0 auto;
+    }
+
+    .wild-live-status{
+      text-align:center;
+      font-size:22px;
+      font-weight:900;
+      color:#d7d7d7;
+      letter-spacing:0.4px;
+      line-height:1.1;
+      min-height:24px;
+    }
+
+    .wild-live-panel{
+      width:100%;
+      padding:10px 4px 0;
+      box-sizing:border-box;
+    }
+
+    .wild-live-panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+
+    .wild-live-panel-title{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.45);
+    }
+
+    .wild-live-dots{
+      display:flex;
+      gap:6px;
+    }
+
+    .wild-live-dot{
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+    }
+
+    .wild-live-dot.active{
+      background:rgba(255,255,255,0.60);
+    }
+
+    .wild-live-slides{
+      position:relative;
+      min-height:250px;
+    }
+
+    .wild-live-slide{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transform:translateY(6px);
+      transition:opacity .35s ease, transform .35s ease;
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .wild-live-slide.active{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .wild-goal-row{
+      display:flex;
+      align-items:flex-start;
+      padding:8px 0;
+      border-top:1px solid rgba(255,255,255,0.06);
+    }
+
+    .wild-goal-row:first-child{
+      border-top:none;
+      padding-top:0;
+    }
+
+    .wild-goal-left{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      min-width:0;
+      width:100%;
+    }
+
+    .wild-goal-headshot{
+      width:58px;
+      height:58px;
+      border-radius:999px;
+      object-fit:cover;
+      background:#222;
+      border:1px solid rgba(255,255,255,0.14);
+      flex:0 0 auto;
+    }
+
+    .wild-goal-main{
+      min-width:0;
+      flex:1;
+      text-align:left;
+    }
+
+    .wild-goal-name-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .wild-goal-scorer{
+      font-size:24px;
+      font-weight:900;
+      color:rgba(255,255,255,0.97);
+      line-height:1.05;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .wild-goal-team-logo{
+      width:24px;
+      height:24px;
+      object-fit:contain;
+      flex:0 0 auto;
+    }
+
+    .wild-goal-assists{
+      margin-top:5px;
+      font-size:16px;
+      font-weight:800;
+      color:#a9a9a9;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .wild-no-goals{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:180px;
+      text-align:center;
+      font-size:24px;
+      font-weight:900;
+      color:#8d8d8d;
+    }
+
     /* Ticker */
     .ticker-wrap{
       background:#000; height:215px; border-top:6px solid var(--accent);
@@ -257,12 +459,11 @@
 
     // Twins (MLB)
     const MLB_TWINS_TEAM_ID = 142;
-    const MLB_SEASON = new Date().getFullYear(); // 2026
-    let MLB_GAME_TYPE = "S"; // stays S until a regular-season game date is <= today
+    const MLB_SEASON = new Date().getFullYear();
+    let MLB_GAME_TYPE = "S";
     const MLB_HEADSHOT = (personId) =>
       `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_auto:best/v1/people/${personId}/headshot/67/current`;
 
-    // MLB opponent logo (team cap on light background)
     const MLB_TEAM_LOGO = (teamId) =>
       `https://www.mlbstatic.com/team-logos/team-cap-on-light/${teamId}.svg`;
 
@@ -338,6 +539,170 @@
 
       const time = start.toLocaleTimeString('en-US', { timeZone: CT_TZ, hour:'numeric', minute:'2-digit' });
       return `${label} • ${time} CT`;
+    }
+
+    function chunkArray(arr, size){
+      const out = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    }
+
+    function ordinalPeriod(n){
+      const num = Number(n);
+      if (!Number.isFinite(num) || num <= 0) return "";
+      if (num === 1) return "1ST";
+      if (num === 2) return "2ND";
+      if (num === 3) return "3RD";
+      return `${num}OT`;
+    }
+
+    function safeText(s){
+      return String(s || "").trim();
+    }
+
+    function buildWildStatusLineFromCompetition(comp){
+      const status = comp?.status || {};
+      const state = status?.type?.state || "";
+      const shortDetail = safeText(status?.type?.shortDetail);
+      const detail = safeText(status?.type?.detail);
+      const clock = safeText(status?.displayClock);
+      const period = ordinalPeriod(status?.period);
+
+      if (state === "post") return "FINAL";
+      if (state === "in"){
+        const bits = ["LIVE"];
+        if (period) bits.push(period);
+        if (clock && clock !== "0:00") bits.push(clock);
+        return bits.join(" • ");
+      }
+
+      return shortDetail || detail || "";
+    }
+
+    function normalizeAthlete(a){
+      if (!a) return null;
+      return a?.athlete || a?.player || a;
+    }
+
+    function athleteName(a){
+      const x = normalizeAthlete(a);
+      return x?.displayName || x?.shortName || x?.fullName || x?.name || "";
+    }
+
+    function athleteHeadshot(a){
+      const x = normalizeAthlete(a);
+      return x?.headshot || x?.image || x?.images?.[0]?.href || x?.images?.[0]?.url || x?.photo || "";
+    }
+
+    function findScoringPlaysDeep(obj){
+      if (!obj || typeof obj !== "object") return [];
+      if (Array.isArray(obj?.scoringPlays)) return obj.scoringPlays;
+      if (Array.isArray(obj?.plays)) {
+        const goalLike = obj.plays.filter(p => {
+          const txt = `${p?.text || ""} ${p?.type?.text || ""} ${p?.type?.displayName || ""}`.toLowerCase();
+          return txt.includes("goal");
+        });
+        if (goalLike.length) return goalLike;
+      }
+      for (const key of Object.keys(obj)){
+        const val = obj[key];
+        if (val && typeof val === "object"){
+          const found = findScoringPlaysDeep(val);
+          if (found.length) return found;
+        }
+      }
+      return [];
+    }
+
+    function parseWildScoringPlays(summary, fallbackWildLogo, fallbackOppLogo){
+      const comp = summary?.header?.competitions?.[0] || summary?.boxscore?.game || summary?.gamepackageJSON?.header?.competitions?.[0] || null;
+      const competitors = comp?.competitors || [];
+      const wildComp = competitors.find(c => String(c?.team?.id) === "30");
+      const oppComp = competitors.find(c => String(c?.team?.id) !== "30");
+
+      const wildLogo = teamLogo(wildComp?.team) || fallbackWildLogo || "";
+      const oppLogo = teamLogo(oppComp?.team) || fallbackOppLogo || "";
+
+      const playsRaw = findScoringPlaysDeep(summary);
+      const plays = [];
+
+      for (const p of playsRaw){
+        const athletes = Array.isArray(p?.athletesInvolved) ? p.athletesInvolved : (Array.isArray(p?.participants) ? p.participants : []);
+        const scorerA = athletes.length ? normalizeAthlete(athletes[0]) : null;
+        const assistsA = athletes.slice(1).map(normalizeAthlete).filter(Boolean);
+
+        const scorer = athleteName(scorerA);
+        const headshot = athleteHeadshot(scorerA);
+
+        const playTeam = p?.team || p?.teamInfo || {};
+        const playTeamId = String(playTeam?.id || p?.teamId || p?.team?.$ref?.split("/").pop() || "");
+        const playTeamLogo = teamLogo(playTeam) || (playTeamId === "30" ? wildLogo : oppLogo) || "";
+
+        let assists = assistsA.map(athleteName).filter(Boolean);
+
+        if (!assists.length){
+          const text = safeText(p?.text || p?.shortText || p?.description);
+          const assistMatch = text.match(/assists?:\s*(.*)$/i);
+          if (assistMatch && assistMatch[1]){
+            assists = assistMatch[1]
+              .split(/[;,]/)
+              .map(s => s.replace(/\(\d+\)/g, "").trim())
+              .filter(Boolean);
+          }
+        }
+
+        let scorerName = scorer;
+        if (!scorerName){
+          const text = safeText(p?.text || p?.shortText || p?.description);
+          const beforeComma = text.split(",")[0].trim();
+          scorerName = beforeComma || "Goal";
+        }
+
+        plays.push({
+          scorer: scorerName,
+          assists,
+          teamLogo: playTeamLogo,
+          headshot: headshot || "",
+          sequence: Number(p?.sequenceNumber || p?.id || 0) || 0
+        });
+      }
+
+      plays.sort((a,b) => a.sequence - b.sequence);
+      return plays;
+    }
+
+    async function getWildLiveFinalPack(event, fallbackData){
+      const cacheKey = `wildLiveFinal:${event?.id}:${event?.status?.type?.state}:${fallbackData?.myScore}:${fallbackData?.oppScore}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const summary = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event=${event?.id}`);
+      const comp = summary?.header?.competitions?.[0] || event?.competitions?.[0] || {};
+      const competitors = comp?.competitors || [];
+
+      const wildComp = competitors.find(c => String(c?.team?.id) === "30") || event?.competitions?.[0]?.competitors?.find(c => String(c?.team?.id) === "30");
+      const oppComp  = competitors.find(c => String(c?.team?.id) !== "30") || event?.competitions?.[0]?.competitors?.find(c => String(c?.team?.id) !== "30");
+
+      const wildLogo = teamLogo(wildComp?.team) || fallbackData?.myLogo || "";
+      const oppLogo = teamLogo(oppComp?.team) || fallbackData?.theirLogo || "";
+
+      const wildScore = String(wildComp?.score ?? fallbackData?.myScore ?? "");
+      const oppScore = String(oppComp?.score ?? fallbackData?.oppScore ?? "");
+
+      const statusLine = buildWildStatusLineFromCompetition(comp) || buildWildStatusLineFromCompetition(event?.competitions?.[0]) || statusLabel(event?.status?.type?.state);
+      const goals = summary ? parseWildScoringPlays(summary, wildLogo, oppLogo) : [];
+
+      const pack = {
+        wildLogo,
+        wildScore,
+        oppLogo,
+        oppScore,
+        statusLine,
+        goals
+      };
+
+      cacheSet(cacheKey, pack);
+      return pack;
     }
 
     // ---------------- Wild pack ----------------
@@ -482,9 +847,8 @@
         [0]?.x || null;
     }
 
-    // Only switch to Regular Season once a regular-season game date is <= today.
     async function detectMlbGameType(){
-      const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+      const today = new Date().toISOString().slice(0,10);
       const scheduleUrl =
         `https://statsapi.mlb.com/api/v1/schedule` +
         `?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}&gameType=R` +
@@ -519,7 +883,6 @@
 
       await detectMlbGameType();
 
-      // Try chosen gameType first (S in spring). If empty and it chose R, fall back to S.
       let hitters = await mlbTeamStats("hitting");
       let pitchers = await mlbTeamStats("pitching");
 
@@ -563,7 +926,6 @@
       return [slideHitters, slidePitchers];
     }
 
-    // ✅ Twins NEXT game (correct opponent + correct logo) pulled from MLB schedule
     async function getTwinsNextGame(){
       const cacheKey = `twinsNext:${MLB_SEASON}`;
       const cached = cacheGet(cacheKey);
@@ -574,7 +936,6 @@
       const endDateObj = new Date(Date.now() + 14*86400000);
       const endDate = endDateObj.toISOString().slice(0,10);
 
-      // detect if Twins regular season has started
       const checkRegUrl =
         `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${MLB_TWINS_TEAM_ID}&season=${MLB_SEASON}` +
         `&gameType=R&startDate=${MLB_SEASON}-01-01&endDate=${today}`;
@@ -621,7 +982,7 @@
       return best;
     }
 
-    // ---------------- ESPN event picker + opponent (for NHL/NBA + fallback) ----------------
+    // ---------------- ESPN event picker + opponent (for NHL/NBA/MLB/NFL) ----------------
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -682,7 +1043,6 @@
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(teamDetails);
 
-      // next info (default from ESPN)
       let nextIso = null, nextAtOrVs = "vs", nextOppLogo = "", nextOpponent = "TBD";
       if (event){
         const comp = event.competitions[0];
@@ -701,7 +1061,6 @@
         nextOpponent = oppInfo?.oppName || "TBD";
       }
 
-      // ✅ OVERRIDE Twins NEXT using MLB schedule (correct opponent + logo)
       if (team.league === "mlb") {
         const twNext = await getTwinsNextGame();
         if (twNext?.nextIso) {
@@ -718,7 +1077,6 @@
 
       const state = event?.status?.type?.state || "none";
 
-      // Panels for NHL/NBA/MLB when not live
       const showPanel = (team.league === "nhl" || team.league === "nba" || team.league === "mlb") && state !== "in";
       let pack = null;
       if (showPanel){
@@ -727,7 +1085,6 @@
         if (team.league === "mlb") pack = await getTwinsPack();
       }
 
-      // scores if live/final
       let myScore="", oppScore="", myLogo="", theirLogo="";
       if (event){
         const comp = event.competitions[0];
@@ -739,6 +1096,13 @@
         theirLogo = teamLogo(opp?.team) || "";
       }
 
+      let wildLiveFinalPack = null;
+      if (team.league === "nhl" && team.id === "30" && event && (state === "in" || state === "post")) {
+        wildLiveFinalPack = await getWildLiveFinalPack(event, {
+          myScore, oppScore, myLogo, theirLogo
+        });
+      }
+
       return {
         league: team.league,
         name: team.name,
@@ -746,7 +1110,8 @@
         logo, record, standings,
         nextIso, daysUntilNext, nextAtOrVs, nextOppLogo, nextOpponent, nextCountdown, nextTimeText,
         showPanel, pack,
-        myScore, oppScore, myLogo, theirLogo
+        myScore, oppScore, myLogo, theirLogo,
+        wildLiveFinalPack
       };
     }
 
@@ -811,6 +1176,81 @@
       `;
     }
 
+    function renderWildGoalRow(goal){
+      const assistsText = goal.assists && goal.assists.length
+        ? `A: ${goal.assists.join(", ")}`
+        : "Unassisted";
+
+      return `
+        <div class="wild-goal-row">
+          <div class="wild-goal-left">
+            ${goal.headshot ? `<img class="wild-goal-headshot" src="${goal.headshot}" alt="">` : `<div class="wild-goal-headshot"></div>`}
+            <div class="wild-goal-main">
+              <div class="wild-goal-name-row">
+                <div class="wild-goal-scorer">${goal.scorer}</div>
+                ${goal.teamLogo ? `<img class="wild-goal-team-logo" src="${goal.teamLogo}" alt="">` : ``}
+              </div>
+              <div class="wild-goal-assists">${assistsText}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderWildLiveFinalPanel(d){
+      const pack = d.wildLiveFinalPack || {
+        wildLogo: d.myLogo,
+        wildScore: d.myScore,
+        oppLogo: d.theirLogo,
+        oppScore: d.oppScore,
+        statusLine: statusLabel(d.status),
+        goals: []
+      };
+
+      const groups = pack.goals.length ? chunkArray(pack.goals, 3) : [[]];
+      const dots = groups.map((_,i) => `<span class="wild-live-dot ${i===0 ? "active" : ""}"></span>`).join("");
+
+      const slides = groups.map((group, i) => `
+        <div class="wild-live-slide ${i===0 ? "active" : ""}">
+          ${
+            group.length
+              ? group.map(renderWildGoalRow).join("")
+              : `<div class="wild-no-goals">No goals yet</div>`
+          }
+        </div>
+      `).join("");
+
+      return `
+        <div class="wild-live-wrap">
+          <div class="wild-live-scoreboard">
+            <div class="wild-side">
+              <img class="wild-live-team-logo" src="${pack.wildLogo || d.myLogo}" alt="">
+              <div class="wild-live-score">${pack.wildScore ?? d.myScore ?? ""}</div>
+            </div>
+
+            <div class="wild-live-divider">@</div>
+
+            <div class="wild-side">
+              <img class="wild-live-team-logo" src="${pack.oppLogo || d.theirLogo}" alt="">
+              <div class="wild-live-score">${pack.oppScore ?? d.oppScore ?? ""}</div>
+            </div>
+          </div>
+
+          <div class="wild-live-status">${pack.statusLine || statusLabel(d.status)}</div>
+
+          <div class="wild-live-panel" data-wild-goal-carousel="${d.league}_${d.name}">
+            <div class="wild-live-panel-header">
+              <div class="wild-live-panel-title">SCORING SUMMARY</div>
+              <div class="wild-live-dots">${dots}</div>
+            </div>
+            <div class="wild-live-slides">
+              ${slides}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function startBottomCarousels(){
       document.querySelectorAll("[data-bottom-carousel]").forEach(box => {
         if (box.dataset.running === "1") return;
@@ -827,6 +1267,26 @@
           slides[idx].classList.add("active");
           dots[idx]?.classList.add("active");
         }, 15000);
+      });
+    }
+
+    function startWildGoalCarousels(){
+      document.querySelectorAll("[data-wild-goal-carousel]").forEach(box => {
+        if (box.dataset.running === "1") return;
+        box.dataset.running = "1";
+
+        const slides = box.querySelectorAll(".wild-live-slide");
+        const dots = box.querySelectorAll(".wild-live-dot");
+        if (slides.length <= 1) return;
+
+        let idx = 0;
+        setInterval(() => {
+          slides[idx].classList.remove("active");
+          dots[idx]?.classList.remove("active");
+          idx = (idx + 1) % slides.length;
+          slides[idx].classList.add("active");
+          dots[idx]?.classList.add("active");
+        }, 12000);
       });
     }
 
@@ -863,7 +1323,9 @@
         card.className = "card";
 
         let bottomHtml = "";
-        if (d.status === "in" || d.status === "post") {
+        if (d.league === "nhl" && d.name === "Wild" && (d.status === "in" || d.status === "post")) {
+          bottomHtml = renderWildLiveFinalPanel(d);
+        } else if (d.status === "in" || d.status === "post") {
           bottomHtml = scoreBlock(d);
         } else {
           if (d.showPanel && (d.league === "nhl" || d.league === "nba" || d.league === "mlb")) {
@@ -898,6 +1360,7 @@
       });
 
       startBottomCarousels();
+      startWildGoalCarousels();
     }
 
     async function updateTicker(){
