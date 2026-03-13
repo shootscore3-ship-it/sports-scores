@@ -143,7 +143,6 @@
       pointer-events:auto;
     }
 
-    /* Squeezed rows so top-3 fits */
     .leader-row{
       display:flex;
       align-items:center;
@@ -247,6 +246,7 @@
       color:#666;
       line-height:1;
       flex:0 0 auto;
+      text-transform:lowercase;
     }
 
     .wild-live-status{
@@ -567,8 +567,14 @@
       const detail = safeText(status?.type?.detail);
       const clock = safeText(status?.displayClock);
       const period = ordinalPeriod(status?.period);
+      const combined = `${shortDetail} ${detail}`.toUpperCase();
 
-      if (state === "post") return "FINAL";
+      if (state === "post"){
+        if (combined.includes("SO") || combined.includes("SHOOTOUT")) return "FINAL • SO";
+        if (combined.includes("OT") || combined.includes("OVERTIME")) return "FINAL • OT";
+        return "FINAL";
+      }
+
       if (state === "in"){
         const bits = ["LIVE"];
         if (period) bits.push(period);
@@ -600,7 +606,7 @@
       if (Array.isArray(obj?.plays)) {
         const goalLike = obj.plays.filter(p => {
           const txt = `${p?.text || ""} ${p?.type?.text || ""} ${p?.type?.displayName || ""}`.toLowerCase();
-          return txt.includes("goal");
+          return txt.includes("goal") || txt.includes("scores");
         });
         if (goalLike.length) return goalLike;
       }
@@ -627,21 +633,43 @@
       const plays = [];
 
       for (const p of playsRaw){
-        const athletes = Array.isArray(p?.athletesInvolved) ? p.athletesInvolved : (Array.isArray(p?.participants) ? p.participants : []);
+        const text = safeText(p?.text || p?.shortText || p?.description);
+        const lower = text.toLowerCase();
+
+        if (
+          lower.includes("shootout") ||
+          lower.includes("goalie stopped") ||
+          lower.includes("saved") ||
+          lower.includes("save") ||
+          lower.includes("missed") ||
+          lower.includes("misses") ||
+          lower.includes("penalty shot")
+        ) {
+          continue;
+        }
+
+        const isGoalLike = lower.includes("goal") || lower.includes("scores");
+        if (!isGoalLike) continue;
+
+        if (p?.scoreValue != null && Number(p.scoreValue) <= 0) continue;
+
+        const athletes = Array.isArray(p?.athletesInvolved)
+          ? p.athletesInvolved
+          : (Array.isArray(p?.participants) ? p.participants : []);
+
         const scorerA = athletes.length ? normalizeAthlete(athletes[0]) : null;
         const assistsA = athletes.slice(1).map(normalizeAthlete).filter(Boolean);
 
-        const scorer = athleteName(scorerA);
+        let scorer = athleteName(scorerA);
         const headshot = athleteHeadshot(scorerA);
 
         const playTeam = p?.team || p?.teamInfo || {};
-        const playTeamId = String(playTeam?.id || p?.teamId || p?.team?.$ref?.split("/").pop() || "");
+        const playTeamId = String(playTeam?.id || p?.teamId || "");
         const playTeamLogo = teamLogo(playTeam) || (playTeamId === "30" ? wildLogo : oppLogo) || "";
 
         let assists = assistsA.map(athleteName).filter(Boolean);
 
         if (!assists.length){
-          const text = safeText(p?.text || p?.shortText || p?.description);
           const assistMatch = text.match(/assists?:\s*(.*)$/i);
           if (assistMatch && assistMatch[1]){
             assists = assistMatch[1]
@@ -651,15 +679,19 @@
           }
         }
 
-        let scorerName = scorer;
-        if (!scorerName){
-          const text = safeText(p?.text || p?.shortText || p?.description);
-          const beforeComma = text.split(",")[0].trim();
-          scorerName = beforeComma || "Goal";
+        if (!scorer){
+          let firstPart = text.split(",")[0].trim();
+          firstPart = firstPart.replace(/\s+scores.*$/i, "").trim();
+          firstPart = firstPart.replace(/\s+goal.*$/i, "").trim();
+          scorer = firstPart || "Goal";
         }
 
+        assists = assists
+          .map(a => a.replace(/\s+scores.*$/i, "").trim())
+          .filter(Boolean);
+
         plays.push({
-          scorer: scorerName,
+          scorer,
           assists,
           teamLogo: playTeamLogo,
           headshot: headshot || "",
@@ -680,8 +712,14 @@
       const comp = summary?.header?.competitions?.[0] || event?.competitions?.[0] || {};
       const competitors = comp?.competitors || [];
 
-      const wildComp = competitors.find(c => String(c?.team?.id) === "30") || event?.competitions?.[0]?.competitors?.find(c => String(c?.team?.id) === "30");
-      const oppComp  = competitors.find(c => String(c?.team?.id) !== "30") || event?.competitions?.[0]?.competitors?.find(c => String(c?.team?.id) !== "30");
+      const eventComp = event?.competitions?.[0] || {};
+      const eventCompetitors = eventComp?.competitors || [];
+
+      const wildComp = competitors.find(c => String(c?.team?.id) === "30") || eventCompetitors.find(c => String(c?.team?.id) === "30");
+      const oppComp  = competitors.find(c => String(c?.team?.id) !== "30") || eventCompetitors.find(c => String(c?.team?.id) !== "30");
+
+      const wildHomeAway = wildComp?.homeAway || eventCompetitors.find(c => String(c?.team?.id) === "30")?.homeAway || "";
+      const matchupSymbol = wildHomeAway === "away" ? "@" : "vs";
 
       const wildLogo = teamLogo(wildComp?.team) || fallbackData?.myLogo || "";
       const oppLogo = teamLogo(oppComp?.team) || fallbackData?.theirLogo || "";
@@ -689,7 +727,11 @@
       const wildScore = String(wildComp?.score ?? fallbackData?.myScore ?? "");
       const oppScore = String(oppComp?.score ?? fallbackData?.oppScore ?? "");
 
-      const statusLine = buildWildStatusLineFromCompetition(comp) || buildWildStatusLineFromCompetition(event?.competitions?.[0]) || statusLabel(event?.status?.type?.state);
+      const statusLine =
+        buildWildStatusLineFromCompetition(comp) ||
+        buildWildStatusLineFromCompetition(eventComp) ||
+        statusLabel(event?.status?.type?.state);
+
       const goals = summary ? parseWildScoringPlays(summary, wildLogo, oppLogo) : [];
 
       const pack = {
@@ -698,7 +740,8 @@
         oppLogo,
         oppScore,
         statusLine,
-        goals
+        goals,
+        matchupSymbol
       };
 
       cacheSet(cacheKey, pack);
@@ -819,7 +862,7 @@
       return [slidePts, slideOther];
     }
 
-    // ---------------- Twins pack (MLB) — FULL TEAM, auto Spring->Regular ----------------
+    // ---------------- Twins pack ----------------
     function toNum(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -982,7 +1025,7 @@
       return best;
     }
 
-    // ---------------- ESPN event picker + opponent (for NHL/NBA/MLB/NFL) ----------------
+    // ---------------- ESPN event picker + opponent ----------------
     function pickBestEventForTeam(scoreboard, teamId){
       const events = (scoreboard?.events || []).filter(e =>
         e?.competitions?.[0]?.competitors?.some(c => String(c?.team?.id) === String(teamId))
@@ -1204,7 +1247,8 @@
         oppLogo: d.theirLogo,
         oppScore: d.oppScore,
         statusLine: statusLabel(d.status),
-        goals: []
+        goals: [],
+        matchupSymbol: "vs"
       };
 
       const groups = pack.goals.length ? chunkArray(pack.goals, 3) : [[]];
@@ -1228,7 +1272,7 @@
               <div class="wild-live-score">${pack.wildScore ?? d.myScore ?? ""}</div>
             </div>
 
-            <div class="wild-live-divider">@</div>
+            <div class="wild-live-divider">${pack.matchupSymbol || "vs"}</div>
 
             <div class="wild-side">
               <img class="wild-live-team-logo" src="${pack.oppLogo || d.theirLogo}" alt="">
