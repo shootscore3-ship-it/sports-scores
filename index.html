@@ -581,6 +581,11 @@
       return x?.headshot || x?.image || x?.images?.[0]?.href || x?.images?.[0]?.url || x?.photo || "";
     }
 
+    function athleteId(a){
+      const x = normalizeAthlete(a);
+      return x?.id || x?.playerId || x?.uid?.split(":").pop() || null;
+    }
+
     function normalizePlayerName(name){
       return String(name || "")
         .toLowerCase()
@@ -985,13 +990,15 @@
 
       return rows.map(r => {
         const statMap = buildStatMap(r.labels, r.stats);
+        const athlete = normalizeAthlete(r.athlete);
+
         const pts = parseEspnStatNumber(firstExisting(statMap, ["PTS"]));
         const reb = parseEspnStatNumber(firstExisting(statMap, ["REB"]));
         const ast = parseEspnStatNumber(firstExisting(statMap, ["AST"]));
 
         return {
-          name: athleteName(r.athlete),
-          headshot: athleteHeadshot(r.athlete),
+          name: athleteName(athlete),
+          headshot: athleteHeadshot(athlete),
           teamLogo: teamLogoUrl,
           pts: pts ?? 0,
           reb: reb ?? 0,
@@ -1047,9 +1054,13 @@
 
       return rows.map(r => {
         const statMap = buildStatMap(r.labels, r.stats);
-        const row = {
-          name: athleteName(r.athlete),
-          headshot: athleteHeadshot(r.athlete),
+        const athlete = normalizeAthlete(r.athlete);
+        const id = athleteId(athlete);
+        const betterHeadshot = id ? MLB_HEADSHOT(id) : (athleteHeadshot(athlete) || "");
+
+        return {
+          name: athleteName(athlete),
+          headshot: betterHeadshot,
           teamLogo: teamLogoUrl,
           r: parseEspnStatNumber(firstExisting(statMap, ["R"])) ?? 0,
           h: parseEspnStatNumber(firstExisting(statMap, ["H"])) ?? 0,
@@ -1059,8 +1070,6 @@
           so: firstExisting(statMap, ["SO"]),
           er: firstExisting(statMap, ["ER"])
         };
-
-        return row;
       })
       .filter(p => p.name && p.ip == null && (p.h > 0 || p.rbi > 0 || p.r > 0 || p.hr > 0))
       .sort((a,b) => {
@@ -1083,14 +1092,18 @@
 
       const pitchers = rows.map(r => {
         const statMap = buildStatMap(r.labels, r.stats);
+        const athlete = normalizeAthlete(r.athlete);
+        const id = athleteId(athlete);
+        const betterHeadshot = id ? MLB_HEADSHOT(id) : (athleteHeadshot(athlete) || "");
+
         const ipRaw = firstExisting(statMap, ["IP"]);
         const ipValue = baseballIpToNumber(ipRaw);
         const so = parseEspnStatNumber(firstExisting(statMap, ["SO"])) ?? 0;
         const er = parseEspnStatNumber(firstExisting(statMap, ["ER"])) ?? 0;
 
         return {
-          name: athleteName(r.athlete),
-          headshot: athleteHeadshot(r.athlete),
+          name: athleteName(athlete),
+          headshot: betterHeadshot,
           teamLogo: teamLogoUrl,
           ipRaw: ipRaw || null,
           ipValue,
