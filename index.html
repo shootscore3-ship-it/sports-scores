@@ -198,7 +198,7 @@
       white-space:nowrap;
     }
 
-    /* Wild live/final custom area */
+    /* Custom live/final card area */
     .wild-live-wrap{
       display:flex;
       flex-direction:column;
@@ -561,29 +561,9 @@
       return String(s || "").trim();
     }
 
-    function buildWildStatusLineFromCompetition(comp){
-      const status = comp?.status || {};
-      const state = status?.type?.state || "";
-      const shortDetail = safeText(status?.type?.shortDetail);
-      const detail = safeText(status?.type?.detail);
-      const clock = safeText(status?.displayClock);
-      const period = ordinalPeriod(status?.period);
-      const combined = `${shortDetail} ${detail}`.toUpperCase();
-
-      if (state === "post"){
-        if (combined.includes("SO") || combined.includes("SHOOTOUT")) return "FINAL • SO";
-        if (combined.includes("OT") || combined.includes("OVERTIME")) return "FINAL • OT";
-        return "FINAL";
-      }
-
-      if (state === "in"){
-        const bits = ["LIVE"];
-        if (period) bits.push(period);
-        if (clock && clock !== "0:00") bits.push(clock);
-        return bits.join(" • ");
-      }
-
-      return shortDetail || detail || "";
+    function toNum(v){
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
     }
 
     function normalizeAthlete(a){
@@ -609,6 +589,52 @@
         .replace(/-/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+    }
+
+    function buildWildStatusLineFromCompetition(comp){
+      const status = comp?.status || {};
+      const state = status?.type?.state || "";
+      const shortDetail = safeText(status?.type?.shortDetail);
+      const detail = safeText(status?.type?.detail);
+      const clock = safeText(status?.displayClock);
+      const period = ordinalPeriod(status?.period);
+      const combined = `${shortDetail} ${detail}`.toUpperCase();
+
+      if (state === "post"){
+        if (combined.includes("SO") || combined.includes("SHOOTOUT")) return "FINAL • SO";
+        if (combined.includes("OT") || combined.includes("OVERTIME")) return "FINAL • OT";
+        return "FINAL";
+      }
+
+      if (state === "in"){
+        const bits = ["LIVE"];
+        if (period) bits.push(period);
+        if (clock && clock !== "0:00") bits.push(clock);
+        return bits.join(" • ");
+      }
+
+      return shortDetail || detail || "";
+    }
+
+    function buildGenericStatusLineFromCompetition(comp){
+      const status = comp?.status || {};
+      const state = status?.type?.state || "";
+      const shortDetail = safeText(status?.type?.shortDetail);
+      const detail = safeText(status?.type?.detail);
+      const combinedUpper = `${shortDetail} ${detail}`.toUpperCase();
+      const display = shortDetail || detail;
+
+      if (state === "post"){
+        if (combinedUpper.includes("SO") || combinedUpper.includes("SHOOTOUT")) return "FINAL • SO";
+        if (combinedUpper.includes("OT") || combinedUpper.includes("OVERTIME")) return "FINAL • OT";
+        return "FINAL";
+      }
+
+      if (state === "in"){
+        return display ? `LIVE • ${display.toUpperCase()}` : "LIVE";
+      }
+
+      return display;
     }
 
     function buildNhlHeadshotLookupFromClubStats(data){
@@ -832,6 +858,301 @@
       return pack;
     }
 
+    // ---------- Generic ESPN boxscore helpers for Wolves/Twins ----------
+    function normalizeLabel(label){
+      return String(label || "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9%]/g, "");
+    }
+
+    function firstExisting(obj, keys){
+      for (const k of keys){
+        if (obj[k] != null && obj[k] !== "") return obj[k];
+      }
+      return null;
+    }
+
+    function buildStatMap(labels, stats){
+      const map = {};
+      (labels || []).forEach((label, i) => {
+        map[normalizeLabel(label)] = stats?.[i];
+      });
+      return map;
+    }
+
+    function parseEspnStatNumber(v){
+      if (v == null) return null;
+      const s = String(v).trim();
+      if (!s || s === "-" || s === "--") return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function baseballIpToNumber(v){
+      if (v == null) return null;
+      const s = String(v).trim();
+      if (!s || s === "-" || s === "--") return null;
+      if (!s.includes(".")) {
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+      }
+      const [wholeStr, fracStr] = s.split(".");
+      const whole = Number(wholeStr);
+      const frac = Number(fracStr);
+      if (!Number.isFinite(whole) || !Number.isFinite(frac)) return null;
+      if (frac === 1) return whole + 1/3;
+      if (frac === 2) return whole + 2/3;
+      return whole + (frac / 10);
+    }
+
+    function extractEspnTeamBox(summary, teamId){
+      const players = Array.isArray(summary?.boxscore?.players) ? summary.boxscore.players : [];
+      return players.find(p => String(p?.team?.id) === String(teamId)) || null;
+    }
+
+    function extractAthleteRowsFromTeamBox(teamBox){
+      const rows = [];
+      const seen = new Map();
+
+      function visit(node, inheritedLabels = null){
+        if (!node) return;
+
+        if (Array.isArray(node)){
+          node.forEach(item => visit(item, inheritedLabels));
+          return;
+        }
+
+        if (typeof node !== "object") return;
+
+        const currentLabels = Array.isArray(node?.labels) ? node.labels : inheritedLabels;
+
+        if (node?.athlete && Array.isArray(node?.stats)){
+          const id = String(node.athlete?.id || node.athlete?.$ref || node.athlete?.displayName || Math.random());
+          const candidate = {
+            athlete: node.athlete,
+            labels: currentLabels || [],
+            stats: node.stats || []
+          };
+          const prev = seen.get(id);
+          if (!prev || (candidate.labels.length + candidate.stats.length) > (prev.labels.length + prev.stats.length)){
+            seen.set(id, candidate);
+          }
+        }
+
+        if (Array.isArray(node?.athletes)){
+          node.athletes.forEach(a => visit(a, currentLabels));
+        }
+
+        Object.values(node).forEach(v => {
+          if (v && typeof v === "object") visit(v, currentLabels);
+        });
+      }
+
+      visit(teamBox, null);
+      seen.forEach(v => rows.push(v));
+      return rows;
+    }
+
+    function getCompTeamInfo(comp, teamId){
+      const competitors = comp?.competitors || [];
+      const me = competitors.find(c => String(c?.team?.id) === String(teamId));
+      const opp = competitors.find(c => String(c?.team?.id) !== String(teamId));
+      return { me, opp };
+    }
+
+    function buildLivePackBaseFromSummary(summary, event, teamId, fallbackData, statusBuilder){
+      const comp = summary?.header?.competitions?.[0] || event?.competitions?.[0] || {};
+      const { me, opp } = getCompTeamInfo(comp, teamId);
+
+      const myHomeAway = me?.homeAway || "";
+      const matchupSymbol = myHomeAway === "away" ? "@" : "vs";
+
+      return {
+        comp,
+        me,
+        opp,
+        myLogo: teamLogo(me?.team) || fallbackData?.myLogo || "",
+        oppLogo: teamLogo(opp?.team) || fallbackData?.theirLogo || "",
+        myScore: String(me?.score ?? fallbackData?.myScore ?? ""),
+        oppScore: String(opp?.score ?? fallbackData?.oppScore ?? ""),
+        statusLine: statusBuilder(comp) || statusBuilder(event?.competitions?.[0] || {}) || statusLabel(event?.status?.type?.state),
+        matchupSymbol
+      };
+    }
+
+    function buildWolvesPlayersFromTeamBox(teamBox, teamLogoUrl){
+      const rows = extractAthleteRowsFromTeamBox(teamBox);
+
+      return rows.map(r => {
+        const statMap = buildStatMap(r.labels, r.stats);
+        const pts = parseEspnStatNumber(firstExisting(statMap, ["PTS"]));
+        const reb = parseEspnStatNumber(firstExisting(statMap, ["REB"]));
+        const ast = parseEspnStatNumber(firstExisting(statMap, ["AST"]));
+
+        return {
+          name: athleteName(r.athlete),
+          headshot: athleteHeadshot(r.athlete),
+          teamLogo: teamLogoUrl,
+          pts: pts ?? 0,
+          reb: reb ?? 0,
+          ast: ast ?? 0
+        };
+      })
+      .filter(p => p.name && (p.pts > 0 || p.reb > 0 || p.ast > 0))
+      .sort((a,b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.reb !== a.reb) return b.reb - a.reb;
+        return b.ast - a.ast;
+      })
+      .slice(0, 3)
+      .map(p => ({
+        name: p.name,
+        headshot: p.headshot,
+        teamLogo: p.teamLogo,
+        statLine: `PTS ${p.pts} • REB ${p.reb} • AST ${p.ast}`
+      }));
+    }
+
+    async function getWolvesLiveFinalPack(event, fallbackData){
+      const cacheKey = `wolvesLiveFinal:${event?.id}:${event?.status?.type?.state}:${fallbackData?.myScore}:${fallbackData?.oppScore}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const summary = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event?.id}`);
+      const base = buildLivePackBaseFromSummary(summary || {}, event, "16", fallbackData, buildGenericStatusLineFromCompetition);
+      const myBox = extractEspnTeamBox(summary || {}, "16");
+      const oppTeamId = String(base?.opp?.team?.id || "");
+      const oppBox = extractEspnTeamBox(summary || {}, oppTeamId);
+
+      const myRows = buildWolvesPlayersFromTeamBox(myBox, base.myLogo);
+      const oppRows = buildWolvesPlayersFromTeamBox(oppBox, base.oppLogo);
+
+      const pack = {
+        teamLogo: base.myLogo,
+        teamScore: base.myScore,
+        oppLogo: base.oppLogo,
+        oppScore: base.oppScore,
+        statusLine: base.statusLine,
+        matchupSymbol: base.matchupSymbol,
+        title: "GAME LEADERS",
+        slides: [myRows, oppRows]
+      };
+
+      cacheSet(cacheKey, pack);
+      return pack;
+    }
+
+    function buildTwinsHitterRowsFromTeamBox(teamBox, teamLogoUrl){
+      const rows = extractAthleteRowsFromTeamBox(teamBox);
+
+      return rows.map(r => {
+        const statMap = buildStatMap(r.labels, r.stats);
+        const row = {
+          name: athleteName(r.athlete),
+          headshot: athleteHeadshot(r.athlete),
+          teamLogo: teamLogoUrl,
+          r: parseEspnStatNumber(firstExisting(statMap, ["R"])) ?? 0,
+          h: parseEspnStatNumber(firstExisting(statMap, ["H"])) ?? 0,
+          rbi: parseEspnStatNumber(firstExisting(statMap, ["RBI"])) ?? 0,
+          hr: parseEspnStatNumber(firstExisting(statMap, ["HR"])) ?? 0,
+          ip: firstExisting(statMap, ["IP"]),
+          so: firstExisting(statMap, ["SO"]),
+          er: firstExisting(statMap, ["ER"])
+        };
+
+        return row;
+      })
+      .filter(p => p.name && p.ip == null && (p.h > 0 || p.rbi > 0 || p.r > 0 || p.hr > 0))
+      .sort((a,b) => {
+        if (b.rbi !== a.rbi) return b.rbi - a.rbi;
+        if (b.h !== a.h) return b.h - a.h;
+        if (b.r !== a.r) return b.r - a.r;
+        return b.hr - a.hr;
+      })
+      .slice(0, 2)
+      .map(p => ({
+        name: p.name,
+        headshot: p.headshot,
+        teamLogo: p.teamLogo,
+        statLine: `R ${p.r} • H ${p.h} • RBI ${p.rbi} • HR ${p.hr}`
+      }));
+    }
+
+    function buildTwinsPitcherRowFromTeamBox(teamBox, teamLogoUrl){
+      const rows = extractAthleteRowsFromTeamBox(teamBox);
+
+      const pitchers = rows.map(r => {
+        const statMap = buildStatMap(r.labels, r.stats);
+        const ipRaw = firstExisting(statMap, ["IP"]);
+        const ipValue = baseballIpToNumber(ipRaw);
+        const so = parseEspnStatNumber(firstExisting(statMap, ["SO"])) ?? 0;
+        const er = parseEspnStatNumber(firstExisting(statMap, ["ER"])) ?? 0;
+
+        return {
+          name: athleteName(r.athlete),
+          headshot: athleteHeadshot(r.athlete),
+          teamLogo: teamLogoUrl,
+          ipRaw: ipRaw || null,
+          ipValue,
+          so,
+          er
+        };
+      })
+      .filter(p => p.name && p.ipRaw != null)
+      .sort((a,b) => {
+        if ((b.ipValue ?? -1) !== (a.ipValue ?? -1)) return (b.ipValue ?? -1) - (a.ipValue ?? -1);
+        if (b.so !== a.so) return b.so - a.so;
+        return a.er - b.er;
+      });
+
+      if (!pitchers.length) return null;
+
+      const p = pitchers[0];
+      return {
+        name: p.name,
+        headshot: p.headshot,
+        teamLogo: p.teamLogo,
+        statLine: `IP ${p.ipRaw} • SO ${p.so} • ER ${p.er}`
+      };
+    }
+
+    async function getTwinsLiveFinalPack(event, fallbackData){
+      const cacheKey = `twinsLiveFinal:${event?.id}:${event?.status?.type?.state}:${fallbackData?.myScore}:${fallbackData?.oppScore}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const summary = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event=${event?.id}`);
+      const base = buildLivePackBaseFromSummary(summary || {}, event, "9", fallbackData, buildGenericStatusLineFromCompetition);
+      const myBox = extractEspnTeamBox(summary || {}, "9");
+      const oppTeamId = String(base?.opp?.team?.id || "");
+      const oppBox = extractEspnTeamBox(summary || {}, oppTeamId);
+
+      const myHitters = buildTwinsHitterRowsFromTeamBox(myBox, base.myLogo);
+      const myPitcher = buildTwinsPitcherRowFromTeamBox(myBox, base.myLogo);
+      const oppHitters = buildTwinsHitterRowsFromTeamBox(oppBox, base.oppLogo);
+      const oppPitcher = buildTwinsPitcherRowFromTeamBox(oppBox, base.oppLogo);
+
+      const slide1 = [...myHitters];
+      if (myPitcher) slide1.push(myPitcher);
+
+      const slide2 = [...oppHitters];
+      if (oppPitcher) slide2.push(oppPitcher);
+
+      const pack = {
+        teamLogo: base.myLogo,
+        teamScore: base.myScore,
+        oppLogo: base.oppLogo,
+        oppScore: base.oppScore,
+        statusLine: base.statusLine,
+        matchupSymbol: base.matchupSymbol,
+        title: "GAME LEADERS",
+        slides: [slide1, slide2]
+      };
+
+      cacheSet(cacheKey, pack);
+      return pack;
+    }
+
     // ---------------- Wild pack ----------------
     function wildName(p){
       const fn = p?.firstName?.default || "";
@@ -877,7 +1198,7 @@
       return [slidePts, slideGA];
     }
 
-    // ---------------- Wolves pack ----------------
+    // ---------------- Wolves off-day pack ----------------
     function parseNbaResultSet(data){
       const rs = data?.resultSets?.[0] || data?.resultSet;
       if (!rs) return null;
@@ -946,11 +1267,7 @@
       return [slidePts, slideOther];
     }
 
-    // ---------------- Twins pack ----------------
-    function toNum(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
+    // ---------------- Twins off-day pack ----------------
     function fmtAvg(v){
       const n = toNum(v);
       if (n == null) return "—";
@@ -1224,10 +1541,19 @@
       }
 
       let wildLiveFinalPack = null;
+      let wolvesLiveFinalPack = null;
+      let twinsLiveFinalPack = null;
+
       if (team.league === "nhl" && team.id === "30" && event && (state === "in" || state === "post")) {
-        wildLiveFinalPack = await getWildLiveFinalPack(event, {
-          myScore, oppScore, myLogo, theirLogo
-        });
+        wildLiveFinalPack = await getWildLiveFinalPack(event, { myScore, oppScore, myLogo, theirLogo });
+      }
+
+      if (team.league === "nba" && team.id === "16" && event && (state === "in" || state === "post")) {
+        wolvesLiveFinalPack = await getWolvesLiveFinalPack(event, { myScore, oppScore, myLogo, theirLogo });
+      }
+
+      if (team.league === "mlb" && team.id === "9" && event && (state === "in" || state === "post")) {
+        twinsLiveFinalPack = await getTwinsLiveFinalPack(event, { myScore, oppScore, myLogo, theirLogo });
       }
 
       return {
@@ -1238,7 +1564,9 @@
         nextIso, daysUntilNext, nextAtOrVs, nextOppLogo, nextOpponent, nextCountdown, nextTimeText,
         showPanel, pack,
         myScore, oppScore, myLogo, theirLogo,
-        wildLiveFinalPack
+        wildLiveFinalPack,
+        wolvesLiveFinalPack,
+        twinsLiveFinalPack
       };
     }
 
@@ -1324,6 +1652,23 @@
       `;
     }
 
+    function renderStatRow(row){
+      return `
+        <div class="wild-goal-row">
+          <div class="wild-goal-left">
+            ${row.headshot ? `<img class="wild-goal-headshot" src="${row.headshot}" alt="">` : `<div class="wild-goal-headshot"></div>`}
+            <div class="wild-goal-main">
+              <div class="wild-goal-name-row">
+                <div class="wild-goal-scorer">${row.name}</div>
+                ${row.teamLogo ? `<img class="wild-goal-team-logo" src="${row.teamLogo}" alt="">` : ``}
+              </div>
+              <div class="wild-goal-assists">${row.statLine || ""}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderWildLiveFinalPanel(d){
       const pack = d.wildLiveFinalPack || {
         wildLogo: d.myLogo,
@@ -1369,6 +1714,52 @@
           <div class="wild-live-panel" data-wild-goal-carousel="${d.league}_${d.name}">
             <div class="wild-live-panel-header">
               <div class="wild-live-panel-title">SCORING SUMMARY</div>
+              <div class="wild-live-dots">${dots}</div>
+            </div>
+            <div class="wild-live-slides">
+              ${slides}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGenericLiveStatsPanel(pack, fallback, carouselKey){
+      const slidesData = Array.isArray(pack?.slides) ? pack.slides : [[], []];
+      const normalizedSlides = slidesData.map(s => Array.isArray(s) ? s : []);
+      const dots = normalizedSlides.map((_, i) => `<span class="wild-live-dot ${i===0 ? "active" : ""}"></span>`).join("");
+
+      const slides = normalizedSlides.map((rows, i) => `
+        <div class="wild-live-slide ${i===0 ? "active" : ""}">
+          ${
+            rows.length
+              ? rows.map(renderStatRow).join("")
+              : `<div class="wild-no-goals">No stats yet</div>`
+          }
+        </div>
+      `).join("");
+
+      return `
+        <div class="wild-live-wrap">
+          <div class="wild-live-scoreboard">
+            <div class="wild-side">
+              <img class="wild-live-team-logo" src="${pack?.teamLogo || fallback.myLogo}" alt="">
+              <div class="wild-live-score">${pack?.teamScore ?? fallback.myScore ?? ""}</div>
+            </div>
+
+            <div class="wild-live-divider">${pack?.matchupSymbol || "vs"}</div>
+
+            <div class="wild-side">
+              <img class="wild-live-team-logo" src="${pack?.oppLogo || fallback.theirLogo}" alt="">
+              <div class="wild-live-score">${pack?.oppScore ?? fallback.oppScore ?? ""}</div>
+            </div>
+          </div>
+
+          <div class="wild-live-status">${pack?.statusLine || statusLabel(fallback.status)}</div>
+
+          <div class="wild-live-panel" data-wild-goal-carousel="${carouselKey}">
+            <div class="wild-live-panel-header">
+              <div class="wild-live-panel-title">${pack?.title || "GAME LEADERS"}</div>
               <div class="wild-live-dots">${dots}</div>
             </div>
             <div class="wild-live-slides">
@@ -1451,8 +1842,21 @@
         card.className = "card";
 
         let bottomHtml = "";
+
         if (d.league === "nhl" && d.name === "Wild" && (d.status === "in" || d.status === "post")) {
           bottomHtml = renderWildLiveFinalPanel(d);
+        } else if (d.league === "nba" && d.name === "Wolves" && (d.status === "in" || d.status === "post") && d.wolvesLiveFinalPack) {
+          bottomHtml = renderGenericLiveStatsPanel(
+            d.wolvesLiveFinalPack,
+            { myLogo:d.myLogo, theirLogo:d.theirLogo, myScore:d.myScore, oppScore:d.oppScore, status:d.status },
+            `${d.league}_${d.name}`
+          );
+        } else if (d.league === "mlb" && d.name === "Twins" && (d.status === "in" || d.status === "post") && d.twinsLiveFinalPack) {
+          bottomHtml = renderGenericLiveStatsPanel(
+            d.twinsLiveFinalPack,
+            { myLogo:d.myLogo, theirLogo:d.theirLogo, myScore:d.myScore, oppScore:d.oppScore, status:d.status },
+            `${d.league}_${d.name}`
+          );
         } else if (d.status === "in" || d.status === "post") {
           bottomHtml = scoreBlock(d);
         } else {
