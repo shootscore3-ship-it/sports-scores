@@ -409,6 +409,7 @@
       border:1px solid rgba(255,255,255,0.14);
       flex:0 0 auto;
     }
+    .headshot.image-fallback,.wild-goal-headshot.image-fallback{ object-fit:contain; padding:7px; box-sizing:border-box; }
     .leader-text{ min-width:0; text-align:left; }
     .leader-k{
       font-size:14px;
@@ -682,6 +683,18 @@
     const DEMO_MODE = LIVE_DEMO || FEATURE_DEMO;
     const FEATURE_DURATION_MS = 45000;
 
+    // Never leave a broken-image icon on the TV. Player rows provide their
+    // team logo as a last-resort fallback when a remote headshot disappears.
+    document.addEventListener("error", event => {
+      const img = event.target;
+      if (!(img instanceof HTMLImageElement)) return;
+      const fallback = img.dataset.imageFallback;
+      if (!fallback || img.dataset.fallbackApplied === "1") return;
+      img.dataset.fallbackApplied = "1";
+      img.classList.add("image-fallback");
+      img.src = fallback;
+    }, true);
+
     const HIDE_AFTER_DAYS = 3;
     const NFL_SHOW_WITHIN_DAYS = 7;
 
@@ -716,6 +729,74 @@
 
     const MLB_TEAM_LOGO = (teamId) =>
       `https://www.mlbstatic.com/team-logos/team-cap-on-light/${teamId}.svg`;
+
+    async function getMlbPlayerLookup(teamId){
+      if (!teamId) return new Map();
+      const cacheKey = `mlbPlayerLookup:${teamId}:${MLB_SEASON}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+
+      const roster = await fetchJson(
+        `https://statsapi.mlb.com/api/v1/teams/${teamId}/roster` +
+        `?rosterType=40Man&season=${MLB_SEASON}&hydrate=person`
+      );
+      const lookup = new Map();
+      for (const row of roster?.roster || []){
+        const name = row?.person?.fullName || "";
+        const id = row?.person?.id;
+        if (name && id) lookup.set(normalizePlayerName(name), id);
+      }
+      if (lookup.size) cacheSet(cacheKey, lookup);
+      return lookup;
+    }
+
+    async function getMlbTeamDirectory(){
+      const cacheKey = `mlbTeamDirectory:${MLB_SEASON}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
+      const data = await fetchJson(
+        `https://statsapi.mlb.com/api/v1/teams?sportId=1&season=${MLB_SEASON}`
+      );
+      const directory = new Map();
+      for (const team of data?.teams || []){
+        const keys = [
+          team?.name,
+          team?.teamName,
+          team?.clubName,
+          team?.shortName,
+          team?.abbreviation,
+          `${team?.locationName || ""} ${team?.teamName || ""}`
+        ];
+        for (const key of keys){
+          if (key) directory.set(normalizePlayerName(key), team?.id);
+        }
+      }
+      if (directory.size) cacheSet(cacheKey, directory);
+      return directory;
+    }
+
+    async function resolveMlbTeamId(espnTeam){
+      if (!espnTeam) return null;
+      const directory = await getMlbTeamDirectory();
+      const candidates = [
+        espnTeam?.displayName,
+        espnTeam?.name,
+        espnTeam?.shortDisplayName,
+        espnTeam?.abbreviation,
+        `${espnTeam?.location || ""} ${espnTeam?.name || ""}`
+      ];
+      for (const candidate of candidates){
+        const teamId = directory.get(normalizePlayerName(candidate));
+        if (teamId) return teamId;
+      }
+      return null;
+    }
+
+    function mlbHeadshotForAthlete(athlete, mlbPlayerLookup){
+      const mlbIdForName = mlbPlayerLookup?.get(normalizePlayerName(athleteName(athlete)));
+      if (mlbIdForName) return MLB_HEADSHOT(mlbIdForName);
+      return athleteHeadshot(athlete) || "";
+    }
 
     let dataSuccesses = 0;
     let dataFailures = 0;
@@ -1059,6 +1140,8 @@
 
     function normalizePlayerName(name){
       return String(name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/\./g, "")
         .replace(/'/g, "")
@@ -1657,14 +1740,15 @@
       return pack;
     }
 
-    function buildTwinsHitterRowsFromTeamBox(teamBox, teamLogoUrl){
+    function buildTwinsHitterRowsFromTeamBox(teamBox, teamLogoUrl, mlbPlayerLookup = null){
       const rows = extractAthleteRowsFromTeamBox(teamBox);
 
       return rows.map(r => {
         const statMap = buildStatMap(r.labels, r.stats);
         const athlete = normalizeAthlete(r.athlete);
-        const id = athleteId(athlete);
-        const betterHeadshot = id ? MLB_HEADSHOT(id) : (athleteHeadshot(athlete) || "");
+        const betterHeadshot = mlbPlayerLookup
+          ? mlbHeadshotForAthlete(athlete, mlbPlayerLookup)
+          : athleteHeadshot(athlete);
 
         return {
           name: athleteName(athlete),
@@ -1695,14 +1779,15 @@
       }));
     }
 
-    function buildTwinsPitcherRowFromTeamBox(teamBox, teamLogoUrl){
+    function buildTwinsPitcherRowFromTeamBox(teamBox, teamLogoUrl, mlbPlayerLookup = null){
       const rows = extractAthleteRowsFromTeamBox(teamBox);
 
       const pitchers = rows.map(r => {
         const statMap = buildStatMap(r.labels, r.stats);
         const athlete = normalizeAthlete(r.athlete);
-        const id = athleteId(athlete);
-        const betterHeadshot = id ? MLB_HEADSHOT(id) : (athleteHeadshot(athlete) || "");
+        const betterHeadshot = mlbPlayerLookup
+          ? mlbHeadshotForAthlete(athlete, mlbPlayerLookup)
+          : athleteHeadshot(athlete);
 
         const ipRaw = firstExisting(statMap, ["IP"]);
         const ipValue = baseballIpToNumber(ipRaw);
@@ -1748,11 +1833,16 @@
       const myBox = extractEspnTeamBox(summary || {}, "9");
       const oppTeamId = String(base?.opp?.team?.id || "");
       const oppBox = extractEspnTeamBox(summary || {}, oppTeamId);
+      const opponentMlbTeamId = await resolveMlbTeamId(base?.opp?.team);
+      const [twinsMlbPlayerLookup, opponentMlbPlayerLookup] = await Promise.all([
+        getMlbPlayerLookup(MLB_TWINS_TEAM_ID),
+        getMlbPlayerLookup(opponentMlbTeamId)
+      ]);
 
-      const myHitters = buildTwinsHitterRowsFromTeamBox(myBox, base.myLogo);
-      const myPitcher = buildTwinsPitcherRowFromTeamBox(myBox, base.myLogo);
-      const oppHitters = buildTwinsHitterRowsFromTeamBox(oppBox, base.oppLogo);
-      const oppPitcher = buildTwinsPitcherRowFromTeamBox(oppBox, base.oppLogo);
+      const myHitters = buildTwinsHitterRowsFromTeamBox(myBox, base.myLogo, twinsMlbPlayerLookup);
+      const myPitcher = buildTwinsPitcherRowFromTeamBox(myBox, base.myLogo, twinsMlbPlayerLookup);
+      const oppHitters = buildTwinsHitterRowsFromTeamBox(oppBox, base.oppLogo, opponentMlbPlayerLookup);
+      const oppPitcher = buildTwinsPitcherRowFromTeamBox(oppBox, base.oppLogo, opponentMlbPlayerLookup);
 
       const slide1 = [...myHitters];
       if (myPitcher) slide1.push(myPitcher);
@@ -2275,7 +2365,7 @@
           ${rows.map(r => `
             <div class="leader-row">
               <div class="leader-left">
-                ${r.headshot ? `<img class="headshot" src="${r.headshot}" alt="">` : `<div class="headshot"></div>`}
+                ${r.headshot ? `<img class="headshot" src="${r.headshot}" data-image-fallback="${r.teamLogo || ""}" alt="">` : `<div class="headshot"></div>`}
                 <div class="leader-text">
                   <div class="leader-k">${r.key}</div>
                   <div class="leader-v">${r.name}</div>
@@ -2332,7 +2422,7 @@
       return `
         <div class="wild-goal-row">
           <div class="wild-goal-left">
-            ${row.headshot ? `<img class="wild-goal-headshot" src="${row.headshot}" alt="">` : `<div class="wild-goal-headshot"></div>`}
+            ${row.headshot ? `<img class="wild-goal-headshot" src="${row.headshot}" data-image-fallback="${row.teamLogo || ""}" alt="">` : `<div class="wild-goal-headshot"></div>`}
             <div class="wild-goal-main">
               <div class="wild-goal-name-row">
                 <div class="wild-goal-scorer">${row.name}</div>
