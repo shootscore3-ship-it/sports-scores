@@ -1,2 +1,2 @@
 # sports-scores
-sports scores for the wild twins timberwolves waconia wildcats, and sports score ticker
+sports scores for the wild twins timberwolves vikings, and sports score ticker
