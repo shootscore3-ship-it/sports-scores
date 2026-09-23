@@ -3557,6 +3557,24 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         .filter(({asset}) => asset && !seen.has(asset) && seen.add(asset)).slice(0,2);
     }
 
+    function tickerBroadcastNetworks(comp,league){
+      const national = nationalTickerNetworks(comp,league);
+      const minnesota = TEAMS.find(team => team.league === league);
+      const mine = comp?.competitors?.find(entry => String(entry?.team?.id) === minnesota?.id);
+      const side = mine?.homeAway?.toLowerCase();
+      if (side !== "home" && side !== "away") return national;
+      const listed = (comp?.broadcasts || [])
+        .filter(b => String(b?.market || "").toLowerCase() === side)
+        .flatMap(b => b?.names || []);
+      const geographic = (comp?.geoBroadcasts || [])
+        .filter(b => String(b?.market?.type || "").toLowerCase() === side)
+        .map(b => b?.media?.shortName);
+      const seen = new Set(national.map(({asset}) => asset));
+      const local = [...listed,...geographic].filter(Boolean).map(name => ({name,asset:networkAsset(name,league)}))
+        .filter(({asset}) => asset && !seen.has(asset) && seen.add(asset));
+      return [...national,...local].slice(0,3);
+    }
+
     function startTickerMotion(){
       if (tickerMotion.started) return;
       tickerMotion.started = true;
@@ -3584,12 +3602,12 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         if (!away || !home) return "";
         const state = game.status?.type?.state || "pre";
         const detail = state === "pre" ? nextLabelAndTime(game.date) : game.status?.type?.shortDetail || "";
-        const broadcasts = nationalTickerNetworks(comp,league).map(({name,asset}) => {
+        const broadcasts = tickerBroadcastNetworks(comp,league).map(({name,asset}) => {
           const artClass = `network-art-${asset.split("/").pop().split(".")[0].replace(/[^a-z0-9-]/gi,"-")}`;
           return `<span class="ticker-broadcast ${artClass}" title="${safeText(name)}"><img class="ticker-broadcast-logo network-logo" src="${asset}" alt="${safeText(name)}"></span>`;
         }).join("");
         const side = t => `<div class="ticker-side"><img class="ticker-team-logo" src="${safeText(teamLogo(t.team))}" alt=""><span>${safeText(t.team?.abbreviation || teamName(t.team))}</span>${state !== "pre" ? `<b class="ticker-score">${safeText(String(t.score ?? "—"))}</b>` : ""}</div>`;
-        return `<div class="ticker-item ticker-state-${state}">${side(away)}<span class="ticker-separator">@</span>${side(home)}<span class="ticker-detail">${state === "in" ? `<b>LIVE</b>` : ""}${safeText(detail)}${broadcasts ? `<span class="ticker-broadcasts" aria-label="National broadcast">${broadcasts}</span>` : ""}</span></div>`;
+        return `<div class="ticker-item ticker-state-${state}">${side(away)}<span class="ticker-separator">@</span>${side(home)}<span class="ticker-detail">${state === "in" ? `<b>LIVE</b>` : ""}${safeText(detail)}${broadcasts ? `<span class="ticker-broadcasts" aria-label="Broadcast networks">${broadcasts}</span>` : ""}</span></div>`;
       }).filter(Boolean).join("");
       return items ? `<section class="ticker-group" data-league="${league}" aria-label="${league.toUpperCase()} scores">${renderLeagueBadge(league)}<div class="ticker-games">${items}</div></section>` : "";
     }
