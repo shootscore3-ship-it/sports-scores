@@ -626,6 +626,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 .brand-title{font-size:1.8rem;letter-spacing:-.04rem}.brand-sub{font-size:.72rem;color:#aebacc;font-weight:400;letter-spacing:.19rem}
 .header-clock{font-size:1.7rem}.rotation-status{font-size:.8rem;color:#aebacc}.data-health{font-size:.75rem;color:#b9c6cf}
 .dashboard,.dashboard.focus-mode{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr) 12rem;gap:.8rem;padding:.8rem;max-height:none;min-height:0;flex:1;transition:none}
+.dashboard.focus-mode.three-teams{grid-template-columns:repeat(2,minmax(0,1fr))}
 .card{position:relative;border-radius:.45rem;padding:0;border:1px solid #738ba944;background:#0c1723;box-shadow:none;transition:none;isolation:isolate}
 .card.is-featured{grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:minmax(0,40fr) minmax(0,60fr);padding:0;text-align:left;border-color:#70839a66;box-shadow:none}
 .team-hero{position:relative;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;isolation:isolate;background:linear-gradient(140deg,var(--team-color),#0c1723)}
@@ -1082,15 +1083,18 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     ];
 
     // Wild / NHL
-    const NHL_SEASON_CODE = "20252026";
+    const hockeySeasonStart = new Date().getMonth() >= 6 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+    const NHL_SEASON_CODE = `${hockeySeasonStart}${hockeySeasonStart + 1}`;
     const NHL_WILD_CLUB_STATS_URL = `https://api-web.nhle.com/v1/club-stats/MIN/${NHL_SEASON_CODE}/2`;
 
     // Wolves stats
+    const basketballSeasonStart = new Date().getMonth() >= 6 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+    const NBA_SEASON_LABEL = `${basketballSeasonStart}-${String(basketballSeasonStart + 1).slice(-2)}`;
     const NBA_WOLVES_LEAGUE_DASH_URL =
       "https://stats.nba.com/stats/leaguedashplayerstats" +
       "?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=" +
       "&Height=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0" +
-      "&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025-26" +
+      `&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=${NBA_SEASON_LABEL}` +
       "&SeasonSegment=&SeasonType=Regular%20Season&ShotClockRange=&StarterBench=&TeamID=1610612750&TwoWay=0&VsConference=&VsDivision=&Weight=";
 
     const NBA_HEADSHOT = (playerId) =>
@@ -1242,6 +1246,23 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     function broadcastNames(comp){
       const names = [...(comp?.broadcasts || []).flatMap(b => b?.names || []), ...(comp?.geoBroadcasts || []).map(b => b?.media?.shortName)].filter(Boolean);
       return [...new Set(names)].slice(0,3);
+    }
+
+    async function wildScheduleNetworks(nextIso){
+      const date = nextIso?.slice(0,10);
+      if (!date) return [];
+      const key = `wildBroadcasts:${NHL_SEASON_CODE}`;
+      let schedule = cacheGet(key);
+      if (!schedule){
+        schedule = await fetchJson(`https://api-web.nhle.com/v1/club-schedule-season/MIN/${NHL_SEASON_CODE}`);
+        if (schedule?.games) cacheSet(key,schedule);
+      }
+      const game = schedule?.games?.find(g => g?.gameDate === date &&
+        (g?.homeTeam?.abbrev === "MIN" || g?.awayTeam?.abbrev === "MIN"));
+      const market = game?.homeTeam?.abbrev === "MIN" ? "H" : "A";
+      return [...new Set((game?.tvBroadcasts || [])
+        .filter(b => b?.countryCode === "US" && (b?.market === market || b?.market === "N"))
+        .map(b => b?.network).filter(n => n && n !== "MINNHL"))];
     }
 
     function networkClass(name){
@@ -2412,8 +2433,17 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     }
 
     function buildFootballLeaders(teamBox, teamLogoUrl){
-      const rows = extractAthleteRowsFromTeamBox(teamBox);
-      return rows.slice(0,3).map(r => {
+      const groups = teamBox?.statistics || [];
+      const rows = ["passing","rushing","receiving"].map(category => {
+        const group = groups.find(item => item?.name === category);
+        if (!group) return null;
+        const yardsIndex = (group.labels || []).indexOf("YDS");
+        const best = [...(group.athletes || [])].sort((a,b) =>
+          (Number(b?.stats?.[yardsIndex]) || 0) - (Number(a?.stats?.[yardsIndex]) || 0))[0];
+        return best && (Number(best?.stats?.[yardsIndex]) || 0) > 0
+          ? {athlete:best.athlete,labels:group.labels,stats:best.stats} : null;
+      }).filter(Boolean);
+      return rows.map(r => {
         const athlete = normalizeAthlete(r.athlete);
         const statMap = buildStatMap(r.labels,r.stats);
         const useful = ["C/ATT","YDS","TD","CAR","REC"].filter(k => statMap[k] != null).slice(0,3).map(k => `${k} ${statMap[k]}`).join(" • ");
@@ -2449,7 +2479,8 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     }
 
     async function getWildPack(){
-      const cached = cacheGet("wildPack:v2");
+      const cacheKey = `wildPack:${NHL_SEASON_CODE}`;
+      const cached = cacheGet(cacheKey);
       if (cached) return cached;
 
       const nhl = await fetchJson(NHL_WILD_CLUB_STATS_URL);
@@ -2465,7 +2496,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       const ast1 = topAssists[0];
 
       const pack = { topPts, topGoals, topAssists, goals1, ast1 };
-      cacheSet("wildPack:v2", pack);
+      cacheSet(cacheKey, pack);
       return pack;
     }
 
@@ -2519,14 +2550,15 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     }
 
     async function getWolvesPack(){
-      const cached = cacheGet("wolvesPack:v2");
+      const cacheKey = `wolvesPack:${NBA_SEASON_LABEL}`;
+      const cached = cacheGet(cacheKey);
       if (cached) return cached;
 
       const data = await fetchJson(NBA_WOLVES_LEAGUE_DASH_URL);
       if (!data) return null;
 
       const players = parseNbaResultSet(data);
-      if (!players || !players.length) return null;
+      if (!players || !players.length || !players.some(p => p.pts > 0 || p.reb > 0 || p.ast > 0)) return null;
 
       const topPts = [...players].sort((a,b)=>b.pts-a.pts).slice(0,4);
       const topReb = [...players].sort((a,b)=>b.reb-a.reb).slice(0,2);
@@ -2535,7 +2567,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       const astL = topBy(players, "ast");
 
       const pack = { topPts, topReb, topAst, rebL, astL };
-      cacheSet("wolvesPack:v2", pack);
+      cacheSet(cacheKey, pack);
       return pack;
     }
 
@@ -2827,7 +2859,8 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       const state = event?.status?.type?.state || "none";
       const eventComp = event?.competitions?.[0] || null;
       const nearestUpcoming = upcomingGames.find(g => !g.completed && Date.parse(g.date) >= Date.now());
-      const networks = eventComp ? broadcastNames(eventComp) : nearestUpcoming?.networks || [];
+      let networks = eventComp ? broadcastNames(eventComp) : nearestUpcoming?.networks || [];
+      if (!networks.length && team.league === "nhl") networks = await wildScheduleNetworks(nextIso);
       const venue = safeText(eventComp?.venue?.fullName || eventComp?.venue?.address?.city || nearestUpcoming?.venue || "");
       const weatherTemp = eventComp?.weather?.temperature;
       const weatherCondition = safeText(eventComp?.weather?.displayValue || eventComp?.weather?.conditionId || "");
@@ -3382,13 +3415,23 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     let demoAlertShown = false;
     let featureDemoAlertsShown = false;
 
+    function shouldShowTeam(data){
+      if (data.league !== "mlb") return true;
+      if (data.status === "in") return true;
+      if (data.status === "post" && Date.parse(data.nextIso) > Date.now() - HIDE_AFTER_DAYS * 86400000) return true;
+      if (data.upcomingGames?.some(game => !game.completed && Date.parse(game.date) > Date.now())) return true;
+      const month = new Date().getMonth();
+      return month >= 2 && month <= 8;
+    }
+
     async function updateDashboard(){
       const container = document.getElementById("cards-container");
       const results = await Promise.all(TEAMS.map(t => getTeamData(t)));
-      const list = FEATURE_DEMO ? results.map(makeFeatureDemoTeam) : LIVE_DEMO ? results.map(makeDemoTeam) : results;
+      const list = FEATURE_DEMO ? results.map(makeFeatureDemoTeam) : LIVE_DEMO ? results.map(makeDemoTeam) : results.filter(shouldShowTeam);
       if (LIVE_DEMO) document.querySelector(".brand-sub").textContent = "Live TV demonstration";
       if (FEATURE_DEMO) document.querySelector(".brand-sub").textContent = "Full feature demonstration";
       container.classList.add("focus-mode");
+      container.classList.toggle("three-teams",list.length === 3);
       container.innerHTML = "";
 
       const scoreBlock = (d) => `
@@ -3553,7 +3596,9 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         .filter(b => String(b?.market?.type || "").toLowerCase() === "national")
         .map(b => b?.media?.shortName);
       const seen = new Set();
-      return [...listed,...geographic].filter(Boolean).map(name => ({name,asset:networkAsset(name,league)}))
+      const names = [...listed,...geographic].filter(Boolean);
+      return names.filter(name => league !== "nhl" || !/^espn\+$/i.test(name) || names.some(other => /hulu|disney\+/i.test(other)))
+        .map(name => ({name,asset:networkAsset(name,league)}))
         .filter(({asset}) => asset && !seen.has(asset) && seen.add(asset)).slice(0,2);
     }
 
@@ -3602,7 +3647,11 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         if (!away || !home) return "";
         const state = game.status?.type?.state || "pre";
         const detail = state === "pre" ? nextLabelAndTime(game.date) : game.status?.type?.shortDetail || "";
-        const broadcasts = tickerBroadcastNetworks(comp,league).map(({name,asset}) => {
+        const gameNetworks = tickerBroadcastNetworks(comp,league);
+        // NFL's Week 4 viewing guide confirms ABC simulcasts this game; ESPN's feed lists only ESPN.
+        if (league === "nfl" && String(game.id) === "401872979" && !gameNetworks.some(n => n.name === "ABC"))
+          gameNetworks.push({name:"ABC",asset:networkAsset("ABC",league)});
+        const broadcasts = gameNetworks.map(({name,asset}) => {
           const artClass = `network-art-${asset.split("/").pop().split(".")[0].replace(/[^a-z0-9-]/gi,"-")}`;
           return `<span class="ticker-broadcast ${artClass}" title="${safeText(name)}"><img class="ticker-broadcast-logo network-logo" src="${asset}" alt="${safeText(name)}"></span>`;
         }).join("");
