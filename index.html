@@ -939,6 +939,13 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 .card.is-featured .shot-chart-surface{overflow:hidden}
 .card.is-featured .basketball-court.shot-chart-surface{aspect-ratio:2 / 1;background:#092b4b;background-image:none;border:1px solid #638db1;box-shadow:inset 0 0 25px #031624}
 .shot-chart-overlay{display:block;position:absolute;inset:0;width:100%;height:100%;z-index:2}
+.shot-chart-side{position:absolute;top:5%;z-index:3;display:flex;align-items:center;gap:.4rem;max-width:39%;min-height:2.6rem;box-sizing:border-box;padding:.25rem .45rem;border:1px solid #ffffff88;border-radius:.4rem;background:#071828e8;box-shadow:0 2px 7px #0009;color:#fff;text-align:left}
+.shot-chart-side.mine{left:9%;border-color:#83ee77}
+.shot-chart-side.opponent{right:9%;border-color:#b8d2ed}
+.shot-chart-side img{display:block;width:2.25rem;height:2.25rem;flex:none;object-fit:contain;filter:drop-shadow(0 1px 2px #0009)}
+.shot-chart-side span{min-width:0;display:flex;flex-direction:column;line-height:1.05}
+.shot-chart-side strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem}
+.shot-chart-side small{display:block;white-space:nowrap;color:#d6e5f2;font-size:.66rem;font-weight:900;margin-top:.15rem}
 .shot-chart-point{fill:#f7fbff;stroke:#071723;stroke-width:2;paint-order:stroke fill;filter:drop-shadow(0 1px 2px #001)}
 .shot-chart-point.missed{fill:#102940;stroke:#fff;stroke-width:3}
 .shot-chart-point.scored{fill:#7ef048;stroke:#113d22;stroke-width:3;filter:drop-shadow(0 0 6px #66ff59) drop-shadow(0 0 3px #0a1c11)}
@@ -1990,7 +1997,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         statusLine,
         goals,
         matchupSymbol,
-        visual: buildLiveVisual(summary || {}, {myScore:wildScore,oppScore}, "nhl", "30")
+        visual: buildLiveVisual(summary || {}, {myScore:wildScore,oppScore,myLogo:wildLogo,oppLogo,me:wildComp,opp:oppComp}, "nhl", "30")
       };
 
       if (!isLive) cacheSet(cacheKey, pack);
@@ -2253,11 +2260,17 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       };
     }
 
-    function buildShotChart(summary, league, teamId){
+    function buildShotChart(summary, league, teamId, base = {}){
       if (league !== "nhl" && league !== "nba") return null;
+      const competitors = summary?.header?.competitions?.[0]?.competitors || [];
+      const mine = competitors.find(c => String(c?.team?.id) === String(teamId)) || base.me;
+      const opponent = competitors.find(c => String(c?.team?.id) !== String(teamId)) || base.opp;
+      const opponentId = String(opponent?.team?.id || "");
       const shots = [];
       for (const play of (summary?.plays || [])){
-        if (playTeamId(play) !== String(teamId)) continue;
+        const playId = playTeamId(play);
+        const side = playId === String(teamId) ? "mine" : playId === opponentId && opponentId ? "opponent" : "";
+        if (!side) continue;
         const type = String(play?.type?.text || "").toLowerCase();
         const pointValue = Number(play?.pointsAttempted);
         if (league === "nhl" && !["shot","goal","missed","blocked"].includes(type)) continue;
@@ -2269,14 +2282,32 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         if (league === "nhl" && (x < -100 || x > 100 || y < -43 || y > 43)) continue;
         if (league === "nba" && (x < 0 || x > 50 || y < -3 || y > 47)) continue;
         const scored = league === "nhl" ? type === "goal" : Boolean(play?.scoringPlay && Number(play?.scoreValue) > 0);
+        const rinkX = 322.5 + (side === "mine" ? -1 : 1) * Math.abs(x) * 557 / 200;
+        const rinkY = side === "mine" ? (x > 0 ? -y : y) : (x < 0 ? -y : y);
+        const courtDistance = Math.max(0,Math.min(47,y)) * 8.3;
         shots.push({
-          x: league === "nhl" ? 44 + (x + 100) * 557 / 200 : 855 - Math.max(0,y) * 15.5,
-          y: league === "nhl" ? 52 + (43 - y) * 256 / 86 : 50 + x * 8,
+          x: league === "nhl" ? rinkX : side === "mine" ? 110 + courtDistance : 890 - courtDistance,
+          y: league === "nhl" ? 52 + (43 - rinkY) * 256 / 86 : 40 + x * 8.4,
+          side,
           scored,
           kind: !scored && (league === "nba" || type === "missed" || type === "blocked") ? "missed" : "shot"
         });
       }
-      return {shots, attempts:shots.length, scored:shots.filter(shot => shot.scored).length};
+      const sideInfo = (side, comp, logo, label) => {
+        const sideShots = shots.filter(shot => shot.side === side);
+        return {
+          name:safeText(comp?.team?.name || comp?.team?.abbreviation || label),
+          abbreviation:safeText(comp?.team?.abbreviation || label),
+          logo:teamLogo(comp?.team) || logo || "",
+          attempts:sideShots.length,
+          scored:sideShots.filter(shot => shot.scored).length
+        };
+      };
+      return {
+        shots,attempts:shots.length,
+        mine:sideInfo("mine",mine,base.myLogo,league === "nhl" ? "Wild" : "Wolves"),
+        opponent:sideInfo("opponent",opponent,base.oppLogo,"Opponent")
+      };
     }
 
     function buildLiveVisual(summary, base, league, teamId){
@@ -2291,7 +2322,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         lastPlay:last.text,
         clock:last.clock || safeText(comp?.status?.displayClock || ""),
         stats,
-        shotChart:buildShotChart(summary,league,teamId),
+        shotChart:buildShotChart(summary,league,teamId,base),
         alert:scoringAlertFromSummary(summary || {},base,league,teamId),
         baseball:{
           balls:Number(situation?.balls ?? 0), strikes:Number(situation?.strikes ?? 0), outs:Number(situation?.outs ?? 0),
@@ -2306,7 +2337,6 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
           ballPosition,
           possession:safeText(situation?.possessionText || situation?.possession || "")
         },
-        // The play feed does not provide reliable puck or basketball locations.
         hockey:{period:safeText(comp?.status?.type?.shortDetail || comp?.status?.type?.detail || "LIVE")},
         basketball:{}
       };
@@ -3181,18 +3211,19 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 
     function renderShotChart(visual){
       const hockey = visual.league === "nhl";
-      const chart = visual.shotChart || {shots:[],attempts:0,scored:0};
+      const chart = visual.shotChart || {shots:[],attempts:0,mine:{name:hockey ? "Wild" : "Wolves",attempts:0,scored:0},opponent:{name:"Opponent",attempts:0,scored:0}};
       const dots = chart.shots.slice().sort((a,b) => Number(a.scored) - Number(b.scored)).map(shot => {
-        const className = shot.scored ? "shot-chart-point scored" : shot.kind === "missed" ? "shot-chart-point missed" : "shot-chart-point";
+        const className = `shot-chart-point ${shot.side || "mine"}${shot.scored ? " scored" : shot.kind === "missed" ? " missed" : ""}`;
         return `<circle class="${className}" cx="${shot.x.toFixed(1)}" cy="${shot.y.toFixed(1)}" r="${shot.scored ? 7 : 4.5}"></circle>`;
       }).join("");
       const empty = chart.attempts ? "" : '<span class="shot-chart-empty">Shot locations will appear when available.</span>';
-      const rink = `<div class="hockey-rink live-surface shot-chart-surface"><svg class="shot-chart-overlay" viewBox="0 0 645 360" preserveAspectRatio="none" aria-label="Wild shot locations">${dots}</svg>${empty}</div>`;
-      const court = `<div class="basketball-court live-surface shot-chart-surface"><svg class="shot-chart-overlay" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-label="Timberwolves shot locations"><rect class="court-floor" x="15" y="15" width="970" height="470" rx="10"></rect><path class="court-line" d="M55 40V460 M925 40V460 M925 145H700V355H925 M700 185H925 M700 315H925 M700 165a85 85 0 0 0 0 170 M850 40V70 M850 430V460 M850 70a290 290 0 0 0 0 360"></path><circle class="court-rim" cx="855" cy="250" r="12"></circle><path class="court-line" d="M880 215V285"></path>${dots}</svg>${empty}</div>`;
+      const badge = (side,info,displayName) => `<div class="shot-chart-side ${side}">${info?.logo ? `<img src="${info.logo}" alt="">` : ""}<span><strong>${displayName}</strong><small>${info?.attempts || 0} ATT · ${info?.scored || 0} ${hockey ? "G" : "MADE"}</small></span></div>`;
+      const badges = `${badge("mine",chart.mine,hockey ? "Wild" : "Wolves")}${badge("opponent",chart.opponent,chart.opponent?.name || "Opponent")}`;
+      const rink = `<div class="hockey-rink live-surface shot-chart-surface"><svg class="shot-chart-overlay" viewBox="0 0 645 360" preserveAspectRatio="none" aria-label="Wild shots on the left and opponent shots on the right">${dots}</svg>${badges}${empty}</div>`;
+      const court = `<div class="basketball-court live-surface shot-chart-surface"><svg class="shot-chart-overlay" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-label="Timberwolves shots on the left and opponent shots on the right"><rect class="court-floor" x="15" y="15" width="970" height="470" rx="10"></rect><path class="court-line" d="M500 15V485 M15 155H265V345H15 M265 190H15 M265 310H15 M265 165a85 85 0 0 1 0 170 M985 155H735V345H985 M735 190H985 M735 310H985 M735 165a85 85 0 0 0 0 170 M110 40V70 Q440 250 110 430V460 M890 40V70 Q560 250 890 430V460"></path><circle class="court-line" cx="500" cy="250" r="65"></circle><circle class="court-rim" cx="110" cy="250" r="12"></circle><circle class="court-rim" cx="890" cy="250" r="12"></circle><path class="court-line" d="M82 210V290 M918 210V290"></path>${dots}</svg>${badges}${empty}</div>`;
       const first = hockey ? `<span class="shot-legend-key"><i class="shot-legend-dot"></i>Shot on goal</span><span class="shot-legend-key"><i class="shot-legend-dot missed"></i>Missed / blocked</span>` : `<span class="shot-legend-key"><i class="shot-legend-dot missed"></i>Miss</span>`;
       const scoreLabel = hockey ? "Goal" : "Made basket";
-      const teamLabel = hockey ? "Wild" : "Wolves";
-      const legend = `<div class="shot-chart-legend"><span class="shot-chart-count">${teamLabel}: ${chart.attempts} mapped attempts · ${chart.scored} ${hockey ? "goals" : "made"}</span><span class="shot-legend-items">${first}<span class="shot-legend-key"><i class="shot-legend-dot scored"></i>${scoreLabel}</span></span></div>`;
+      const legend = `<div class="shot-chart-legend"><span class="shot-chart-count">MINNESOTA LEFT · OPPONENT RIGHT</span><span class="shot-legend-items">${first}<span class="shot-legend-key"><i class="shot-legend-dot scored"></i>${scoreLabel}</span></span></div>`;
       return `${hockey ? rink : court}${legend}`;
     }
 
@@ -3575,7 +3606,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 
         const livePack = d.wildLiveFinalPack || d.wolvesLiveFinalPack || d.twinsLiveFinalPack || d.vikingsLiveFinalPack;
         const rightPanel = d.status === "in" && livePack?.visual
-          ? `<div class="feature-section-title live-section-title"><span>${d.league === "nhl" ? "Wild shot chart" : d.league === "nba" ? "Timberwolves shot chart" : `Live ${d.league === "mlb" ? "diamond" : "field position"}`}</span></div>${renderLiveVisualization(livePack.visual)}`
+          ? `<div class="feature-section-title live-section-title"><span>${d.league === "nhl" || d.league === "nba" ? "Game shot chart" : `Live ${d.league === "mlb" ? "diamond" : "field position"}`}</span></div>${renderLiveVisualization(livePack.visual)}`
           : d.pregameMode
             ? renderPregamePanel(d)
           : d.status === "post"
