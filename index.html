@@ -800,6 +800,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 .card.is-featured .network-mark.dark-logo{background:#fff}
 .network-mark:has(>img[src$="/chsn.png"]) img,.network-mark:has(>img[src$="/twins-tv.png"]) img,.network-mark:has(>img[src$="/mlb-tv.png"]) img,.network-mark:has(>img[src$="/nbc-ba.png"]) img{filter:none;mix-blend-mode:normal}
 .no-auto-scroll{overflow:hidden!important}
+.card.is-featured .pregame-panel{gap:.4rem;box-sizing:border-box}
 
 /* Transparent broadcaster artwork: the source white canvas has been removed. */
 .card.is-featured .network-mark.has-logo,.mode-item-v .network-mark.has-logo{background:transparent;border:0;padding:.05rem .15rem}
@@ -826,8 +827,12 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 .month-weekdays{margin:.2rem 0}.month-weekdays span{text-align:center;font-size:.65rem;letter-spacing:.08rem;color:#94a8bf;font-weight:800}
 .month-grid{flex:1;grid-auto-rows:minmax(0,1fr)}
 .month-day{position:relative;min-width:0;min-height:0;padding:.28rem .35rem;border:1px solid #60758a30;border-radius:.25rem;background:#101c2a99;color:#8394a8}
-.month-day.is-empty{visibility:hidden}.month-date{font-size:.7rem;font-weight:800}.month-day.has-game{display:grid;grid-template-columns:1.7rem minmax(0,1fr);grid-template-rows:auto auto;border-color:color-mix(in srgb,var(--team-accent) 65%,#687b90);background:linear-gradient(135deg,color-mix(in srgb,var(--team-color) 58%,#1c3043),#101b29);color:#fff;box-shadow:inset 2px 0 var(--team-accent)}
+.month-day.is-empty{visibility:hidden}.month-date{font-size:.7rem;font-weight:800}.month-day.has-game{display:grid;grid-template-columns:1.7rem minmax(0,1fr);grid-template-rows:auto auto;border-color:#718aa3;background:linear-gradient(135deg,#1d3145,#101b29);color:#fff;box-shadow:inset 2px 0 #8aa5bf}
 .month-day.has-game .month-date{position:absolute;right:.25rem;top:.15rem;color:#b9c7d8;font-size:.58rem}.month-day img{grid-row:1 / span 2;width:1.55rem;height:1.55rem;object-fit:contain;align-self:center}.month-day b{font-size:.65rem;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:.8rem}.month-day small{font-size:.55rem;color:#c3d1df;line-height:1.1}
+.month-day.has-game.is-win{border-color:#44c77b;background:linear-gradient(135deg,#1c4937,#102a25);box-shadow:inset 3px 0 #55df8d}
+.month-day.has-game.is-loss{border-color:#e66b70;background:linear-gradient(135deg,#4c2530,#261b29);box-shadow:inset 3px 0 #f0787d}
+.month-day.has-game.is-next{border:2px solid #ffd36b;background:linear-gradient(135deg,color-mix(in srgb,var(--team-color) 58%,#1c3043),#101b29);box-shadow:0 0 0 1px #ffd36b88,0 0 13px #ffd36b66,inset 3px 0 #ffd36b}
+.month-day.has-game.is-next::after{content:"NEXT";position:absolute;top:-.45rem;left:.2rem;padding:.05rem .2rem;border-radius:.15rem;background:#ffd36b;color:#17202b;font-size:.42rem;font-weight:900;letter-spacing:.04em}
 
 /* Keep the recap heading within its panel, including on short viewports. */
 .recap-panel{justify-content:flex-start;gap:.35rem;padding-top:.35rem;box-sizing:border-box}
@@ -837,7 +842,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
 
 /* Four-team divisions can use the full height of the standings card. */
 .standings-slide .division-standings{flex:1;justify-content:space-evenly;gap:.3rem}
-.standings-slide .division-row{min-height:3.6rem;grid-template-columns:2rem 3.3rem minmax(0,1fr) 6rem 4.5rem;padding:.35rem .65rem;gap:.7rem}
+.standings-slide .division-row{min-height:3.4rem;grid-template-columns:2rem 3.3rem minmax(0,1fr) 6rem 4.5rem;padding:.35rem .65rem;gap:.7rem}
 .standings-slide .standings-heading{grid-template-columns:2rem 3.3rem minmax(0,1fr) 6rem 4.5rem;padding:0 .65rem .3rem;gap:.7rem;font-size:.8rem}
 .standings-slide .division-logo{width:3.15rem;height:3.15rem}
 .standings-slide .division-name{font-size:1.3rem}
@@ -1338,8 +1343,16 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     function standingsRecord(entry, league){
       const wins = standingStat(entry,"wins")?.displayValue ?? "0";
       const losses = standingStat(entry,"losses")?.displayValue ?? "0";
-      const extra = league === "nhl" ? standingStat(entry,"otLosses") : standingStat(entry,"ties");
+      const extra = league === "nhl" ? standingStat(entry,"otLosses","overtimeLosses","OTL") : standingStat(entry,"ties");
+      if (league === "nhl") return `${wins}-${losses}-${extra?.displayValue ?? "0"}`;
       return extra?.displayValue && extra.displayValue !== "0" ? `${wins}-${losses}-${extra.displayValue}` : `${wins}-${losses}`;
+    }
+
+    function recentForm(value, league){
+      const text = String(value || "—");
+      if (league !== "nhl") return text;
+      const match = text.match(/^(\d+)-(\d+)-(\d+)/);
+      return match ? `${match[1]}-${match[2]}-${match[3]} · ${Number(match[1]) * 2 + Number(match[3])} PTS` : text;
     }
 
     function standingsValue(entry, league){
@@ -1401,7 +1414,7 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
           record:safeText(standingsRecord(entry,team.league)),
           value:safeText(value.value),
           streak:safeText(standingStat(entry,"streak")?.displayValue || "—"),
-          lastTen:safeText(standingStat(entry,"lastTen","last10","Last Ten Games")?.displayValue || "—"),
+          lastTen:safeText(recentForm(standingStat(entry,"lastTen","last10","Last Ten Games")?.displayValue,team.league)),
           home:safeText(standingStat(entry,"home")?.displayValue || "—"),
           away:safeText(standingStat(entry,"road","away")?.displayValue || "—"),
           officialRank:standingStat(entry,"rank","playoffSeed")?.value,
@@ -1423,13 +1436,18 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
     }
 
     function renderIdleInfo(d){
-      return `<div class="idle-info-rotator"><div class="idle-info-slide standings-slide"><div class="idle-slide-label">${d.division?.name || "Division"} standings${d.division?.seasonLabel ? `<span class="standings-season">${d.division.seasonLabel}</span>` : ""}</div>${renderDivisionStandings(d.division,d.teamId)}</div><div class="idle-info-slide headlines-slide"><div class="idle-slide-label">Latest ${d.name} headlines</div>${renderHeadlines(d.news)}</div></div>`;
+      return `<div class="idle-info-rotator"><div class="idle-info-slide standings-slide no-auto-scroll"><div class="idle-slide-label">${d.division?.name || "Division"} standings${d.division?.seasonLabel ? `<span class="standings-season">${d.division.seasonLabel}</span>` : ""}</div>${renderDivisionStandings(d.division,d.teamId)}</div><div class="idle-info-slide headlines-slide"><div class="idle-slide-label">Latest ${d.name} headlines</div>${renderHeadlines(d.news)}</div></div>`;
     }
 
     function renderTrendsSlide(d){
       const me = d.division?.rows?.find(r => r.teamId === String(d.teamId)) || {};
       const gapLabel = d.league === "nhl" ? "Points" : d.division?.valueLabel || "Position";
-      return `<div class="slide trend-slide"><div class="context-slide"><div class="context-title">Playoff race & recent trends</div><div class="context-grid"><div class="context-stat context-rank"><div class="context-k">${d.division?.scope || "Division"} position</div><div class="context-v">${me.rank ? `#${me.rank}` : "—"}</div></div><div class="context-stat"><div class="context-k">${gapLabel}</div><div class="context-v">${me.value || "—"}</div></div><div class="context-stat context-streak"><div class="context-k">Current streak</div><div class="context-v">${me.streak || "—"}</div></div><div class="context-stat"><div class="context-k">Last 10</div><div class="context-v">${me.lastTen || "—"}</div></div><div class="context-stat"><div class="context-k">Home record</div><div class="context-v">${me.home || "—"}</div></div><div class="context-stat"><div class="context-k">Road record</div><div class="context-v">${me.away || "—"}</div></div></div></div></div>`;
+      const completedGames = (d.upcomingGames || []).filter(g => g.completed && (d.league !== "nfl" || !g.seasonType || g.seasonType === 2));
+      const recentGames = completedGames.slice(-10);
+      const recentRecord = recentGames.length ? `${recentGames.filter(g => g.result === "W").length}-${recentGames.filter(g => g.result === "L").length}${recentGames.some(g => g.result === "T") ? `-${recentGames.filter(g => g.result === "T").length}` : ""}` : "";
+      const formLabel = d.league === "nfl" && completedGames.length < 10 ? "Games so far" : "Last 10";
+      const formValue = d.league === "nfl" ? (completedGames.length < 10 ? me.record || recentRecord || "—" : recentRecord || "—") : (me.lastTen || "—");
+      return `<div class="slide trend-slide"><div class="context-slide"><div class="context-title">Playoff race & recent trends</div><div class="context-grid"><div class="context-stat context-rank"><div class="context-k">${d.division?.scope || "Division"} position</div><div class="context-v">${me.rank ? `#${me.rank}` : "—"}</div></div><div class="context-stat"><div class="context-k">${gapLabel}</div><div class="context-v">${me.value || "—"}</div></div><div class="context-stat context-streak"><div class="context-k">Current streak</div><div class="context-v">${me.streak || "—"}</div></div><div class="context-stat"><div class="context-k">${formLabel}</div><div class="context-v">${formValue}</div></div><div class="context-stat"><div class="context-k">Home record</div><div class="context-v">${me.home || "—"}</div></div><div class="context-stat"><div class="context-k">Road record</div><div class="context-v">${me.away || "—"}</div></div></div></div></div>`;
     }
 
     async function getPlayoffRace(team){
@@ -1457,11 +1475,12 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       return `<div class="slide"><div class="context-slide"><div class="context-title">Injuries & roster updates</div>${rows.map(n => `<div class="update-row">${n.image ? `<img class="update-thumb" src="${n.image}" alt="">` : ``}<div class="update-text">${n.title}</div></div>`).join("")}</div></div>`;
     }
 
-    function renderCalendarSlide(d){
+    function renderCalendarSlide(d, now = new Date()){
       const games = (d.upcomingGames || []).filter(x => x.date);
       if (!games.length) return "";
-      const current = new Date();
-      const first = games.some(x => { const dt=new Date(x.date); return dt.getFullYear()===current.getFullYear() && dt.getMonth()===current.getMonth(); }) ? current : new Date(games.find(x => new Date(x.date)>=current)?.date || games[0].date);
+      const nextGame = games.filter(x => !x.completed && (x.state === "in" || Date.parse(x.date) >= now.getTime())).sort((a,b) => Date.parse(a.date)-Date.parse(b.date))[0];
+      const sameMonth = (date, reference) => { const dt=new Date(date); return dt.getFullYear()===reference.getFullYear() && dt.getMonth()===reference.getMonth(); };
+      const first = nextGame ? new Date(nextGame.date) : games.some(x => sameMonth(x.date,now)) ? now : new Date(games.at(-1).date);
       const year = first.getFullYear(), month = first.getMonth();
       const monthGames = games.filter(x => { const dt=new Date(x.date); return dt.getFullYear()===year && dt.getMonth()===month; });
       const byDay = new Map(monthGames.map(x => [new Date(x.date).getDate(),x]));
@@ -1470,14 +1489,15 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       const cells = Array.from({length:offset+days},(_,i) => {
         if (i < offset) return `<div class="month-day is-empty"></div>`;
         const day=i-offset+1, game=byDay.get(day);
-        return `<div class="month-day ${game ? "has-game" : ""}"><span class="month-date">${day}</span>${game ? `<img src="${game.oppLogo || d.logo}" alt=""><b>${game.atOrVs} ${game.opponent}</b><small>${game.completed ? `${game.result} ${game.myScore}–${game.oppScore}` : new Date(game.date).toLocaleTimeString("en-US",{timeZone:CT_TZ,hour:"numeric",minute:"2-digit"})}</small>` : ""}</div>`;
+        const resultClass = game?.completed && game.result === "W" ? "is-win" : game?.completed && game.result === "L" ? "is-loss" : "";
+        return `<div class="month-day ${game ? "has-game" : ""} ${resultClass} ${game === nextGame ? "is-next" : ""}"><span class="month-date">${day}</span>${game ? `<img src="${game.oppLogo || d.logo}" alt=""><b>${game.atOrVs} ${game.opponent}</b><small>${game.completed ? `${game.result} ${game.myScore}–${game.oppScore}` : new Date(game.date).toLocaleTimeString("en-US",{timeZone:CT_TZ,hour:"numeric",minute:"2-digit"})}</small>` : ""}</div>`;
       }).join("");
       const monthName=first.toLocaleDateString("en-US",{month:"long",year:"numeric"});
       return `<div class="slide month-calendar-slide"><div class="context-slide"><div class="context-title">${d.name} schedule · ${monthName}</div><div class="month-weekdays">${["SUN","MON","TUE","WED","THU","FRI","SAT"].map(x=>`<span>${x}</span>`).join("")}</div><div class="month-grid">${cells}</div></div></div>`;
     }
 
     function renderPregamePanel(d){
-      return `<div class="pregame-panel"><div class="mode-kicker">Pregame central · ${d.nextCountdown || "Starting soon"}</div><div class="mode-title pregame-matchup"><img src="${d.logo}" alt=""><span>${d.name} ${d.nextAtOrVs} ${d.nextOpponent}</span><img src="${d.nextOppLogo || d.logo}" alt=""></div><div class="mode-grid"><div class="mode-item"><div class="mode-item-k">Start time</div><div class="mode-item-v">${d.nextTimeText}</div></div><div class="mode-item"><div class="mode-item-k">Broadcast</div><div class="mode-item-v">${renderNetworkLogos(d.networks,d.league)}</div></div><div class="mode-item"><div class="mode-item-k">Venue</div><div class="mode-item-v">${d.venue || "Venue TBD"}</div></div><div class="mode-item"><div class="mode-item-k">Weather</div><div class="mode-item-v">${d.weather || "Indoor / unavailable"}</div></div><div class="mode-item"><div class="mode-item-k">Game line</div><div class="mode-item-v">${d.odds || "Not posted"}</div></div><div class="mode-item"><div class="mode-item-k">Status</div><div class="mode-item-v">Lineups and starters updating</div></div></div></div>`;
+      return `<div class="pregame-panel no-auto-scroll"><div class="mode-kicker">Pregame central · ${d.nextCountdown || "Starting soon"}</div><div class="mode-title pregame-matchup"><img src="${d.logo}" alt=""><span>${d.name} ${d.nextAtOrVs} ${d.nextOpponent}</span><img src="${d.nextOppLogo || d.logo}" alt=""></div><div class="mode-grid"><div class="mode-item"><div class="mode-item-k">Start time</div><div class="mode-item-v">${d.nextTimeText}</div></div><div class="mode-item"><div class="mode-item-k">Broadcast</div><div class="mode-item-v">${renderNetworkLogos(d.networks,d.league)}</div></div><div class="mode-item"><div class="mode-item-k">Venue</div><div class="mode-item-v">${d.venue || "Venue TBD"}</div></div><div class="mode-item"><div class="mode-item-k">Weather</div><div class="mode-item-v">${d.weather || "Indoor / unavailable"}</div></div><div class="mode-item"><div class="mode-item-k">Game line</div><div class="mode-item-v">${d.odds || "Not posted"}</div></div><div class="mode-item"><div class="mode-item-k">Status</div><div class="mode-item-v">Lineups and starters updating</div></div></div></div>`;
     }
 
     function recapPerformers(d){
@@ -1571,7 +1591,8 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
         const oppScore = opp?.score?.displayValue ?? opp?.score ?? "";
         return {
           date:e.date,
-          completed,myScore,oppScore,result:completed ? (Number(myScore)>Number(oppScore) ? "W" : Number(myScore)<Number(oppScore) ? "L" : "T") : "",
+          seasonType:Number(e?.season?.type ?? e?.seasonType?.id ?? 0),
+          completed,state:(comp?.status?.type || e?.status?.type)?.state || "",myScore,oppScore,result:completed ? (Number(myScore)>Number(oppScore) ? "W" : Number(myScore)<Number(oppScore) ? "L" : "T") : "",
           atOrVs:me?.homeAway === "away" ? "@" : "vs",
           opponent:safeText(teamName(opp?.team)),
           oppLogo:safeText(teamLogo(opp?.team)),
@@ -2879,7 +2900,10 @@ body{background:#020508;font-size:1rem;width:100vw;height:100vh;overflow:hidden}
       ]);
       const event = pickBestEventForTeam(scoreboard, team.id);
 
-      const record = teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
+      const divisionRecord = division?.rows?.find(r => r.teamId === String(team.id))?.record;
+      const record = team.league === "nhl" && divisionRecord
+        ? divisionRecord
+        : teamDetails?.team?.record?.items?.[0]?.summary || "0-0";
       const logo = teamDetails?.team?.logo || `https://a.espncdn.com/i/teamlogos/${team.league}/500/${team.id}.png`;
       const standings = await standingsText(teamDetails);
 
